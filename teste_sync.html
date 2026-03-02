@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head><title>Teste LactoCeleiro Sync</title>
+<meta charset="utf-8">
+<style>
+body { font-family: monospace; padding: 20px; background: #1e3a5f; color: white; }
+button { padding: 10px 20px; margin: 5px; background: #2d5282; color: white; border: none; border-radius: 8px; cursor: pointer; font-size: 14px; }
+button:hover { background: #4a7ab5; }
+#resultado { background: #0f2942; padding: 15px; border-radius: 8px; margin-top: 15px; white-space: pre-wrap; font-size: 12px; min-height: 100px; }
+</style>
+</head>
+<body>
+<h2>🔧 Diagnóstico LactoCeleiro Sync</h2>
+<p>URL: <code id="url-display"></code></p>
+
+<button onclick="testarGET()">🔍 Testar GET (pull)</button>
+<button onclick="testarPOST()">📤 Testar POST (push)</button>
+<button onclick="limpar()">🗑️ Limpar</button>
+
+<div id="resultado">Clica num botão para testar...</div>
+
+<script>
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzLAZnmV3mXTV9gdUwcZPdVQfI11h5sqmo2c79RQMrz8kgs54JQyjt3Ay2vWYaRTQVK/exec';
+document.getElementById('url-display').textContent = SCRIPT_URL;
+
+function log(msg) {
+  document.getElementById('resultado').textContent += msg + '\n';
+}
+function limpar() {
+  document.getElementById('resultado').textContent = '';
+}
+
+async function testarGET() {
+  limpar();
+  log('A fazer GET...');
+  try {
+    const url = SCRIPT_URL + '?acao=pull&ts=' + Date.now();
+    log('URL: ' + url);
+    const resp = await fetch(url, { redirect: 'follow', mode: 'cors', cache: 'no-cache' });
+    log('Status HTTP: ' + resp.status + ' ' + resp.statusText);
+    log('Headers: ' + [...resp.headers.entries()].map(h=>h[0]+': '+h[1]).join(', '));
+    const texto = await resp.text();
+    log('\nResposta raw: ' + texto.slice(0, 500));
+    try {
+      const json = JSON.parse(texto);
+      log('\nJSON ok: ' + json.ok);
+      if (json.remoto) log('Chaves remoto: ' + Object.keys(json.remoto).join(', '));
+    } catch(e) {
+      log('ERRO ao parsear JSON: ' + e.message);
+    }
+  } catch(e) {
+    log('ERRO: ' + e.message);
+    log('Tipo: ' + e.name);
+  }
+}
+
+async function testarPOST() {
+  limpar();
+  log('A fazer POST...');
+  try {
+    const payload = { acao: 'push', dados: { '_teste': 'ok_' + Date.now() }, meta: {} };
+    log('Payload: ' + JSON.stringify(payload).slice(0, 200));
+    const resp = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      redirect: 'follow',
+      mode: 'cors',
+      cache: 'no-cache',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    log('Status HTTP: ' + resp.status + ' ' + resp.statusText);
+    const texto = await resp.text();
+    log('\nResposta raw: ' + texto.slice(0, 500));
+    try {
+      const json = JSON.parse(texto);
+      log('\nJSON ok: ' + json.ok);
+      if (json.erro) log('Erro: ' + json.erro);
+    } catch(e) {
+      log('ERRO ao parsear JSON: ' + e.message);
+    }
+  } catch(e) {
+    log('ERRO: ' + e.message);
+    log('Tipo: ' + e.name);
+    if (e.name === 'TypeError') log('\n⚠️ Provavelmente CORS ou rede');
+  }
+}
+</script>
+</body>
+</html>
