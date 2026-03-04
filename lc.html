@@ -1655,10 +1655,69 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
 
       </div>
 
+
+      <!-- ── RELATÓRIO HISTÓRICO DE LOTE ── -->
+      <div style="background:white;border:2px solid #1e3a5f;border-radius:14px;padding:14px 16px;margin-top:16px">
+        <div style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#1e3a5f;margin-bottom:12px">📋 Relatório de Histórico de Lote</div>
+        <!-- Tipo de filtro -->
+        <div style="display:flex;gap:8px;margin-bottom:10px">
+          <button type="button" id="btn-filtro-lote" onclick="setFiltroLote('lote')"
+            style="flex:1;padding:10px;border:2px solid #1e3a5f;border-radius:10px;background:#1e3a5f;color:white;font-size:13px;font-weight:700;cursor:pointer">
+            🔢 Por Lote
+          </button>
+          <button type="button" id="btn-filtro-data" onclick="setFiltroLote('data')"
+            style="flex:1;padding:10px;border:2px solid #1e3a5f;border-radius:10px;background:white;color:#1e3a5f;font-size:13px;font-weight:700;cursor:pointer">
+            📅 Por Data
+          </button>
+        </div>
+        <!-- Filtro por lote -->
+        <div id="filtro-lote-area">
+          <div class="form-row" style="margin-bottom:10px">
+            <div class="form-group" style="margin-bottom:0">
+              <label>Lote início (ex: 261001)</label>
+              <input type="text" id="rl-lote-ini" placeholder="261001" style="font-family:'DM Mono',monospace;font-weight:700">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>Lote fim (vazio = só 1)</label>
+              <input type="text" id="rl-lote-fim" placeholder="261010" style="font-family:'DM Mono',monospace;font-weight:700">
+            </div>
+          </div>
+        </div>
+        <!-- Filtro por data -->
+        <div id="filtro-data-area" style="display:none">
+          <div class="form-row" style="margin-bottom:10px">
+            <div class="form-group" style="margin-bottom:0">
+              <label>Data início</label>
+              <input type="date" id="rl-data-ini">
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>Data fim</label>
+              <input type="date" id="rl-data-fim">
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+          <button onclick="gerarRelatorioLote('print')" style="padding:10px 4px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🖨️ Print</button>
+          <button onclick="gerarRelatorioLote('xlsx')" style="padding:10px 4px;background:#15803d;color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">📊 Excel</button>
+          <button onclick="gerarRelatorioLote('preview')" style="padding:10px 4px;background:#0891b2;color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">👁 Ver</button>
+        </div>
+      </div>
+
       <div class="status" id="status-export"></div>
       <div style="display:flex;gap:8px;margin-top:4px"><button class="btn-back" onclick="voltarPagina()" style="flex:1">← Voltar</button><button class="btn-back" onclick="irPara('screen-home')" style="width:48px;flex-shrink:0;font-size:18px;padding:10px">🏠</button></div>
     </div>
 
+
+    <!-- RELATÓRIO HISTÓRICO LOTE: PREVIEW -->
+    <div class="screen" id="screen-relatorio-lote">
+      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-export')">Relatórios</span> <span>›</span> <strong>Histórico de Lote</strong></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button onclick="gerarRelatorioLote('print')" style="flex:1;padding:12px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
+        <button onclick="gerarRelatorioLote('xlsx')" style="flex:1;padding:12px;background:#15803d;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">📊 Excel</button>
+        <button onclick="irPara('screen-export')" style="width:48px;padding:12px;background:#f3f4f6;border:none;border-radius:10px;font-size:18px;cursor:pointer">←</button>
+      </div>
+      <div id="rel-lote-corpo"></div>
+    </div>
 
     <!-- ══════════════════════════════ -->
     <!-- CONGELAÇÃO -->
@@ -9037,6 +9096,441 @@ function _guardarEditLavagem(camaraNum, loteId, lavIdx) {
   document.getElementById('edit-lavagem-panel').remove();
   var newIdx = (e[camaraNum]||[]).findIndex(function(l){ return l.id === loteId; });
   if (newIdx >= 0) abrirDetalhesLote(camaraNum, newIdx);
+}
+
+// ═══════════════════════════════════════════════════════════
+// RELATÓRIO HISTÓRICO DE LOTE
+// ═══════════════════════════════════════════════════════════
+var _rlFiltroTipo = 'lote';
+
+function setFiltroLote(tipo) {
+  _rlFiltroTipo = tipo;
+  document.getElementById('filtro-lote-area').style.display = tipo==='lote' ? '' : 'none';
+  document.getElementById('filtro-data-area').style.display = tipo==='data' ? '' : 'none';
+  var bL=document.getElementById('btn-filtro-lote'), bD=document.getElementById('btn-filtro-data');
+  if(bL){bL.style.background=tipo==='lote'?'#1e3a5f':'white';bL.style.color=tipo==='lote'?'white':'#1e3a5f';}
+  if(bD){bD.style.background=tipo==='data'?'#1e3a5f':'white';bD.style.color=tipo==='data'?'white':'#1e3a5f';}
+}
+
+// ── Helpers de formatação ──────────────────────────────────
+function _rlH(iso) {
+  if(!iso) return '\u2014';
+  var d=new Date(iso);
+  return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+}
+function _rlDur(a,b) {
+  if(!a||!b) return '\u2014';
+  var m=Math.round((new Date(b)-new Date(a))/60000);
+  if(m<0) return '\u2014';
+  return m>=60 ? Math.floor(m/60)+'h '+(m%60)+'min' : m+'min';
+}
+function _rlCel(lbl,val,bg) {
+  return '<div style="background:'+(bg||'#f8fafc')+';border-radius:7px;padding:7px 9px">'+
+    '<div style="color:#6b7280;font-size:10px;font-weight:600;margin-bottom:2px;text-transform:uppercase;letter-spacing:.04em">'+lbl+'</div>'+
+    '<div style="font-weight:800;font-size:13px;color:#111827">'+val+'</div></div>';
+}
+function _rlCelS(lbl,val) {
+  return '<div style="background:#f8fafc;border-radius:6px;padding:5px 7px">'+
+    '<div style="color:#9ca3af;font-size:10px;margin-bottom:1px">'+lbl+'</div>'+
+    '<div style="font-weight:700;font-size:12px">'+val+'</div></div>';
+}
+function _rlPasso(icone,nome,ini,fim,dur,pess,bg) {
+  return '<div style="background:'+(bg||'#f8fafc')+';border-radius:9px;padding:9px 10px">'+
+    '<div style="font-size:10px;font-weight:800;text-transform:uppercase;color:#374151;margin-bottom:5px;letter-spacing:.04em">'+icone+' '+nome+'</div>'+
+    '<div style="font-size:13px;font-weight:700;color:#111827">'+ini+(fim?' <span style="color:#9ca3af">\u2192</span> '+fim:'')+'</div>'+
+    (dur&&dur!=='\u2014'?'<div style="font-size:11px;color:#6b7280;margin-top:2px">\u23F1 '+dur+'</div>':'')+
+    (pess&&pess>0?'<div style="font-size:11px;color:#6b7280">\uD83D\uDC65 '+pess+' pessoa'+(pess>1?'s':'')+'</div>':'')+
+    '</div>';
+}
+
+// ── Recolha de dados ───────────────────────────────────────
+function _rlRecolherTodos() {
+  var todos = [];
+  // Produções concluídas — chave correcta: lc_prod_queijo_v1
+  (getProdutosQueijo()||[]).forEach(function(p) {
+    todos.push({tipo:'pq', data:p.data||p.horaInicio, lote:p.lote, obj:p});
+  });
+  // Produções em curso
+  (getProdEmCurso()||[]).forEach(function(p) {
+    todos.push({tipo:'pq', data:p.data||p.horaInicio, lote:p.lote, obj:p});
+  });
+  // Câmaras de cura 1-5
+  var e=getEstado();
+  [1,2,3,4,5].forEach(function(c) {
+    (e[c]||[]).forEach(function(l) {
+      todos.push({tipo:'camara', camara:c, data:l.data, lote:l.lote, obj:l});
+    });
+  });
+  return todos;
+}
+
+function _rlFiltrar() {
+  var todos = _rlRecolherTodos();
+  var res;
+
+  if(_rlFiltroTipo==='lote') {
+    var ini=(document.getElementById('rl-lote-ini').value||'').trim();
+    var fim=(document.getElementById('rl-lote-fim').value||'').trim()||ini;
+    if(!ini) return null;
+    res=todos.filter(function(r){ var l=(r.lote||''); return l>=ini && l<=fim; });
+  } else {
+    var dI=document.getElementById('rl-data-ini').value;
+    var dF=document.getElementById('rl-data-fim').value;
+    if(!dI||!dF) return null;
+    res=todos.filter(function(r){ var d=(r.data||'').slice(0,10); return d>=dI && d<=dF; });
+  }
+
+  // Agrupar por número de lote
+  var porLote={};
+  res.forEach(function(r){
+    var k=(r.lote||'(sem lote)').trim();
+    if(!porLote[k]) porLote[k]={pq:null, camaras:[]};
+    if(r.tipo==='pq' && !porLote[k].pq) porLote[k].pq = r.obj;
+    if(r.tipo==='camara') porLote[k].camaras.push(r.obj);
+  });
+  return porLote;
+}
+
+// ── Entrada principal ──────────────────────────────────────
+function gerarRelatorioLote(formato) {
+  var porLote=_rlFiltrar();
+  if(porLote===null){ mostrarStatus('status-export','\u26A0\uFE0F Preencha os filtros primeiro','error'); return; }
+  if(!Object.keys(porLote).length){ mostrarStatus('status-export','\u26A0\uFE0F Nenhum lote encontrado com esses filtros','warning'); return; }
+
+  if(formato==='xlsx') { _rlXLSX(porLote); return; }
+
+  var html = _rlHTML(porLote);
+
+  if(formato==='preview') {
+    document.getElementById('rel-lote-corpo').innerHTML = html;
+    irPara('screen-relatorio-lote');
+    return;
+  }
+  var a=new Date();
+  var dtStr=a.getDate()+' de '+MESES_FULL[a.getMonth()]+' de '+a.getFullYear()+
+    ' \u00E0s '+String(a.getHours()).padStart(2,'0')+':'+String(a.getMinutes()).padStart(2,'0');
+  var inner='<div class="rel-header"><h1>\uD83E\uDDC0 LactoCeleiro</h1>'+
+    '<div class="rel-sub">Hist\u00F3rico Detalhado de Lotes</div>'+
+    '<div class="rel-data">'+dtStr+'</div></div>'+html+
+    '<div class="rel-rodape">LactoCeleiro &bull; Gest\u00E3o de Produ\u00E7\u00E3o</div>';
+  gerarHTMLParaImpressao(inner,'historico_lotes');
+}
+
+// ── Construção do HTML ─────────────────────────────────────
+function _rlHTML(porLote) {
+  var html='';
+  var COR={ovelha:'#92400e',dop:'#1e40af',cabra:'#166534'};
+  var CBG={ovelha:'#fef3c7',dop:'#dbeafe',cabra:'#dcfce7'};
+  var CBD={ovelha:'#fcd34d',dop:'#93c5fd',cabra:'#86efac'};
+
+  Object.keys(porLote).sort().forEach(function(loteNum) {
+    var d=porLote[loteNum];
+    var pq=d.pq, cams=d.camaras;
+
+    var tipo=pq?pq.tipo:'';
+    var cor=COR[tipo]||'#1e3a5f';
+    var bg=CBG[tipo]||'#f0f9ff';
+    var bd=CBD[tipo]||'#bae6fd';
+
+    // ── Card principal ──
+    html+='<div style="border:2px solid '+bd+';border-radius:18px;margin-bottom:24px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.06)">';
+
+    // Cabeçalho
+    var dataLote = pq?(pq.dataFormatada||''):(cams.length?(cams[0].dataFormatada||''):'');
+    html+='<div style="background:'+bg+';border-bottom:2px solid '+bd+';padding:16px 18px">'+
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start">'+
+      '<div>'+
+      '<div style="font-family:\'DM Mono\',monospace;font-weight:900;font-size:22px;color:'+cor+';letter-spacing:-.01em">'+loteNum+'</div>'+
+      '<div style="font-size:12px;color:#6b7280;margin-top:3px;display:flex;gap:10px;flex-wrap:wrap">'+
+      (tipo?'<span style="background:'+bd+';color:'+cor+';border-radius:5px;padding:2px 8px;font-weight:700">'+tipo.charAt(0).toUpperCase()+tipo.slice(1)+'</span>':'')+
+      (pq&&pq.referencia?'<span style="background:#f3f4f6;border-radius:5px;padding:2px 8px;font-weight:700;color:#374151">Ref: '+pq.referencia+'</span>':'')+
+      (dataLote?'<span style="color:#9ca3af">'+dataLote+'</span>':'')+
+      '</div></div>'+
+      '<div style="text-align:right">'+
+      (pq&&pq.leiteTotal?'<div style="font-size:20px;font-weight:900;color:'+cor+'">'+Number(pq.leiteTotal).toFixed(0)+' L</div><div style="font-size:10px;color:#9ca3af">leite usado</div>':'')+
+      '</div></div></div>';
+
+    // ── SECÇÃO PRODUÇÃO ──
+    if(pq) {
+      var p=pq.passos||{};
+      var leite=Number(pq.leiteTotal||0);
+      var salKg=0,cardoKg=0;
+      if(tipo==='ovelha'){salKg=leite*0.007;cardoKg=leite*0.0007;}
+      else if(tipo==='dop'){salKg=leite*0.001;cardoKg=leite*0.00036;}
+      else if(tipo==='cabra'){salKg=leite*0.007;}
+      var qtdF=Number(pq.qtd||pq._tempQtd||0);
+      var pesoF=Number(pq.peso||pq._tempPeso||0);
+      var emCurso=pq.estado==='em_curso';
+
+      html+='<div style="padding:14px 18px;border-bottom:2px solid #f3f4f6">';
+
+      // Título secção
+      html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'+
+        '<div style="width:28px;height:28px;background:'+cor+';border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px">\uD83C\uDFED</div>'+
+        '<div style="font-size:13px;font-weight:800;text-transform:uppercase;color:'+cor+';letter-spacing:.05em">Produção de Queijo</div>'+
+        (emCurso?'<span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">\u23F3 Em curso</span>':
+          '<span style="background:#dcfce7;color:#15803d;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:700">\u2713 Concluído</span>')+
+        '</div>';
+
+      // Linha 1: dados base
+      html+='<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:8px">'+
+        _rlCel('\uD83E\uDD5B Leite total', leite.toFixed(0)+' L')+
+        _rlCel('\uD83C\uDF21\uFE0F Temperatura', (pq.temperatura||'\u2014')+'°C')+
+        _rlCel('\uD83D\uDCC5 Data', pq.dataFormatada||'\u2014')+
+        _rlCel('\u23F1 Duração total', pq.horaInicio&&pq.horaFim?_rlDur(pq.horaInicio,pq.horaFim):'\u2014')+
+        '</div>';
+
+      // Lotes de leite usados
+      if(pq.lotesLeite&&pq.lotesLeite.length) {
+        html+='<div style="background:#f0f9ff;border-radius:8px;padding:8px 10px;margin-bottom:8px;font-size:11px;color:#0369a1">'+
+          '<span style="font-weight:700">\uD83E\uDD5B Lotes de leite: </span>';
+        pq.lotesLeite.forEach(function(ll,i) {
+          html+='<span style="background:white;border:1px solid #bae6fd;border-radius:5px;padding:1px 7px;margin:0 3px">'+(ll.label||ll.id)+' &bull; '+Number(ll.litros).toFixed(0)+' L</span>';
+        });
+        html+='</div>';
+      }
+
+      // Ingredientes sal/cardo
+      if(salKg>0) {
+        html+='<div style="display:grid;grid-template-columns:1fr'+(cardoKg>0?' 1fr':'')+';gap:8px;margin-bottom:10px">'+
+          '<div style="background:#fff1f2;border:1px solid #fecdd3;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px">'+
+          '<span style="font-size:20px">\uD83E\uDEC0</span>'+
+          '<div><div style="font-size:10px;font-weight:800;color:#9f1239;text-transform:uppercase">Sal</div>'+
+          '<div style="font-size:18px;font-weight:900;color:#e11d48">'+salKg.toFixed(2)+' <span style="font-size:12px">kg</span></div></div></div>'+
+          (cardoKg>0?
+            '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px">'+
+            '<span style="font-size:20px">\uD83C\uDF3F</span>'+
+            '<div><div style="font-size:10px;font-weight:800;color:#14532d;text-transform:uppercase">Cardo</div>'+
+            '<div style="font-size:18px;font-weight:900;color:#16a34a">'+cardoKg.toFixed(3)+' <span style="font-size:12px">kg</span></div></div></div>':'') +
+          '</div>';
+      }
+
+      // Passos de produção
+      html+='<div style="margin-bottom:10px">'+
+        '<div style="font-size:10px;font-weight:700;text-transform:uppercase;color:#9ca3af;margin-bottom:6px;letter-spacing:.05em">Linha do tempo</div>'+
+        '<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:6px">'+
+        _rlPasso('✂️','Corte da Coalhada',
+          p.corte?_rlH(p.corte):'\u2014',null,null,null,
+          p.corte?'#f0fdf4':'#f8fafc')+
+        _rlPasso('🫙','Enchimento de Formas',
+          p.enchimento_ini?_rlH(p.enchimento_ini):'\u2014',
+          p.enchimento_fim?_rlH(p.enchimento_fim):null,
+          p.enchimento_ini&&p.enchimento_fim?_rlDur(p.enchimento_ini,p.enchimento_fim):null,
+          p.enchimento_ini_pessoas||null,
+          p.enchimento_ini?'#f0fdf4':'#f8fafc')+
+        _rlPasso('🔄','Desmoldagem',
+          p.desmold?_rlH(p.desmold):'\u2014',null,null,
+          p.desmold_pessoas||null,
+          p.desmold?'#f0fdf4':'#f8fafc')+
+        _rlPasso(emCurso?'⏳':'✅',emCurso?'Em curso':'Conclusão',
+          emCurso?'Em curso':(pq.horaFim?_rlH(pq.horaFim):'\u2014'),null,
+          pq.horaInicio&&pq.horaFim?_rlDur(pq.horaInicio,pq.horaFim):null,null,
+          emCurso?'#fef3c7':'#f0fdf4')+
+        '</div></div>';
+
+      // Resultado final
+      if(!emCurso && (qtdF>0||pesoF>0)) {
+        html+='<div style="background:#1e3a5f;color:white;border-radius:10px;padding:12px 16px;'+
+          'display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">'+
+          '<div><div style="font-size:9px;opacity:.6;text-transform:uppercase;letter-spacing:.05em">Queijos</div>'+
+          '<div style="font-size:20px;font-weight:900">'+qtdF+'</div><div style="font-size:10px;opacity:.6">un</div></div>'+
+          '<div><div style="font-size:9px;opacity:.6;text-transform:uppercase;letter-spacing:.05em">Peso Final</div>'+
+          '<div style="font-size:20px;font-weight:900">'+(pesoF>0?pesoF.toFixed(1):'\u2014')+'</div><div style="font-size:10px;opacity:.6">kg</div></div>'+
+          '<div><div style="font-size:9px;opacity:.6;text-transform:uppercase;letter-spacing:.05em">Rend. Leite</div>'+
+          '<div style="font-size:20px;font-weight:900">'+(leite>0&&pesoF>0?((pesoF/leite)*100).toFixed(1)+'\u0025':'\u2014')+'</div><div style="font-size:10px;opacity:.6">de '+leite.toFixed(0)+'L</div></div>'+
+          '<div><div style="font-size:9px;opacity:.6;text-transform:uppercase;letter-spacing:.05em">Kg/queijo</div>'+
+          '<div style="font-size:20px;font-weight:900">'+(qtdF>0&&pesoF>0?(pesoF/qtdF).toFixed(2):'\u2014')+'</div><div style="font-size:10px;opacity:.6">kg médio</div></div>'+
+          '</div>';
+      }
+
+      html+='</div>'; // fim secção produção
+    }
+
+    // ── SECÇÃO CURA E LAVAGEM ──
+    if(cams.length) {
+      html+='<div style="padding:14px 18px">';
+      html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'+
+        '<div style="width:28px;height:28px;background:#0e7490;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px">\uD83C\uDFED</div>'+
+        '<div style="font-size:13px;font-weight:800;text-transform:uppercase;color:#0e7490;letter-spacing:.05em">Cura e Lavagem</div>'+
+        '</div>';
+
+      // Calcular peso de entrada em C1 para perda total
+      var pesoC1=null, qtdC1=null;
+      cams.forEach(function(l) {
+        if(l.camara===1 && l.operacao!=='lavagem' && !pesoC1) {
+          pesoC1=l.pesoOriginal||l.peso||null;
+          qtdC1=l.qtdOriginal||l.qtd||null;
+        }
+      });
+
+      cams.forEach(function(l, ci) {
+        var lavs=l.lavagens||[];
+        var pesoEnt=Number(l.pesoOriginal||l.peso||0);
+        var qtdEnt=Number(l.qtdOriginal||l.qtd||0);
+        var camN=l.camara;
+
+        html+='<div style="border:1px solid #e5e7eb;border-radius:12px;margin-bottom:10px;overflow:hidden">';
+
+        // Cabeçalho câmara
+        html+='<div style="background:#f8fafc;border-bottom:1px solid #e5e7eb;padding:10px 14px;display:flex;justify-content:space-between;align-items:center">'+
+          '<div style="font-weight:800;font-size:13px;color:#1e3a5f">'+
+          'Câmara '+camN+
+          (l.operacao==='lavagem'?
+            ' <span style="font-size:11px;background:#ecfeff;color:#0e7490;border:1px solid #a5f3fc;border-radius:5px;padding:1px 6px;margin-left:4px">\uD83E\uDDFC após lavagem</span>':'') +
+          '</div>'+
+          '<div style="font-size:12px;color:#9ca3af">'+(l.dataFormatada||'\u2014')+'</div></div>';
+
+        // Dados de entrada na câmara
+        html+='<div style="padding:10px 14px">'+
+          '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:'+(lavs.length?'12':'0')+'px">'+
+          _rlCel('Unidades', qtdEnt)+
+          _rlCel('Peso entrada', pesoEnt>0?pesoEnt.toFixed(1)+' kg':'\u2014')+
+          _rlCel('Origem', l.origemCamara?'Câmara '+l.origemCamara:'Directo')+
+          '</div>';
+
+        // Lavagens
+        if(lavs.length) {
+          lavs.forEach(function(lav,li) {
+            var dur=_rlDur(lav.horaInicio,lav.horaFim);
+            var pK='',pP='';
+            if(pesoEnt>0&&lav.kgTransferidos>0) {
+              var pp=pesoEnt-Number(lav.kgTransferidos);
+              pK=pp.toFixed(2)+' kg';
+              pP=((pp/pesoEnt)*100).toFixed(1)+'%';
+            }
+            var pKqt='';
+            if(qtdEnt>0&&lav.qtdTransferida>0&&qtdEnt>lav.qtdTransferida) {
+              pKqt=(qtdEnt-lav.qtdTransferida)+' un';
+            }
+
+            html+='<div style="background:#f0fdfe;border:1px solid #a5f3fc;border-radius:9px;padding:10px 12px;margin-bottom:8px">';
+            html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'+
+              '<div style="font-size:12px;font-weight:800;color:#0e7490">\uD83E\uDDFC Lavagem '+(li+1)+'</div>'+
+              (lav.camaraDestino?'<div style="font-size:11px;color:#6b7280;background:white;border:1px solid #e5e7eb;border-radius:5px;padding:2px 8px">\u2192 Câmara '+lav.camaraDestino+'</div>':'')+
+              '</div>';
+
+            // Grid de tempos e pessoas
+            html+='<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:5px;margin-bottom:6px">'+
+              _rlCelS('Início',_rlH(lav.horaInicio))+
+              _rlCelS('Fim',_rlH(lav.horaFim))+
+              _rlCelS('Duração',dur)+
+              _rlCelS('Pessoas',lav.numPessoas||'\u2014')+
+              _rlCelS('Un. transferidas',(lav.qtdTransferida||'\u2014')+(pKqt?' (-'+pKqt+')':''))+
+              _rlCelS('Kg transferidos',lav.kgTransferidos?Number(lav.kgTransferidos).toFixed(1)+' kg':'\u2014')+
+              '</div>';
+
+            // Perdas destacadas
+            if(pK||pP) {
+              html+='<div style="background:#fee2e2;border:1px solid #fecaca;border-radius:7px;padding:7px 10px;display:grid;grid-template-columns:1fr 1fr;gap:6px">'+
+                '<div><div style="font-size:10px;color:#991b1b;font-weight:700;text-transform:uppercase">\u2193 Perda em peso</div>'+
+                '<div style="font-size:15px;font-weight:900;color:#dc2626">'+pK+'</div></div>'+
+                '<div><div style="font-size:10px;color:#991b1b;font-weight:700;text-transform:uppercase">\u2193 Perda %</div>'+
+                '<div style="font-size:15px;font-weight:900;color:#dc2626">'+pP+'</div></div>'+
+                '</div>';
+            }
+            html+='</div>'; // fim lavagem
+          });
+        }
+
+        html+='</div></div>'; // fim dados + card câmara
+      });
+
+      // Resumo de perdas totais (C1 → actual)
+      if(pesoC1&&cams.length>1) {
+        var ultCam=cams[cams.length-1];
+        var pesoFinal=Number(ultCam.peso||0);
+        if(pesoC1>0&&pesoFinal>0) {
+          var ptK=pesoC1-pesoFinal, ptP=(ptK/pesoC1)*100;
+          var qtdFinal=Number(ultCam.qtd||0);
+          var ptQtd=qtdC1&&qtdFinal?qtdC1-qtdFinal:null;
+          html+='<div style="background:linear-gradient(135deg,#1e3a5f,#2d5282);color:white;border-radius:12px;padding:12px 16px;margin-top:4px">'+
+            '<div style="font-size:11px;font-weight:700;text-transform:uppercase;opacity:.7;margin-bottom:8px;letter-spacing:.05em">Perdas Totais (C1 \u2192 câmara actual)</div>'+
+            '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center">'+
+            '<div><div style="font-size:9px;opacity:.6">Peso entrada C1</div><div style="font-size:16px;font-weight:900">'+pesoC1.toFixed(1)+'</div><div style="font-size:10px;opacity:.6">kg</div></div>'+
+            '<div><div style="font-size:9px;opacity:.6">Peso actual</div><div style="font-size:16px;font-weight:900">'+pesoFinal.toFixed(1)+'</div><div style="font-size:10px;opacity:.6">kg</div></div>'+
+            '<div><div style="font-size:9px;opacity:.6">Perda total</div><div style="font-size:16px;font-weight:900;color:#fca5a5">'+ptK.toFixed(2)+'</div><div style="font-size:10px;opacity:.6">kg</div></div>'+
+            '<div><div style="font-size:9px;opacity:.6">Perda %</div><div style="font-size:16px;font-weight:900;color:#fca5a5">'+ptP.toFixed(1)+'%</div><div style="font-size:10px;opacity:.6">'+(ptQtd!==null&&ptQtd>0?'-'+ptQtd+' un':'')+'</div></div>'+
+            '</div></div>';
+        }
+      }
+
+      html+='</div>'; // fim secção cura
+    }
+
+    html+='</div>'; // fim card lote
+  });
+
+  return html || '<div style="text-align:center;padding:32px;color:#6b7280">Nenhum lote encontrado</div>';
+}
+
+// ── Export XLSX ────────────────────────────────────────────
+function _rlXLSX(porLote) {
+  var rows=[['Lote','Tipo','Referência','Data','Leite (L)','Temp °C',
+    'Corte','Ench. Início','Ench. Fim','Ench. Duração','Ench. Pessoas',
+    'Desmold.','Desmold. Pessoas','Duração Total',
+    'Queijos (un)','Peso Final (kg)','Rend. %','Kg/queijo',
+    'Sal (kg)','Cardo (kg)',
+    'Câmara','Data Câmara','Peso Entrada (kg)','Qtd Entrada',
+    'Origem','Lav. Nº','Lav. Início','Lav. Fim','Lav. Duração',
+    'Lav. Pessoas','Lav. Un. Transf.','Lav. Kg Transf.',
+    'Perda Kg','Perda %','Destino']];
+
+  Object.keys(porLote).sort().forEach(function(loteNum) {
+    var d=porLote[loteNum], pq=d.pq, cams=d.camaras;
+    var p=pq?(pq.passos||{}):{};
+    var tipo=pq?pq.tipo:'', leite=Number(pq?pq.leiteTotal||0:0);
+    var qtdF=Number(pq?pq.qtd||pq._tempQtd||0:0);
+    var pesoF=Number(pq?pq.peso||pq._tempPeso||0:0);
+    var sK=0,cK=0;
+    if(tipo==='ovelha'){sK=leite*0.007;cK=leite*0.0007;}
+    else if(tipo==='dop'){sK=leite*0.001;cK=leite*0.00036;}
+    else if(tipo==='cabra'){sK=leite*0.007;}
+
+    var base=[loteNum,tipo,pq?pq.referencia||'':'',pq?pq.dataFormatada||'':'',
+      leite,pq?pq.temperatura||'':'',
+      p.corte?_rlH(p.corte):'',
+      p.enchimento_ini?_rlH(p.enchimento_ini):'',
+      p.enchimento_fim?_rlH(p.enchimento_fim):'',
+      _rlDur(p.enchimento_ini,p.enchimento_fim),
+      p.enchimento_ini_pessoas||'',
+      p.desmold?_rlH(p.desmold):'',
+      p.desmold_pessoas||'',
+      pq&&pq.horaInicio&&pq.horaFim?_rlDur(pq.horaInicio,pq.horaFim):'',
+      qtdF||'', pesoF||'',
+      leite>0&&pesoF>0?((pesoF/leite)*100).toFixed(1)+'%':'',
+      qtdF>0&&pesoF>0?(pesoF/qtdF).toFixed(2):'',
+      sK?sK.toFixed(2):'', cK?cK.toFixed(3):''];
+
+    if(!cams.length) {
+      rows.push(base.concat(['','','','','','','','','','','','','','']));
+    } else {
+      cams.forEach(function(l) {
+        var pE=Number(l.pesoOriginal||l.peso||0);
+        var qE=Number(l.qtdOriginal||l.qtd||0);
+        var lavs=l.lavagens||[];
+        if(!lavs.length) {
+          rows.push(base.concat([l.camara,l.dataFormatada||'',pE,qE,
+            l.origemCamara?'C'+l.origemCamara:'Directo','','','','','','','','','','']));
+        } else {
+          lavs.forEach(function(lav,li) {
+            var pK='',pP='';
+            if(pE>0&&lav.kgTransferidos>0){
+              var pp=pE-Number(lav.kgTransferidos);
+              pK=pp.toFixed(2); pP=((pp/pE)*100).toFixed(1)+'%';
+            }
+            rows.push(base.concat([l.camara,l.dataFormatada||'',pE,qE,
+              l.origemCamara?'C'+l.origemCamara:'Directo',
+              li+1, _rlH(lav.horaInicio), _rlH(lav.horaFim),
+              _rlDur(lav.horaInicio,lav.horaFim),
+              lav.numPessoas||'', lav.qtdTransferida||'',
+              lav.kgTransferidos||'', pK, pP,
+              lav.camaraDestino?'C'+lav.camaraDestino:'']));
+          });
+        }
+      });
+    }
+  });
+  exportXLSX(rows,'historico_lotes_'+new Date().toISOString().slice(0,10)+'.xlsx','historico');
 }
 </script>
 </body>
