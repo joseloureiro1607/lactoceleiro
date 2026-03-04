@@ -1350,7 +1350,20 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
       <div class="status" id="status-c5outro"></div>
     </div>
 
-    <!-- ENCOMENDAS HUB -->
+        <!-- LAVAGEM: SELECCIONAR CÂMARA/LOTE -->
+    <div class="screen" id="screen-sel-camara-lavagem">
+      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-cura')">Cura</span> <span>›</span> <strong>Lavagem</strong></div>
+      <div style="background:linear-gradient(135deg,#0e7490,#0891b2);border-radius:14px;padding:14px 16px;margin-bottom:16px;color:white">
+        <div style="font-size:11px;opacity:0.7;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Seleccionar</div>
+        <div style="font-size:16px;font-weight:700">🧼 Qual lote lavar?</div>
+      </div>
+      <div id="sel-camara-lav-lista"></div>
+      <div style="margin-top:12px">
+        <button class="btn-back" onclick="irPara('screen-cura')">← Voltar</button>
+      </div>
+    </div>
+
+<!-- ENCOMENDAS HUB -->
     <div class="screen" id="screen-enc-hub">
       <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <strong>Encomendas</strong></div>
       <div style="background:linear-gradient(135deg,#6d28d9,#7c3aed);border-radius:16px;padding:14px 16px;margin-bottom:16px;color:white">
@@ -4483,6 +4496,8 @@ function renderizarSelecaoLeite(tipo) {
           '</div>'
         : '') +
         '</div>' +
+        '<button type="button" onclick="iniciarProducaoQueijo()" ' +
+        'style="width:100%;margin-top:10px;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer">✓ OK — Confirmar ingredientes</button>' +
         '</div>';
     }
 
@@ -5063,7 +5078,7 @@ function pedirPessoasPQ(passo) {
     '<div style="font-size:15px;font-weight:800;color:#1e3a5f;margin-bottom:14px">' + (nomes[passo]||passo) + ' \u2014 N.\u00BA de Pessoas</div>' +
     '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
     '<button type="button" onclick="_pqNpMenos()" style="width:44px;height:44px;font-size:24px;border:2px solid #e5e7eb;border-radius:10px;background:#f9fafb;cursor:pointer">\u2212</button>' +
-    '<input type="number" id="pq-np-val" value="2" min="1" max="20" style="flex:1;font-size:28px;font-weight:800;text-align:center;border:2px solid #1e3a5f;border-radius:10px;padding:10px;color:#1e3a5f">' +
+    '<input type="number" id="pq-np-val" value="" min="1" max="20" style="flex:1;font-size:28px;font-weight:800;text-align:center;border:2px solid #1e3a5f;border-radius:10px;padding:10px;color:#1e3a5f">' +
     '<button type="button" onclick="_pqNpMais()" style="width:44px;height:44px;font-size:24px;border:2px solid #e5e7eb;border-radius:10px;background:#f9fafb;cursor:pointer">+</button>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
@@ -8811,7 +8826,7 @@ function _pedirPessoasLavagem(lote) {
     '<div style="font-size:15px;font-weight:800;color:#0e7490;margin-bottom:14px">\uD83E\uDDFC Lavagem &mdash; ' + lote.lote + '<br><span style="font-size:13px;font-weight:600;color:#6b7280">N.\u00BA de Pessoas</span></div>' +
     '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
     '<button type="button" onclick="_pqNpMenos()" style="width:44px;height:44px;font-size:24px;border:2px solid #e5e7eb;border-radius:10px;background:#f9fafb;cursor:pointer">\u2212</button>' +
-    '<input type="number" id="pq-np-val" value="2" min="1" max="20" style="flex:1;font-size:28px;font-weight:800;text-align:center;border:2px solid #0e7490;border-radius:10px;padding:10px;color:#0e7490">' +
+    '<input type="number" id="pq-np-val" value="" min="1" max="20" style="flex:1;font-size:28px;font-weight:800;text-align:center;border:2px solid #0e7490;border-radius:10px;padding:10px;color:#0e7490">' +
     '<button type="button" onclick="_pqNpMais()" style="width:44px;height:44px;font-size:24px;border:2px solid #e5e7eb;border-radius:10px;background:#f9fafb;cursor:pointer">+</button>' +
     '</div>' +
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
@@ -8927,7 +8942,37 @@ function confirmarFimLavagem() {
 // NAVEGAÇÃO CURA
 // ─────────────────────────────────────────────────────────────
 function abrirTransferenciaCamaras() { irPara('screen-transferencia'); }
-function abrirLavagemSelCamara()     { irPara('screen-cura'); }
+function abrirLavagemSelCamara() {
+  // Mostrar ecrã de selecção de câmara para lavagem
+  irPara('screen-sel-camara-lavagem');
+  // Renderizar câmaras com lotes disponíveis
+  var e = getEstado();
+  var el = document.getElementById('sel-camara-lav-lista');
+  if (!el) return;
+  var cores = {1:'#1e40af',2:'#1e40af',3:'#15803d',4:'#92400e',5:'#7f1d1d'};
+  var bgs   = {1:'#dbeafe',2:'#dbeafe',3:'#dcfce7',4:'#fef3c7',5:'#fff1f2'};
+  var html = '';
+  for (var c = 1; c <= 5; c++) {
+    var lotes = (e[c]||[]).filter(function(l){ return l.qtd > 0; });
+    if (!lotes.length) continue;
+    html += '<div style="margin-bottom:12px">' +
+      '<div style="font-size:12px;font-weight:800;text-transform:uppercase;color:' + cores[c] + ';margin-bottom:6px">Câmara ' + c + ' — ' + lotes.length + ' lote(s)</div>';
+    lotes.forEach(function(l, idx) {
+      var nLav = (l.lavagens||[]).length;
+      html += '<div onclick="abrirDetalhesLote(' + c + ',' + (e[c]||[]).indexOf(l) + ')" ' +
+        'style="background:' + bgs[c] + ';border:2px solid #e5e7eb;border-radius:12px;padding:12px 14px;cursor:pointer;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">' +
+        '<div>' +
+        '<div style="font-weight:800;font-size:15px;color:' + cores[c] + '">' + l.lote + '</div>' +
+        '<div style="font-size:11px;color:#9ca3af">' + (l.dataFormatada||'') + (nLav ? ' · 🧼 ' + nLav + ' lav.' : '') + '</div>' +
+        '</div>' +
+        '<span style="font-size:13px;font-weight:700;color:' + cores[c] + '">' + l.qtd + ' un →</span>' +
+        '</div>';
+    });
+    html += '</div>';
+  }
+  if (!html) html = '<div style="text-align:center;color:#6b7280;padding:24px">Sem lotes nas câmaras</div>';
+  el.innerHTML = html;
+}
 
 // ─────────────────────────────────────────────────────────────
 // EDITAR LAVAGEM (admin)
