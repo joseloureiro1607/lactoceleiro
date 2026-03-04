@@ -4380,8 +4380,8 @@ function getLotesLeiteDisponiveis(tipo) {
       });
     });
 
-  // Descontar o que foi usado em produções anteriores
-  getProdutosQueijo().forEach(p => {
+  // Descontar o que foi usado em produções terminadas E em curso
+  [...getProdutosQueijo(), ...getProdEmCurso()].forEach(p => {
     if (!p.lotesLeite) return;
     p.lotesLeite.forEach(ul => {
       const lote = lotes.find(l => l.id === ul.id);
@@ -4613,32 +4613,37 @@ var pqLoteAceite = false;    // true se aceitou a sugestão
 
 // --- CALCULAR PRÓXIMO LOTE --
 function calcularProximoLote(codigoArtigo) {
-  const ano = String(new Date().getFullYear()).slice(-2); // '26', '27', etc.
+  const ano = String(new Date().getFullYear()).slice(-2);
   const prefixo = ano + codigoArtigo; // ex: '261', '263', '265'
 
-  // Procurar todos os lotes registados deste tipo
-  const todos = getProdutosQueijo();
-  const desteTipo = todos
+  const numeros = [];
+
+  // Histórico de produções terminadas
+  getProdutosQueijo()
     .map(r => String(r.lote || ''))
     .filter(l => l.startsWith(prefixo) && l.length === 6)
-    .map(l => parseInt(l.slice(3)))
-    .filter(n => !isNaN(n));
+    .forEach(l => { const n = parseInt(l.slice(3)); if (!isNaN(n)) numeros.push(n); });
 
-  // Também ver lotes no histórico de câmaras
+  // Produções em curso — IMPORTANTE: já ocupam o lote mesmo sem terminar
+  getProdEmCurso()
+    .map(r => String(r.lote || ''))
+    .filter(l => l.startsWith(prefixo) && l.length === 6)
+    .forEach(l => { const n = parseInt(l.slice(3)); if (!isNaN(n)) numeros.push(n); });
+
+  // Lotes nas câmaras de cura
   const estado = getEstado();
   [1,2,3,4,5].forEach(c => {
     (estado[c] || []).forEach(l => {
       const ls = String(l.lote || '');
       if (ls.startsWith(prefixo) && ls.length === 6) {
         const n = parseInt(ls.slice(3));
-        if (!isNaN(n)) desteTipo.push(n);
+        if (!isNaN(n)) numeros.push(n);
       }
     });
   });
 
-  if (!desteTipo.length) return prefixo + '001';
-  const max = Math.max(...desteTipo);
-  return prefixo + String(max + 1).padStart(3, '0');
+  if (!numeros.length) return prefixo + '001';
+  return prefixo + String(Math.max(...numeros) + 1).padStart(3, '0');
 }
 
 // --- SELECIONAR TIPO --
