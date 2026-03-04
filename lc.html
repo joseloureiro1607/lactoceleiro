@@ -7436,7 +7436,7 @@ const PERFIS = {
   expedicao:  { label:"Expedição",     areas:["encomendas","criar-enc","exportar-enc"] },
 };
 
-let _utilizadorAtual = null;
+var _utilizadorAtual = null;
 var _PIN_BUF = ''; // PIN buffer
 
 // === SISTEMA DE LOGIN ===
@@ -7504,7 +7504,7 @@ window.voltarLogin = function() {
   var er = document.getElementById('login-erro'); if (er) er.textContent = '';
 };
 
-let _utilizadorSelecionado = null;
+var _utilizadorSelecionado = null;
 
 function getUtilizadores() {
   try {
