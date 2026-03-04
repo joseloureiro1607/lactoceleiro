@@ -4425,6 +4425,38 @@ function renderizarSelecaoLeite(tipo) {
       '<span style="font-size:18px;font-weight:800;font-family:\'DM Mono\',monospace">' + totalSel.toFixed(0) + ' L</span>' +
       '</div>';
 
+    // --- CAIXA SAL / CARDO ---
+    var salGr = null, cardoGr = null;
+    if (tipo === 'ovelha') {
+      salGr   = totalSel * 0.007;   // 0,7%
+      cardoGr = totalSel * 0.0007;  // 0,07%
+    } else if (tipo === 'dop') {
+      salGr   = totalSel * 0.001;   // 0,1%
+      cardoGr = totalSel * 0.00036; // 0,036%
+    } else if (tipo === 'cabra') {
+      salGr   = totalSel * 0.007;   // 0,7%
+    }
+
+    if (salGr !== null) {
+      html += '<div style="background:#fffbeb;border:2px solid #fcd34d;border-radius:12px;padding:12px 16px;margin-bottom:12px">' +
+        '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#92400e;margin-bottom:10px">🧂 Ingredientes para ' + totalSel.toFixed(0) + ' L</div>' +
+        '<div style="display:grid;grid-template-columns:1fr ' + (cardoGr !== null ? '1fr' : '') + ';gap:10px">' +
+        '<div style="background:white;border:2px solid #fcd34d;border-radius:10px;padding:10px;text-align:center">' +
+        '<div style="font-size:11px;color:#92400e;font-weight:700;margin-bottom:4px">🧂 SAL</div>' +
+        '<div style="font-size:22px;font-weight:800;color:#92400e;font-family:\'DM Mono\',monospace">' + salGr.toFixed(1) + '</div>' +
+        '<div style="font-size:11px;color:#b45309;font-weight:600">gramas</div>' +
+        '</div>' +
+        (cardoGr !== null ?
+          '<div style="background:white;border:2px solid #fcd34d;border-radius:10px;padding:10px;text-align:center">' +
+          '<div style="font-size:11px;color:#92400e;font-weight:700;margin-bottom:4px">🌿 CARDO</div>' +
+          '<div style="font-size:22px;font-weight:800;color:#92400e;font-family:\'DM Mono\',monospace">' + cardoGr.toFixed(2) + '</div>' +
+          '<div style="font-size:11px;color:#b45309;font-weight:600">gramas</div>' +
+          '</div>'
+        : '') +
+        '</div>' +
+        '</div>';
+    }
+
     // Lista de cada lote selecionado
     pqLotesSelecionados.forEach((sel, idx) => {
       html += '<div style="display:flex;gap:8px;align-items:center;background:white;border:2px solid ' + leiteBrd + ';border-radius:10px;padding:8px 12px;margin-bottom:6px">' +
@@ -4574,9 +4606,8 @@ function fecharConfirmLote() {
 function atualizarLitrosLote(idx, val) {
   const v = parseFloat(val) || 0;
   pqLotesSelecionados[idx].litrosUsados = Math.min(v, pqLotesSelecionados[idx].litrosRestantes);
-  const totalSel = pqLotesSelecionados.reduce((s,l) => s + (l.litrosUsados||0), 0);
-  const els = document.querySelectorAll('#pq-leite-stock-box [style*="text-align:right"]');
-  els.forEach(el => { el.innerHTML = 'Total usado: <strong>' + totalSel.toFixed(0) + ' L</strong>'; });
+  // Redesenhar para actualizar sal/cardo com novos litros
+  renderizarSelecaoLeite(pqTipoAtual);
 }
 
 function removerLoteLeite(idx) {
