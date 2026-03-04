@@ -7161,6 +7161,8 @@ window.addEventListener('DOMContentLoaded', () => {
     localStorage.removeItem('lc_utilizadores_v1');
   }
   renderizarListaUtilizadores();
+  // Repor ecrã de login ao estado inicial (lista de utilizadores)
+  if (typeof lcVoltar === 'function') lcVoltar();
   irPara('screen-login');
 });
 window.addEventListener('load', () => {
@@ -7669,18 +7671,25 @@ function sair() {
   _utilizadorAtual = null;
   _utilizadorSelecionado = null;
   _PIN_BUF = '';
-  // Esconder header-user e admin
-  const headerUser = document.getElementById('header-user');
+  // Esconder header
+  var headerUser = document.getElementById('header-user');
   if (headerUser) headerUser.style.display = 'none';
-  const btnAdmin = document.getElementById('btn-admin');
+  var btnAdmin = document.getElementById('btn-admin');
   if (btnAdmin) btnAdmin.style.display = 'none';
-  // Garantir que volta à lista (não ao PIN)
-  const pinArea = document.getElementById('login-pin-area');
-  const userList = document.getElementById('login-user-list');
+  // Repor ecrã de login (IDs novos: lc-*)
+  var pinArea = document.getElementById('lc-pin-area');
+  var userList = document.getElementById('lc-user-list');
+  var okBtn = document.getElementById('lc-ok');
+  var erroEl = document.getElementById('lc-erro');
   if (pinArea) pinArea.style.display = 'none';
-  if (userList) userList.style.display = 'flex';
-  atualizarDotsPIN();
-  renderizarListaUtilizadores();
+  if (userList) userList.style.display = 'block';
+  if (okBtn) okBtn.style.display = 'none';
+  if (erroEl) erroEl.textContent = '';
+  // Repor dots
+  for (var i = 1; i <= 4; i++) {
+    var d = document.getElementById('lc-d' + i);
+    if (d) d.style.background = '#e5e7eb';
+  }
   irPara('screen-login');
 }
 
