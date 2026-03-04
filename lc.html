@@ -1172,29 +1172,94 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <div style="font-size:17px;font-weight:700">🏭 Cura e Lavagem</div>
       </div>
       <div class="main-btns">
-        <button class="main-btn main-btn-entrada" onclick="irPara('screen-entrada-camara')">
-          <span class="icon">📥</span>ENTRADAS
+        <button class="main-btn main-btn-entrada" onclick="abrirTransferenciaCamaras()">
+          <span class="icon">🔄</span>TRANSFERÊNCIA<br><small style="font-size:10px;opacity:0.8">entre câmaras</small>
+        </button>
+        <button class="main-btn" style="background:linear-gradient(135deg,#0e7490,#0891b2);color:white" onclick="abrirLavagemSelCamara()">
+          <span class="icon">🧼</span>LAVAGEM
         </button>
         <button class="main-btn main-btn-congel" onclick="irParaCongelacao()">
           <span class="icon">🧊</span>CONGELAÇÃO
         </button>
       </div>
-
       <div class="divider"></div>
-      <div class="section-title">Estado das Câmaras</div>
+      <div class="section-title">Estado das Câmaras — toque para ver</div>
       <div class="camaras-resumo" id="resumoCamaras"></div>
       <div style="margin-top:20px">
         <button class="btn-back" onclick="irPara('screen-home')">← Voltar ao Início</button>
       </div>
     </div>
 
-    <!-- ══════════════════════════════ -->
-    <!-- ENTRADAS: ESCOLHER CÂMARA -->
-    <!-- ══════════════════════════════ -->
-    <div class="screen" id="screen-entrada-camara">
-      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <strong>Entradas</strong></div>
-      <div class="step-badge entrada">📥 Entrada de lote</div>
-      <div class="section-title">Selecionar Câmara</div>
+    <!-- CURA: CONTEÚDO DE UMA CÂMARA -->
+    <div class="screen" id="screen-camara-detalhe">
+      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-cura')">Cura</span> <span>›</span> <strong id="bc-camara-detalhe">Câmara 1</strong></div>
+      <div id="camara-detalhe-header" style="border-radius:14px;padding:14px 16px;margin-bottom:16px;border:2px solid #bae6fd;background:#f0f9ff"></div>
+      <div class="section-title">Lotes na câmara</div>
+      <div id="camara-detalhe-lista"></div>
+      <div style="margin-top:12px;display:flex;gap:8px">
+        <button class="btn-back" style="flex:1" onclick="irPara('screen-cura')">← Voltar</button>
+        <button class="btn-back" onclick="irPara('screen-home')" style="width:48px;flex-shrink:0;font-size:18px;padding:10px">🏠</button>
+      </div>
+    </div>
+
+    <!-- CURA: DETALHE DE UM LOTE -->
+    <div class="screen" id="screen-lote-detalhe">
+      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-cura')">Cura</span> <span>›</span> <span class="bc-link" id="bc-lote-camara" onclick="voltarDetalhesCamara()">Câmara</span> <span>›</span> <strong id="bc-lote-detalhe">Lote</strong></div>
+      <div id="lote-detalhe-header" style="background:#f0fdf4;border:2px solid #86efac;border-radius:14px;padding:14px 16px;margin-bottom:16px"></div>
+      <div id="lote-detalhe-lavagens"></div>
+      <button id="btn-iniciar-lavagem" class="btn-primary" style="background:#0e7490;margin-top:8px" onclick="iniciarLavagemLote()">🧼 Iniciar Lavagem</button>
+      <div style="margin-top:8px;display:flex;gap:8px">
+        <button class="btn-back" style="flex:1" onclick="voltarDetalhesCamara()">← Voltar</button>
+        <button class="btn-back" onclick="irPara('screen-home')" style="width:48px;flex-shrink:0;font-size:18px;padding:10px">🏠</button>
+      </div>
+      <div class="status" id="status-lote-detalhe"></div>
+    </div>
+
+    <!-- LAVAGEM EM CURSO -->
+    <div class="screen" id="screen-lavagem-em-curso">
+      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-cura')">Cura</span> <span>›</span> <strong>Lavagem em Curso</strong></div>
+      <div id="lavagem-header" style="background:#ecfeff;border:2px solid #67e8f9;border-radius:14px;padding:14px 16px;margin-bottom:16px"></div>
+      <div class="pq-passo-card active" style="border-color:#0e7490">
+        <div class="pq-passo-header">
+          <div class="pq-passo-num" style="background:#0e7490">🧼</div>
+          <div class="pq-passo-info">
+            <div class="pq-passo-nome">Lavagem em curso</div>
+            <div class="pq-passo-hora" id="lavagem-hora-inicio">▶ —</div>
+          </div>
+          <button class="pq-passo-btn" style="background:#dc2626" onclick="terminarLavagem()">Fim</button>
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <button class="btn-back" onclick="irPara('screen-lote-detalhe')">← Cancelar</button>
+      </div>
+    </div>
+
+    <!-- LAVAGEM: FINALIZAR -->
+    <div class="screen" id="screen-lavagem-fim">
+      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-cura')">Cura</span> <span>›</span> <strong>Finalizar Lavagem</strong></div>
+      <div id="lavagem-fim-header" style="background:#f0fdf4;border:2px solid #86efac;border-radius:14px;padding:14px 16px;margin-bottom:16px"></div>
+      <div class="section-title">Transferir para câmara</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px">
+        <button type="button" onclick="selecionarCamaraDestino(1)" id="btn-dest-1" class="camara-btn"><span class="cb-num">1</span></button>
+        <button type="button" onclick="selecionarCamaraDestino(2)" id="btn-dest-2" class="camara-btn"><span class="cb-num">2</span></button>
+        <button type="button" onclick="selecionarCamaraDestino(3)" id="btn-dest-3" class="camara-btn"><span class="cb-num">3</span></button>
+        <button type="button" onclick="selecionarCamaraDestino(4)" id="btn-dest-4" class="camara-btn" style="border-color:#d97706;background:#fffbeb"><span class="cb-num" style="color:#92400e">4</span></button>
+        <button type="button" onclick="selecionarCamaraDestino(5)" id="btn-dest-5" class="camara-btn" style="border-color:#7f1d1d;background:#fff1f2"><span class="cb-num" style="color:#7f1d1d">5</span></button>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Unidades</label><input type="number" id="lavagem-fim-qtd" class="big" placeholder="0" min="1"></div>
+        <div class="form-group"><label>Peso (kg)</label><input type="number" id="lavagem-fim-kg" class="big" placeholder="0.0" step="0.1" min="0"></div>
+      </div>
+      <button class="btn-primary" style="background:#15803d" onclick="confirmarFimLavagem()">✓ Concluir Lavagem</button>
+      <button class="btn-back" onclick="irPara('screen-lavagem-em-curso')">← Voltar</button>
+      <div class="status" id="status-lavagem-fim"></div>
+    </div>
+
+    <!-- TRANSFERÊNCIA: SELECCIONAR CÂMARA DESTINO -->
+    <div class="screen" id="screen-transferencia">
+      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-cura')">Cura</span> <span>›</span> <strong>Transferência</strong></div>
+      <div class="step-badge entrada">🔄 Transferência entre câmaras</div>
+      <div class="section-title">Câmara de destino</div>
       <div class="camara-btns" style="grid-template-columns:1fr 1fr 1fr 1fr 1fr">
         <button class="camara-btn" onclick="escolherEntradaCamara(1)"><span class="cb-num">1</span></button>
         <button class="camara-btn" onclick="escolherEntradaCamara(2)"><span class="cb-num">2</span></button>
@@ -1202,32 +1267,24 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <button class="camara-btn" style="border-color:#d97706;background:#fffbeb" onclick="escolherEntradaCamara(4)"><span class="cb-num" style="color:#92400e">4</span></button>
         <button class="camara-btn" style="border-color:#7f1d1d;background:#fff1f2" onclick="escolherEntradaCamara(5)"><span class="cb-num" style="color:#7f1d1d">5</span></button>
       </div>
-      <div style="display:flex;gap:8px;margin-top:4px"><button class="btn-back" onclick="voltarPagina()" style="flex:1">← Voltar</button><button class="btn-back" onclick="irPara('screen-home')" style="width:48px;flex-shrink:0;font-size:18px;padding:10px">🏠</button></div>
+      <div style="display:flex;gap:8px;margin-top:4px"><button class="btn-back" onclick="irPara('screen-cura')" style="flex:1">← Voltar</button></div>
     </div>
 
-    <!-- ══════════════════════════════ -->
-    <!-- ENTRADAS C1/C2: FORM DIRETO -->
-    <!-- ══════════════════════════════ -->
+    <!-- ENTRADAS C1/C2 -->
     <div class="screen" id="screen-entrada-c12">
-      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-entrada-camara')">Entradas</span> <span>›</span> <strong id="bc-c12">Câmara 1</strong></div>
+      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-transferencia')">Transferência</span> <span>›</span> <strong id="bc-c12">Câmara 1</strong></div>
       <div class="step-badge entrada">📥 Câmara <span id="badge-c12-num">1</span></div>
-      <div class="info-box">
-        📅 <div><strong id="c12-data-label">—</strong><br><span style="font-size:11px">Data preenchida automaticamente</span></div>
-      </div>
+      <div class="info-box">📅 <div><strong id="c12-data-label">—</strong><br><span style="font-size:11px">Data preenchida automaticamente</span></div></div>
       <div class="form-group"><label>Número do Lote</label>
         <div style="display:flex;gap:8px">
           <input type="text" id="c12-lote" placeholder="ex: 261001" autocomplete="off" oninput="verificarReferenciaLote()" onchange="verificarReferenciaLote()" onkeyup="verificarReferenciaLote()" style="flex:1">
-          <button type="button" onclick="verificarReferenciaLote()" style="padding:0 14px;border-radius:10px;border:2px solid #d1d5db;background:#f9fafb;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;color:#374151">OK</button>
+          <button type="button" onclick="verificarReferenciaLote()" style="padding:0 14px;border-radius:10px;border:2px solid #d1d5db;background:#f9fafb;font-size:13px;font-weight:600;cursor:pointer;color:#374151">OK</button>
         </div>
       </div>
-
-      <!-- Seletor de referência (aparece quando o 3º número do lote é 1 ou 3) -->
       <div id="c12-ref-group" style="display:none;margin-bottom:14px">
-        <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#374151;margin-bottom:8px;display:block" id="c12-ref-label">Referência do queijo</label>
+        <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#374151;margin-bottom:8px;display:block" id="c12-ref-label">Referência</label>
         <div id="c12-ref-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
-        <div id="c12-ref-outros-group" style="display:none;margin-top:10px">
-          <input type="text" id="c12-ref-outros-val" placeholder="Descreva a referência..." autocomplete="off" style="font-size:14px">
-        </div>
+        <div id="c12-ref-outros-group" style="display:none;margin-top:10px"><input type="text" id="c12-ref-outros-val" placeholder="Descreva a referência..." autocomplete="off" style="font-size:14px"></div>
         <div id="c12-ref-selecionado" style="display:none;margin-top:8px;font-size:12px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 10px;color:#15803d;font-weight:600"></div>
       </div>
       <div class="form-row">
@@ -1239,71 +1296,59 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
       <div class="status" id="status-c12"></div>
     </div>
 
-    <!-- ══════════════════════════════ -->
-    <!-- ENTRADAS C3/C4: LISTA LOTES DA CÂMARA ANTERIOR -->
-    <!-- ══════════════════════════════ -->
+    <!-- ENTRADAS C3/C4/C5: LISTA LOTES ORIGEM -->
     <div class="screen" id="screen-entrada-lista-lotes">
-      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-entrada-camara')">Entradas</span> <span>›</span> <strong id="bc-elotes">Câmara 3</strong></div>
-      <div class="step-badge entrada">📥 Câmara <span id="badge-elotes-num">3</span> — Selecionar lote de origem</div>
-      <div class="info-box aviso" id="elotes-origem-info">
-        ⚠️ <div><strong id="elotes-origem-texto">Lotes disponíveis na Câmara anterior</strong></div>
-      </div>
+      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-transferencia')">Transferência</span> <span>›</span> <strong id="bc-elotes">Câmara 3</strong></div>
+      <div class="step-badge entrada">📥 Câmara <span id="badge-elotes-num">3</span></div>
+      <div class="info-box aviso" id="elotes-origem-info">⚠️ <div><strong id="elotes-origem-texto">Lotes disponíveis</strong></div></div>
       <div class="lotes-list" id="lotes-origem-list"></div>
-      <!-- Só câmara 5 tem botão Outro -->
       <button class="btn-outro" id="btn-outro-c5" onclick="entradaC5Outro()" style="display:none">+ OUTRO (Cabra / direto)</button>
       <div style="display:flex;gap:8px;margin-top:4px"><button class="btn-back" onclick="voltarPagina()" style="flex:1">← Voltar</button><button class="btn-back" onclick="irPara('screen-home')" style="width:48px;flex-shrink:0;font-size:18px;padding:10px">🏠</button></div>
     </div>
 
-    <!-- ══════════════════════════════ -->
-    <!-- ENTRADAS C3/C4/C5: FORM COM LOTE ORIGEM -->
-    <!-- ══════════════════════════════ -->
+    <!-- ENTRADAS C3/C4/C5: FORM LOTE -->
     <div class="screen" id="screen-entrada-form-lote">
-      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-entrada-camara')">Entradas</span> <span>›</span> <span class="bc-link" onclick="voltarListaOrigem()">Lista</span> <span>›</span> <strong id="bc-eform">Câmara 3</strong></div>
-      <div class="step-badge entrada">📥 Entrada — Câmara <span id="badge-eform-num">3</span></div>
-
+      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-transferencia')">Transferência</span> <span>›</span> <span class="bc-link" onclick="voltarListaOrigem()">Lista</span> <span>›</span> <strong id="bc-eform">Câmara 3</strong></div>
+      <div class="step-badge entrada">📥 Câmara <span id="badge-eform-num">3</span></div>
       <div class="saida-lote-info" id="eform-origem-info">
         <div class="sl-label">Lote de origem</div>
         <div class="sl-lote" id="eform-lote-nome">—</div>
         <div class="sl-stock" id="eform-lote-stock">Disponível: —</div>
       </div>
-
-      <div class="form-group"><label>Quantidade a transferir (un)</label><input type="number" id="eform-qtd" class="big" placeholder="0" min="1"></div>
-      <button class="btn-primary" onclick="confirmarEntradaLote()">✓ Registar Entrada</button>
+      <div class="form-row">
+        <div class="form-group"><label>Quantidade (un)</label><input type="number" id="eform-qtd" class="big" placeholder="0" min="1"></div>
+        <div class="form-group"><label>Peso (kg)</label><input type="number" id="eform-kg" class="big" placeholder="0.0" step="0.1" min="0"></div>
+      </div>
+      <button class="btn-primary" onclick="confirmarEntradaLote()">✓ Registar Transferência</button>
       <button class="btn-back" onclick="voltarListaOrigem()">← Voltar</button>
       <div class="status" id="status-eform"></div>
     </div>
 
-    <!-- ══════════════════════════════ -->
-    <!-- ENTRADAS C5 OUTRO: form manual -->
-    <!-- ══════════════════════════════ -->
+    <!-- C5 OUTRO -->
     <div class="screen" id="screen-entrada-c5-outro">
-      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-entrada-camara')">Entradas</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-entrada-lista-lotes')">Lista</span> <span>›</span> <strong>Câmara 5 — Outro</strong></div>
+      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <span class="bc-link" onclick="irPara('screen-transferencia')">Transferência</span> <span>›</span> <strong>C5 Outro</strong></div>
       <div class="step-badge entrada">📥 Câmara 5 — Entrada manual</div>
-      <div class="info-box aviso">⚠️ <div>Use esta opção para queijo de cabra ou lotes que vêm diretamente para a Câmara 5</div></div>
+      <div class="info-box aviso">⚠️ <div>Queijo de cabra ou lotes diretos para Câmara 5</div></div>
       <div class="form-group"><label>Número do Lote</label>
         <div style="display:flex;gap:8px">
-          <input type="text" id="c5outro-lote" placeholder="ex: 263001" autocomplete="off" oninput="verificarReferenciaC5Outro()" onchange="verificarReferenciaC5Outro()" onkeyup="verificarReferenciaC5Outro()" style="flex:1">
-          <button type="button" onclick="verificarReferenciaC5Outro()" style="padding:0 14px;border-radius:10px;border:2px solid #d1d5db;background:#f9fafb;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;color:#374151">OK</button>
+          <input type="text" id="c5outro-lote" placeholder="ex: 263001" autocomplete="off" oninput="verificarReferenciaC5Outro()" style="flex:1">
+          <button type="button" onclick="verificarReferenciaC5Outro()" style="padding:0 14px;border-radius:10px;border:2px solid #d1d5db;background:#f9fafb;font-size:13px;font-weight:600;cursor:pointer;color:#374151">OK</button>
         </div>
       </div>
-
-      <!-- Seletor de referência C5 Outro -->
       <div id="c5outro-ref-group" style="display:none;margin-bottom:14px">
-        <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#374151;margin-bottom:8px;display:block" id="c5outro-ref-label">Referência do queijo</label>
+        <label style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;color:#374151;margin-bottom:8px;display:block" id="c5outro-ref-label">Referência</label>
         <div id="c5outro-ref-btns" style="display:flex;gap:8px;flex-wrap:wrap"></div>
-        <div id="c5outro-ref-outros-group" style="display:none;margin-top:10px">
-          <input type="text" id="c5outro-ref-outros-val" placeholder="Descreva a referência..." autocomplete="off" style="font-size:14px">
-        </div>
+        <div id="c5outro-ref-outros-group" style="display:none;margin-top:10px"><input type="text" id="c5outro-ref-outros-val" placeholder="Descreva..." autocomplete="off" style="font-size:14px"></div>
         <div id="c5outro-ref-selecionado" style="display:none;margin-top:8px;font-size:12px;background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px 10px;color:#15803d;font-weight:600"></div>
       </div>
-
-      <div class="form-group"><label>Quantidade (un)</label><input type="number" id="c5outro-qtd" class="big" placeholder="0" min="1"></div>
+      <div class="form-row">
+        <div class="form-group"><label>Quantidade (un)</label><input type="number" id="c5outro-qtd" class="big" placeholder="0" min="1"></div>
+        <div class="form-group"><label>Peso (kg)</label><input type="number" id="c5outro-peso" class="big" placeholder="0.0" step="0.1" min="0"></div>
+      </div>
       <button class="btn-primary" onclick="registarC5Outro()">✓ Registar Entrada</button>
       <div style="display:flex;gap:8px;margin-top:4px"><button class="btn-back" onclick="voltarPagina()" style="flex:1">← Voltar</button><button class="btn-back" onclick="irPara('screen-home')" style="width:48px;flex-shrink:0;font-size:18px;padding:10px">🏠</button></div>
       <div class="status" id="status-c5outro"></div>
     </div>
-
-    <!-- ══════════════════════════════ -->
 
     <!-- ENCOMENDAS HUB -->
     <div class="screen" id="screen-enc-hub">
@@ -1904,44 +1949,26 @@ function voltarPagina() {
 // RESUMO PRINCIPAL
 // ===
 function atualizarResumoCamaras() {
-  const e = getEstado();
-  const defs = [
-    { num:1, cls:'c1' }, { num:2, cls:'c2' },
-    { num:3, cls:'c3c4c5' }, { num:4, cls:'c3c4c5' }, { num:5, cls:'c3c4c5' }
-  ];
-  let html = defs.map(c => {
-    const lotes = e[c.num] || [];
-    const totalQtd = lotes.reduce((a,l) => a + (l.qtd||0), 0);
-    const totalPeso = lotes.reduce((a,l) => a + (l.peso||0), 0);
-    const stockTxt = lotes.length ? `${totalQtd} un${totalPeso > 0 ? ' . '+totalPeso.toFixed(1)+' kg' : ''}` : '—';
-    return `<div class="camara-card ${c.cls}">
-      <div class="camara-num">${c.num}</div>
-      <div class="camara-info">
-        <div class="camara-nome">Câmara ${c.num}</div>
-        <div class="camara-detalhe">${stockTxt}</div>
-      </div>
-      <div class="camara-lotes-count">${lotes.length ? lotes.length + ' lote'+(lotes.length>1?'s':'') : 'Vazia'}</div>
-    </div>`;
-  }).join('');
-
-  // Câmaras de congelação C8 e C9
-  const congelacoes = getCongelacoes();
-  [8, 9].forEach(num => {
-    const lotesCong = congelacoes.filter(c => c.camara === num);
-    const totalQtd = lotesCong.reduce((a,l) => a + (l.qtd||0), 0);
-    const totalPeso = lotesCong.reduce((a,l) => a + (l.peso||0), 0);
-    const stockTxt = lotesCong.length ? `${totalQtd} un${totalPeso > 0 ? ' . '+totalPeso.toFixed(1)+' kg' : ''}` : '—';
-    html += `<div class="camara-card c-congel">
-      <div class="camara-num" style="background:#bfdbfe;color:#1e3a8a">❄${num}</div>
-      <div class="camara-info">
-        <div class="camara-nome">Câmara ${num} <span style="font-size:10px;background:#0369a1;color:#fff;border-radius:4px;padding:1px 5px;vertical-align:middle">CONGELAÇÃO</span></div>
-        <div class="camara-detalhe">${stockTxt}</div>
-      </div>
-      <div class="camara-lotes-count">${lotesCong.length ? lotesCong.length + ' lote'+(lotesCong.length>1?'s':'') : 'Vazia'}</div>
-    </div>`;
-  });
-
-  document.getElementById('resumoCamaras').innerHTML = html;
+  var e = getEstado();
+  var el = document.getElementById('resumoCamaras');
+  if (!el) return;
+  var cores = {1:'#1e40af',2:'#1e40af',3:'#15803d',4:'#92400e',5:'#7f1d1d'};
+  var bgs   = {1:'#dbeafe',2:'#dbeafe',3:'#dcfce7',4:'#fef3c7',5:'#fff1f2'};
+  var html = '';
+  for (var c = 1; c <= 5; c++) {
+    var lotes = e[c] || [];
+    var total = lotes.reduce(function(s,l){ return s+(l.qtd||0); }, 0);
+    var nLav  = lotes.reduce(function(s,l){ return s+((l.lavagens||[]).length); }, 0);
+    html += '<div onclick="abrirDetalhesCamara(' + c + ')" style="background:' + bgs[c] + ';border:2px solid #e5e7eb;border-radius:12px;padding:12px;cursor:pointer">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center">' +
+      '<span style="font-size:14px;font-weight:800;color:' + cores[c] + '">C' + c + '</span>' +
+      '<span style="font-size:11px;color:#6b7280">' + (nLav ? '\uD83E\uDDFC ' + nLav : '') + '</span>' +
+      '</div>' +
+      '<div style="font-size:22px;font-weight:900;color:' + cores[c] + '">' + total + '</div>' +
+      '<div style="font-size:10px;color:#6b7280">' + lotes.length + ' lote(s)</div>' +
+      '</div>';
+  }
+  el.innerHTML = html;
 }
 
 // ===
@@ -4426,31 +4453,33 @@ function renderizarSelecaoLeite(tipo) {
       '</div>';
 
     // --- CAIXA SAL / CARDO ---
-    var salGr = null, cardoGr = null;
+    var salKg = null, cardoKg = null;
     if (tipo === 'ovelha') {
-      salGr   = totalSel * 0.007;   // 0,7%
-      cardoGr = totalSel * 0.0007;  // 0,07%
+      salKg   = totalSel * 0.007;   // 0,7%
+      cardoKg = totalSel * 0.0007;  // 0,07%
     } else if (tipo === 'dop') {
-      salGr   = totalSel * 0.001;   // 0,1%
-      cardoGr = totalSel * 0.00036; // 0,036%
+      salKg   = totalSel * 0.001;   // 0,1%
+      cardoKg = totalSel * 0.00036; // 0,036%
     } else if (tipo === 'cabra') {
-      salGr   = totalSel * 0.007;   // 0,7%
+      salKg   = totalSel * 0.007;   // 0,7%
     }
 
-    if (salGr !== null) {
-      html += '<div style="background:#fffbeb;border:2px solid #fcd34d;border-radius:12px;padding:12px 16px;margin-bottom:12px">' +
-        '<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:#92400e;margin-bottom:10px">🧂 Ingredientes para ' + totalSel.toFixed(0) + ' L</div>' +
-        '<div style="display:grid;grid-template-columns:1fr ' + (cardoGr !== null ? '1fr' : '') + ';gap:10px">' +
-        '<div style="background:white;border:2px solid #fcd34d;border-radius:10px;padding:10px;text-align:center">' +
-        '<div style="font-size:11px;color:#92400e;font-weight:700;margin-bottom:4px">🧂 SAL</div>' +
-        '<div style="font-size:22px;font-weight:800;color:#92400e;font-family:\'DM Mono\',monospace">' + salGr.toFixed(1) + '</div>' +
-        '<div style="font-size:11px;color:#b45309;font-weight:600">gramas</div>' +
+    if (salKg !== null) {
+      html += '<div style="background:#dc2626;border:3px solid #991b1b;border-radius:14px;padding:14px 16px;margin-bottom:12px;box-shadow:0 4px 12px rgba(220,38,38,0.3)">' +
+        '<div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;color:white;margin-bottom:10px;display:flex;align-items:center;gap:6px">' +
+        '⚠️ INGREDIENTES — ' + totalSel.toFixed(0) + ' L' +
         '</div>' +
-        (cardoGr !== null ?
-          '<div style="background:white;border:2px solid #fcd34d;border-radius:10px;padding:10px;text-align:center">' +
-          '<div style="font-size:11px;color:#92400e;font-weight:700;margin-bottom:4px">🌿 CARDO</div>' +
-          '<div style="font-size:22px;font-weight:800;color:#92400e;font-family:\'DM Mono\',monospace">' + cardoGr.toFixed(2) + '</div>' +
-          '<div style="font-size:11px;color:#b45309;font-weight:600">gramas</div>' +
+        '<div style="display:grid;grid-template-columns:1fr ' + (cardoKg !== null ? '1fr' : '') + ';gap:10px">' +
+        '<div style="background:white;border-radius:10px;padding:12px;text-align:center">' +
+        '<div style="font-size:11px;color:#991b1b;font-weight:800;margin-bottom:4px;text-transform:uppercase">🧂 SAL</div>' +
+        '<div style="font-size:26px;font-weight:900;color:#dc2626;font-family:\'DM Mono\',monospace;line-height:1">' + salKg.toFixed(2) + '</div>' +
+        '<div style="font-size:12px;color:#991b1b;font-weight:700">kg</div>' +
+        '</div>' +
+        (cardoKg !== null ?
+          '<div style="background:white;border-radius:10px;padding:12px;text-align:center">' +
+          '<div style="font-size:11px;color:#991b1b;font-weight:800;margin-bottom:4px;text-transform:uppercase">🌿 CARDO</div>' +
+          '<div style="font-size:26px;font-weight:900;color:#dc2626;font-family:\'DM Mono\',monospace;line-height:1">' + cardoKg.toFixed(3) + '</div>' +
+          '<div style="font-size:12px;color:#991b1b;font-weight:700">kg</div>' +
           '</div>'
         : '') +
         '</div>' +
@@ -4975,7 +5004,8 @@ function atualizarPassosPQ(prod) {
   const horaEnch = document.getElementById('pq-hora-enchimento');
   if (p.enchimento_fim) {
     cardEnch.className = 'pq-passo-card done';
-    horaEnch.textContent = '✓ ' + fmtHora(p.enchimento_ini) + ' → ' + fmtHora(p.enchimento_fim);
+    var npE = p.enchimento_ini_pessoas ? ' · ' + p.enchimento_ini_pessoas + 'p' : '';
+    horaEnch.textContent = '✓ ' + fmtHora(p.enchimento_ini) + ' → ' + fmtHora(p.enchimento_fim) + npE;
     btnIni.textContent = '✓'; btnIni.className = 'pq-passo-btn done-btn'; btnIni.disabled = true;
     btnFim.textContent = '✓'; btnFim.className = 'pq-passo-btn done-btn'; btnFim.disabled = true;
   } else if (p.enchimento_ini) {
@@ -4996,7 +5026,8 @@ function atualizarPassosPQ(prod) {
   const horaDes = document.getElementById('pq-hora-desmold');
   if (p.desmold) {
     cardDes.className = 'pq-passo-card done';
-    horaDes.textContent = '✓ ' + fmtHora(p.desmold);
+    var npD = p.desmold_pessoas ? ' · ' + p.desmold_pessoas + 'p' : '';
+    horaDes.textContent = '✓ ' + fmtHora(p.desmold) + npD;
     btnDes.textContent = '✓ Feito'; btnDes.className = 'pq-passo-btn done-btn'; btnDes.disabled = true;
   } else {
     cardDes.className = 'pq-passo-card';
@@ -5012,24 +5043,59 @@ function atualizarPassosPQ(prod) {
 
 function registarPassoPQ(passo) {
   if (!pqProdAtualId) return;
+  if (passo === 'enchimento_ini' || passo === 'desmold') {
+    pedirPessoasPQ(passo); return;
+  }
+  _gravarPassoPQ(passo, null);
+}
+
+function _pqNpMenos() { var i=document.getElementById('pq-np-val'); if(i) i.value=Math.max(1,(parseInt(i.value)||1)-1); }
+function _pqNpMais()  { var i=document.getElementById('pq-np-val'); if(i) i.value=(parseInt(i.value)||1)+1; }
+
+function pedirPessoasPQ(passo) {
+  var old = document.getElementById('pq-pessoas-panel'); if(old) old.remove();
+  var nomes = { enchimento_ini:'\uD83E\uDEB4 Enchimento de Formas', desmold:'\uD83D\uDD04 Desmoldagem' };
+  var panel = document.createElement('div');
+  panel.id = 'pq-pessoas-panel';
+  panel.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:white;border-top:3px solid #1e3a5f;padding:20px;z-index:400;box-shadow:0 -4px 24px rgba(0,0,0,.2)';
+  panel.innerHTML =
+    '<div style="max-width:480px;margin:0 auto">' +
+    '<div style="font-size:15px;font-weight:800;color:#1e3a5f;margin-bottom:14px">' + (nomes[passo]||passo) + ' \u2014 N.\u00BA de Pessoas</div>' +
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+    '<button type="button" onclick="_pqNpMenos()" style="width:44px;height:44px;font-size:24px;border:2px solid #e5e7eb;border-radius:10px;background:#f9fafb;cursor:pointer">\u2212</button>' +
+    '<input type="number" id="pq-np-val" value="2" min="1" max="20" style="flex:1;font-size:28px;font-weight:800;text-align:center;border:2px solid #1e3a5f;border-radius:10px;padding:10px;color:#1e3a5f">' +
+    '<button type="button" onclick="_pqNpMais()" style="width:44px;height:44px;font-size:24px;border:2px solid #e5e7eb;border-radius:10px;background:#f9fafb;cursor:pointer">+</button>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+    '<button type="button" onclick="document.getElementById(\'pq-pessoas-panel\').remove()" style="padding:14px;background:#f3f4f6;border:none;border-radius:12px;font-size:14px;font-weight:700;color:#6b7280;cursor:pointer">Cancelar</button>' +
+    '<button type="button" onclick="_confirmarPessoasPQ(\'' + passo + '\')" style="padding:14px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">\u2713 Confirmar</button>' +
+    '</div></div>';
+  document.body.appendChild(panel);
+  setTimeout(function(){ var el=document.getElementById('pq-np-val'); if(el) el.focus(); }, 100);
+}
+
+function _confirmarPessoasPQ(passo) {
+  var np = parseInt(document.getElementById('pq-np-val').value) || 1;
+  var panel = document.getElementById('pq-pessoas-panel'); if(panel) panel.remove();
+  _gravarPassoPQ(passo, np);
+}
+
+function _gravarPassoPQ(passo, numPessoas) {
+  if (!pqProdAtualId) return;
   const emCurso = getProdEmCurso();
   const idx = emCurso.findIndex(p => p.id === pqProdAtualId);
   if (idx === -1) return;
-
   const agora = new Date().toISOString();
   emCurso[idx].passos[passo] = agora;
+  if (numPessoas !== null) emCurso[idx].passos[passo + '_pessoas'] = numPessoas;
   salvarProdEmCurso(emCurso);
   atualizarPassosPQ(emCurso[idx]);
-
-  // Feedback visual rápido
-  mostrarStatus('status-pq-curso',
-    '✓ ' + { corte:'Corte', enchimento_ini:'Enchimento início', enchimento_fim:'Enchimento fim', desmold:'Desmoldagem' }[passo] +
-    ' — ' + new Date(agora).toLocaleTimeString('pt-PT'),
-    'success');
-  setTimeout(() => {
-    const s = document.getElementById('status-pq-curso');
-    if (s) s.className = 'status';
-  }, 2000);
+  var labels = { corte:'Corte', enchimento_ini:'Enchimento in\u00edcio', enchimento_fim:'Enchimento fim', desmold:'Desmoldagem' };
+  var msg = '\u2713 ' + (labels[passo]||passo);
+  if (numPessoas) msg += ' \u2014 ' + numPessoas + ' pessoa' + (numPessoas>1?'s':'');
+  msg += ' \u2014 ' + new Date(agora).toLocaleTimeString('pt-PT');
+  mostrarStatus('status-pq-curso', msg, 'success');
+  setTimeout(() => { const s=document.getElementById('status-pq-curso'); if(s) s.className='status'; }, 3000);
 }
 
 function concluirProducaoQueijo() {
@@ -8598,6 +8664,335 @@ window.voltarLogin = function() {
   if (er) er.textContent = '';
   try { renderizarListaUtilizadores(); } catch(e) {}
 };
+
+
+// ─────────────────────────────────────────────────────────────
+// ESTADO LAVAGEM
+// ─────────────────────────────────────────────────────────────
+var lavagemLoteId     = null;
+var lavagemCamaraNum  = null;
+var lavagemInicioISO  = null;
+var lavagemNumPessoas = null;
+var lavagemCamaraDestino = null;
+
+// ─────────────────────────────────────────────────────────────
+// CÂMARAS: VER CONTEÚDO
+// ─────────────────────────────────────────────────────────────
+function abrirDetalhesCamara(num) {
+  lavagemCamaraNum = num;
+  var e = getEstado();
+  var lotes = e[num] || [];
+  var cores = {1:'#1e40af',2:'#1e40af',3:'#15803d',4:'#92400e',5:'#7f1d1d'};
+  var bgs   = {1:'#dbeafe',2:'#dbeafe',3:'#dcfce7',4:'#fef3c7',5:'#fff1f2'};
+  document.getElementById('bc-camara-detalhe').textContent = 'Câmara ' + num;
+  var hdr = document.getElementById('camara-detalhe-header');
+  hdr.style.background = bgs[num];
+  hdr.style.borderColor = '#e5e7eb';
+  hdr.innerHTML =
+    '<div style="font-size:16px;font-weight:800;color:' + cores[num] + '">Câmara ' + num + '</div>' +
+    '<div style="font-size:13px;color:#6b7280;margin-top:2px">' + lotes.length + ' lote(s) &nbsp;·&nbsp; ' +
+    lotes.reduce(function(s,l){ return s+(l.qtd||0); },0) + ' un</div>';
+
+  var lista = document.getElementById('camara-detalhe-lista');
+  if (!lotes.length) {
+    lista.innerHTML = '<div style="text-align:center;color:#6b7280;padding:24px;font-size:14px">Câmara vazia</div>';
+  } else {
+    lista.innerHTML = lotes.map(function(l, idx) {
+      var nLav = (l.lavagens||[]).length;
+      var adminBtn = temPermissao('admin') ?
+        '<button onclick="editarLoteCamara(' + num + ',' + l.id + ')" style="width:36px;height:36px;border:2px solid #bfdbfe;border-radius:9px;background:#dbeafe;color:#1e40af;font-size:14px;cursor:pointer">&#9999;&#65039;</button>' : '';
+      return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">' +
+        '<div onclick="abrirDetalhesLote(' + num + ',' + idx + ')" style="flex:1;background:white;border:2px solid #e5e7eb;border-radius:12px;padding:12px 14px;cursor:pointer">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+        '<span style="font-weight:800;font-size:15px;color:' + cores[num] + '">' + l.lote + '</span>' +
+        '<span style="font-size:12px;color:#6b7280">' + (l.qtd||0) + ' un' + (l.peso ? ' &nbsp;·&nbsp; ' + Number(l.peso).toFixed(1) + ' kg' : '') + '</span>' +
+        '</div>' +
+        '<div style="font-size:11px;color:#9ca3af;margin-top:4px">' + (l.dataFormatada||'') +
+        (nLav ? ' &nbsp;·&nbsp; \uD83E\uDDFC ' + nLav + ' lavagem' + (nLav>1?'ns':'') : '') + '</div>' +
+        '</div>' +
+        adminBtn +
+        '<button onclick="pedirEliminarLote(' + num + ',' + idx + ')" style="width:36px;height:36px;border:2px solid #fca5a5;border-radius:9px;background:#fee2e2;color:#dc2626;font-size:14px;cursor:pointer">\uD83D\uDDD1\uFE0F</button>' +
+        '</div>';
+    }).join('');
+  }
+  irPara('screen-camara-detalhe');
+}
+
+function voltarDetalhesCamara() {
+  irPara('screen-camara-detalhe');
+}
+
+// ─────────────────────────────────────────────────────────────
+// LOTE: VER DETALHE + HISTÓRICO LAVAGENS
+// ─────────────────────────────────────────────────────────────
+function abrirDetalhesLote(camaraNum, idx) {
+  lavagemCamaraNum = camaraNum;
+  var e = getEstado();
+  var lote = (e[camaraNum]||[])[idx];
+  if (!lote) return;
+  lavagemLoteId = lote.id;
+
+  document.getElementById('bc-lote-camara').textContent = 'Câmara ' + camaraNum;
+  document.getElementById('bc-lote-detalhe').textContent = lote.lote;
+
+  document.getElementById('lote-detalhe-header').innerHTML =
+    '<div style="display:flex;justify-content:space-between;align-items:center">' +
+    '<span style="font-weight:800;font-size:18px;color:#15803d">' + lote.lote + '</span>' +
+    '<span style="font-size:13px;color:#6b7280">' + (lote.qtd||0) + ' un &nbsp;·&nbsp; ' + (lote.peso ? Number(lote.peso).toFixed(1)+'kg' : '—') + '</span>' +
+    '</div>' +
+    '<div style="font-size:12px;color:#6b7280;margin-top:4px">Entrada: ' + (lote.dataFormatada||'—') + ' &nbsp;·&nbsp; Câmara ' + camaraNum + (lote.referencia ? ' &nbsp;·&nbsp; Ref: '+lote.referencia : '') + '</div>';
+
+  var lavagens = lote.lavagens || [];
+  var lavDiv = document.getElementById('lote-detalhe-lavagens');
+  if (!lavagens.length) {
+    lavDiv.innerHTML = '<div style="background:#f9fafb;border-radius:10px;padding:16px;text-align:center;color:#6b7280;font-size:13px;margin-bottom:12px">Sem lavagens registadas</div>';
+  } else {
+    function fmtH(iso) {
+      if (!iso) return '—';
+      var d = new Date(iso);
+      return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+    }
+    lavDiv.innerHTML = '<div style="font-size:12px;font-weight:700;text-transform:uppercase;color:#0e7490;margin-bottom:8px">\uD83E\uDDFC Lavagens (' + lavagens.length + ')</div>' +
+      lavagens.map(function(lav, i) {
+        var editBtn = temPermissao('admin') ?
+          '<button onclick="editarLavagem(' + camaraNum + ',' + lote.id + ',' + i + ')" style="padding:4px 10px;border:2px solid #bfdbfe;border-radius:8px;background:#dbeafe;color:#1e40af;font-size:12px;cursor:pointer">&#9999;&#65039;</button>' : '';
+        return '<div style="background:white;border:2px solid #a5f3fc;border-radius:12px;padding:12px 14px;margin-bottom:8px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">' +
+          '<span style="font-size:13px;font-weight:800;color:#0e7490">\uD83E\uDDFC Lavagem ' + (i+1) + '</span>' +
+          editBtn + '</div>' +
+          '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;font-size:12px">' +
+          '<div><div style="color:#6b7280">In\u00edcio</div><div style="font-weight:700">' + fmtH(lav.horaInicio) + '</div></div>' +
+          '<div><div style="color:#6b7280">Fim</div><div style="font-weight:700">' + fmtH(lav.horaFim) + '</div></div>' +
+          '<div><div style="color:#6b7280">Pessoas</div><div style="font-weight:700">' + (lav.numPessoas||'—') + '</div></div>' +
+          '</div>' +
+          (lav.camaraDestino ? '<div style="font-size:12px;margin-top:6px;color:#6b7280">\u2192 C\u00e2mara ' + lav.camaraDestino + ' &nbsp;·&nbsp; ' + (lav.qtdTransferida||0) + ' un &nbsp;·&nbsp; ' + Number(lav.kgTransferidos||0).toFixed(1) + ' kg</div>' : '') +
+          '</div>';
+      }).join('');
+  }
+
+  var emCurso = lavagens.find(function(l){ return l.horaInicio && !l.horaFim; });
+  var btn = document.getElementById('btn-iniciar-lavagem');
+  if (emCurso) {
+    btn.textContent = '\u25B6 Lavagem em curso — retomar';
+    btn.style.background = '#d97706';
+  } else {
+    btn.textContent = '\uD83E\uDDFC Iniciar Lavagem';
+    btn.style.background = '#0e7490';
+  }
+  irPara('screen-lote-detalhe');
+}
+
+// ─────────────────────────────────────────────────────────────
+// LAVAGEM: INICIAR
+// ─────────────────────────────────────────────────────────────
+function iniciarLavagemLote() {
+  var e = getEstado();
+  var lote = (e[lavagemCamaraNum]||[]).find(function(l){ return l.id === lavagemLoteId; });
+  if (!lote) return;
+  lote.lavagens = lote.lavagens || [];
+  var emCurso = lote.lavagens.find(function(l){ return l.horaInicio && !l.horaFim; });
+  if (emCurso) {
+    lavagemInicioISO  = emCurso.horaInicio;
+    lavagemNumPessoas = emCurso.numPessoas;
+    _mostrarLavagemEmCurso(lote);
+    return;
+  }
+  _pedirPessoasLavagem(lote);
+}
+
+function _pedirPessoasLavagem(lote) {
+  var old = document.getElementById('pq-pessoas-panel');
+  if (old) old.remove();
+  var panel = document.createElement('div');
+  panel.id = 'pq-pessoas-panel';
+  panel.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:white;border-top:3px solid #0e7490;padding:20px;z-index:400;box-shadow:0 -4px 24px rgba(0,0,0,.2)';
+  panel.innerHTML =
+    '<div style="max-width:480px;margin:0 auto">' +
+    '<div style="font-size:15px;font-weight:800;color:#0e7490;margin-bottom:14px">\uD83E\uDDFC Lavagem &mdash; ' + lote.lote + '<br><span style="font-size:13px;font-weight:600;color:#6b7280">N.\u00BA de Pessoas</span></div>' +
+    '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">' +
+    '<button type="button" onclick="_pqNpMenos()" style="width:44px;height:44px;font-size:24px;border:2px solid #e5e7eb;border-radius:10px;background:#f9fafb;cursor:pointer">\u2212</button>' +
+    '<input type="number" id="pq-np-val" value="2" min="1" max="20" style="flex:1;font-size:28px;font-weight:800;text-align:center;border:2px solid #0e7490;border-radius:10px;padding:10px;color:#0e7490">' +
+    '<button type="button" onclick="_pqNpMais()" style="width:44px;height:44px;font-size:24px;border:2px solid #e5e7eb;border-radius:10px;background:#f9fafb;cursor:pointer">+</button>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">' +
+    '<button type="button" onclick="document.getElementById(\'pq-pessoas-panel\').remove()" style="padding:14px;background:#f3f4f6;border:none;border-radius:12px;font-size:14px;font-weight:700;color:#6b7280;cursor:pointer">Cancelar</button>' +
+    '<button type="button" onclick="_confirmarInicioLavagem()" style="padding:14px;background:#0e7490;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">\u25B6 Iniciar</button>' +
+    '</div></div>';
+  document.body.appendChild(panel);
+  setTimeout(function(){ var el=document.getElementById('pq-np-val'); if(el) el.focus(); }, 100);
+}
+
+function _confirmarInicioLavagem() {
+  var np = parseInt(document.getElementById('pq-np-val').value) || 1;
+  var panel = document.getElementById('pq-pessoas-panel');
+  if (panel) panel.remove();
+  lavagemNumPessoas = np;
+  lavagemInicioISO  = new Date().toISOString();
+  var e = getEstado();
+  var lote = (e[lavagemCamaraNum]||[]).find(function(l){ return l.id === lavagemLoteId; });
+  if (!lote) return;
+  lote.lavagens = lote.lavagens || [];
+  lote.lavagens.push({ horaInicio: lavagemInicioISO, numPessoas: np, horaFim: null });
+  salvarEstado(e);
+  _mostrarLavagemEmCurso(lote);
+}
+
+function _mostrarLavagemEmCurso(lote) {
+  var d = new Date(lavagemInicioISO);
+  var hh = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  document.getElementById('lavagem-header').innerHTML =
+    '<div style="font-weight:800;color:#0e7490;font-size:15px">\uD83E\uDDFC Lavagem &mdash; Lote ' + lote.lote + '</div>' +
+    '<div style="font-size:12px;color:#6b7280;margin-top:4px">C\u00e2mara ' + lavagemCamaraNum + ' &nbsp;·&nbsp; ' + lavagemNumPessoas + ' pessoa(s) &nbsp;·&nbsp; In\u00edcio: ' + hh + '</div>';
+  document.getElementById('lavagem-hora-inicio').textContent = '\u25B6 In\u00edcio: ' + hh + ' &nbsp;·&nbsp; ' + lavagemNumPessoas + ' p.';
+  irPara('screen-lavagem-em-curso');
+}
+
+// ─────────────────────────────────────────────────────────────
+// LAVAGEM: TERMINAR
+// ─────────────────────────────────────────────────────────────
+function terminarLavagem() {
+  var e = getEstado();
+  var lotes = e[lavagemCamaraNum] || [];
+  var lote = lotes.find(function(l){ return l.id === lavagemLoteId; });
+  if (!lote) return;
+  lote.lavagens = lote.lavagens || [];
+  var lavIdx = lote.lavagens.findIndex(function(l){ return l.horaInicio && !l.horaFim; });
+  if (lavIdx >= 0) lote.lavagens[lavIdx].horaFim = new Date().toISOString();
+  salvarEstado(e);
+
+  var hf = new Date();
+  var hh = String(hf.getHours()).padStart(2,'0') + ':' + String(hf.getMinutes()).padStart(2,'0');
+  document.getElementById('lavagem-fim-header').innerHTML =
+    '<div style="font-weight:800;color:#15803d;font-size:15px">\u2713 Lavagem conclu\u00edda &mdash; ' + lote.lote + '</div>' +
+    '<div style="font-size:12px;color:#6b7280;margin-top:4px">Fim: ' + hh + ' &nbsp;·&nbsp; Seleccione a c\u00e2mara de destino</div>';
+
+  lavagemCamaraDestino = null;
+  [1,2,3,4,5].forEach(function(n) {
+    var btn = document.getElementById('btn-dest-' + n);
+    if (btn) btn.style.outline = '';
+  });
+  document.getElementById('lavagem-fim-qtd').value = lote.qtd || '';
+  document.getElementById('lavagem-fim-kg').value  = lote.peso ? Number(lote.peso).toFixed(1) : '';
+  irPara('screen-lavagem-fim');
+}
+
+function selecionarCamaraDestino(num) {
+  lavagemCamaraDestino = num;
+  [1,2,3,4,5].forEach(function(n) {
+    var btn = document.getElementById('btn-dest-' + n);
+    if (btn) btn.style.outline = n === num ? '3px solid #15803d' : '';
+  });
+}
+
+function confirmarFimLavagem() {
+  if (!lavagemCamaraDestino) { mostrarStatus('status-lavagem-fim','&#9888;&#65039; Seleccione a c\u00e2mara de destino','error'); return; }
+  var qtd = parseInt(document.getElementById('lavagem-fim-qtd').value);
+  var kg  = parseFloat(document.getElementById('lavagem-fim-kg').value) || 0;
+  if (!qtd || qtd <= 0) { mostrarStatus('status-lavagem-fim','&#9888;&#65039; Introduza as unidades','error'); return; }
+
+  var e = getEstado();
+  var src = e[lavagemCamaraNum] || [];
+  var loteIdx = src.findIndex(function(l){ return l.id === lavagemLoteId; });
+  if (loteIdx < 0) return;
+  var lote = src[loteIdx];
+
+  // Guardar dados na última lavagem
+  var lavs = lote.lavagens || [];
+  if (lavs.length) {
+    lavs[lavs.length-1].camaraDestino  = lavagemCamaraDestino;
+    lavs[lavs.length-1].qtdTransferida = qtd;
+    lavs[lavs.length-1].kgTransferidos  = kg;
+  }
+
+  // Mover lote para câmara destino
+  src.splice(loteIdx, 1);
+  e[lavagemCamaraDestino] = e[lavagemCamaraDestino] || [];
+  var reg = Object.assign({}, lote, {
+    id: Date.now(), qtd: qtd, qtdOriginal: qtd,
+    peso: kg, pesoOriginal: kg,
+    data: new Date().toISOString(), dataFormatada: dataHoje(),
+    camara: lavagemCamaraDestino, origemCamara: lavagemCamaraNum,
+    operacao: 'lavagem', lavagens: lavs
+  });
+  e[lavagemCamaraDestino].push(reg);
+  salvarEstado(e);
+  addHistorico(reg);
+  atualizarResumoCamaras();
+
+  mostrarStatus('status-lavagem-fim', '\u2713 Lote ' + lote.lote + ' \u2192 C\u00e2mara ' + lavagemCamaraDestino, 'success');
+  setTimeout(function(){ irPara('screen-cura'); }, 1500);
+}
+
+// ─────────────────────────────────────────────────────────────
+// NAVEGAÇÃO CURA
+// ─────────────────────────────────────────────────────────────
+function abrirTransferenciaCamaras() { irPara('screen-transferencia'); }
+function abrirLavagemSelCamara()     { irPara('screen-cura'); }
+
+// ─────────────────────────────────────────────────────────────
+// EDITAR LAVAGEM (admin)
+// ─────────────────────────────────────────────────────────────
+function editarLavagem(camaraNum, loteId, lavIdx) {
+  var e = getEstado();
+  var lote = (e[camaraNum]||[]).find(function(l){ return l.id === loteId; });
+  if (!lote || !(lote.lavagens||[])[lavIdx]) return;
+  var lav = lote.lavagens[lavIdx];
+  function fmtT(iso) {
+    if (!iso) return '';
+    var d = new Date(iso);
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+  var old = document.getElementById('edit-lavagem-panel');
+  if (old) old.remove();
+  var panel = document.createElement('div');
+  panel.id = 'edit-lavagem-panel';
+  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:flex-end';
+  panel.innerHTML =
+    '<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;margin:0 auto">' +
+    '<div style="font-size:15px;font-weight:800;color:#1e3a5f;margin-bottom:14px">&#9999;&#65039; Editar Lavagem ' + (lavIdx+1) + ' &mdash; ' + lote.lote + '</div>' +
+    '<div class="form-row">' +
+    '<div class="form-group"><label>In\u00edcio</label><input type="time" id="el-inicio" value="' + fmtT(lav.horaInicio) + '"></div>' +
+    '<div class="form-group"><label>Fim</label><input type="time" id="el-fim" value="' + fmtT(lav.horaFim) + '"></div>' +
+    '</div>' +
+    '<div class="form-row">' +
+    '<div class="form-group"><label>Pessoas</label><input type="number" id="el-pessoas" value="' + (lav.numPessoas||1) + '" min="1"></div>' +
+    '<div class="form-group"><label>C\u00e2mara destino</label><input type="number" id="el-dest" value="' + (lav.camaraDestino||'') + '" min="1" max="5"></div>' +
+    '</div>' +
+    '<div class="form-row">' +
+    '<div class="form-group"><label>Unidades</label><input type="number" id="el-qtd" value="' + (lav.qtdTransferida||'') + '"></div>' +
+    '<div class="form-group"><label>Kg</label><input type="number" id="el-kg" step="0.1" value="' + (lav.kgTransferidos||'') + '"></div>' +
+    '</div>' +
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">' +
+    '<button type="button" onclick="document.getElementById(\'edit-lavagem-panel\').remove()" style="padding:14px;background:#f3f4f6;border:none;border-radius:12px;font-size:14px;font-weight:700;color:#6b7280;cursor:pointer">Cancelar</button>' +
+    '<button type="button" onclick="_guardarEditLavagem(' + camaraNum + ',' + loteId + ',' + lavIdx + ')" style="padding:14px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">\u2713 Guardar</button>' +
+    '</div></div>';
+  document.body.appendChild(panel);
+}
+
+function _guardarEditLavagem(camaraNum, loteId, lavIdx) {
+  var e = getEstado();
+  var lote = (e[camaraNum]||[]).find(function(l){ return l.id === loteId; });
+  if (!lote || !(lote.lavagens||[])[lavIdx]) return;
+  var lav = lote.lavagens[lavIdx];
+  function setTime(timeStr, baseISO) {
+    if (!timeStr) return baseISO || null;
+    var base = baseISO ? new Date(baseISO) : new Date();
+    var p = timeStr.split(':');
+    base.setHours(parseInt(p[0]), parseInt(p[1]), 0, 0);
+    return base.toISOString();
+  }
+  lav.horaInicio     = setTime(document.getElementById('el-inicio').value, lav.horaInicio);
+  lav.horaFim        = setTime(document.getElementById('el-fim').value, lav.horaFim);
+  lav.numPessoas     = parseInt(document.getElementById('el-pessoas').value) || lav.numPessoas;
+  var dest = parseInt(document.getElementById('el-dest').value);
+  if (dest >= 1 && dest <= 5) lav.camaraDestino = dest;
+  lav.qtdTransferida = parseInt(document.getElementById('el-qtd').value) || lav.qtdTransferida;
+  lav.kgTransferidos = parseFloat(document.getElementById('el-kg').value) || lav.kgTransferidos;
+  salvarEstado(e);
+  document.getElementById('edit-lavagem-panel').remove();
+  var newIdx = (e[camaraNum]||[]).findIndex(function(l){ return l.id === loteId; });
+  if (newIdx >= 0) abrirDetalhesLote(camaraNum, newIdx);
+}
 </script>
 </body>
 </html>
