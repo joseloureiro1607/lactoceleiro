@@ -4681,13 +4681,13 @@ function renderizarSelecaoLeite(tipo) {
         '</div>' +
         '<div style="display:grid;grid-template-columns:1fr ' + (cardoKg !== null ? '1fr' : '') + ';gap:10px">' +
         '<div style="background:white;border-radius:10px;padding:12px;text-align:center">' +
-        '<div style="font-size:11px;color:#991b1b;font-weight:800;margin-bottom:4px;text-transform:uppercase">🧂 SAL</div>' +
+        '<div style="font-size:11px;color:#991b1b;font-weight:800;margin-bottom:4px;text-transform:uppercase"><svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\" width=\"28\" height=\"28\"><rect x=\"10\" y=\"14\" width=\"12\" height=\"14\" rx=\"3\" fill=\"#e2e8f0\" stroke=\"#94a3b8\" stroke-width=\"1.5\"/><rect x=\"9\" y=\"10\" width=\"14\" height=\"5\" rx=\"2\" fill=\"#cbd5e1\" stroke=\"#94a3b8\" stroke-width=\"1.5\"/><rect x=\"13\" y=\"7\" width=\"6\" height=\"4\" rx=\"1.5\" fill=\"#94a3b8\"/><circle cx=\"13\" cy=\"12.5\" r=\"0.8\" fill=\"#64748b\"/><circle cx=\"16\" cy=\"12.5\" r=\"0.8\" fill=\"#64748b\"/><circle cx=\"19\" cy=\"12.5\" r=\"0.8\" fill=\"#64748b\"/><circle cx=\"13\" cy=\"19\" r=\"1\" fill=\"white\" opacity=\"0.7\"/><circle cx=\"16\" cy=\"21\" r=\"1\" fill=\"white\" opacity=\"0.7\"/><circle cx=\"19\" cy=\"19\" r=\"1\" fill=\"white\" opacity=\"0.7\"/><circle cx=\"14\" cy=\"24\" r=\"0.8\" fill=\"white\" opacity=\"0.6\"/><circle cx=\"18\" cy=\"24\" r=\"0.8\" fill=\"white\" opacity=\"0.6\"/></svg> SAL</div>' +
         '<div style="font-size:26px;font-weight:900;color:#dc2626;font-family:\'DM Mono\',monospace;line-height:1">' + salKg.toFixed(2) + '</div>' +
         '<div style="font-size:12px;color:#991b1b;font-weight:700">kg</div>' +
         '</div>' +
         (cardoKg !== null ?
           '<div style="background:white;border-radius:10px;padding:12px;text-align:center">' +
-          '<div style="font-size:11px;color:#991b1b;font-weight:800;margin-bottom:4px;text-transform:uppercase">🌿 CARDO</div>' +
+          '<div style="font-size:11px;color:#991b1b;font-weight:800;margin-bottom:4px;text-transform:uppercase"><svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\" width=\"28\" height=\"28\"><line x1=\"16\" y1=\"32\" x2=\"16\" y2=\"20\" stroke=\"#4d7c0f\" stroke-width=\"2\"/><ellipse cx=\"16\" cy=\"20\" rx=\"7\" ry=\"5\" fill=\"#84cc16\" stroke=\"#4d7c0f\" stroke-width=\"1\"/><path d=\"M9,20 Q7,17 9,15 Q10,18 11,18Z\" fill=\"#65a30d\"/><path d=\"M23,20 Q25,17 23,15 Q22,18 21,18Z\" fill=\"#65a30d\"/><path d=\"M13,16 Q12,13 14,12 Q14,15 15,15Z\" fill=\"#65a30d\"/><path d=\"M19,16 Q20,13 18,12 Q18,15 17,15Z\" fill=\"#65a30d\"/><g stroke=\"#7c3aed\" stroke-width=\"1.2\" stroke-linecap=\"round\"><line x1=\"16\" y1=\"14\" x2=\"16\" y2=\"4\"/><line x1=\"16\" y1=\"14\" x2=\"20\" y2=\"5\"/><line x1=\"16\" y1=\"14\" x2=\"23\" y2=\"8\"/><line x1=\"16\" y1=\"14\" x2=\"24\" y2=\"12\"/><line x1=\"16\" y1=\"14\" x2=\"12\" y2=\"5\"/><line x1=\"16\" y1=\"14\" x2=\"9\" y2=\"8\"/><line x1=\"16\" y1=\"14\" x2=\"8\" y2=\"12\"/><line x1=\"16\" y1=\"14\" x2=\"18\" y2=\"4.5\"/><line x1=\"16\" y1=\"14\" x2=\"14\" y2=\"4.5\"/><line x1=\"16\" y1=\"14\" x2=\"21\" y2=\"6.5\"/><line x1=\"16\" y1=\"14\" x2=\"11\" y2=\"6.5\"/><line x1=\"16\" y1=\"14\" x2=\"23.5\" y2=\"10\"/><line x1=\"16\" y1=\"14\" x2=\"8.5\" y2=\"10\"/></g><g fill=\"#c4b5fd\"><circle cx=\"16\" cy=\"4\" r=\"0.8\"/><circle cx=\"20\" cy=\"5\" r=\"0.8\"/><circle cx=\"23\" cy=\"8\" r=\"0.8\"/><circle cx=\"24\" cy=\"12\" r=\"0.8\"/><circle cx=\"12\" cy=\"5\" r=\"0.8\"/><circle cx=\"9\" cy=\"8\" r=\"0.8\"/><circle cx=\"8\" cy=\"12\" r=\"0.8\"/><circle cx=\"18\" cy=\"4.5\" r=\"0.7\"/><circle cx=\"14\" cy=\"4.5\" r=\"0.7\"/><circle cx=\"21\" cy=\"6.5\" r=\"0.7\"/><circle cx=\"11\" cy=\"6.5\" r=\"0.7\"/></g></svg> CARDO</div>' +
           '<div style="font-size:26px;font-weight:900;color:#dc2626;font-family:\'DM Mono\',monospace;line-height:1">' + cardoKg.toFixed(3) + '</div>' +
           '<div style="font-size:12px;color:#991b1b;font-weight:700">kg</div>' +
           '</div>'
@@ -9289,7 +9289,7 @@ function _rlPasso(icone,nome,ini,fim,dur,pess,bg) {
 // ── Recolha de dados ───────────────────────────────────────
 function _rlRecolherTodos() {
   var todos = [];
-  // Produções concluídas — chave correcta: lc_prod_queijo_v1
+  // Produções concluídas
   (getProdutosQueijo()||[]).forEach(function(p) {
     todos.push({tipo:'pq', data:p.data||p.horaInicio, lote:p.lote, obj:p});
   });
@@ -9297,12 +9297,18 @@ function _rlRecolherTodos() {
   (getProdEmCurso()||[]).forEach(function(p) {
     todos.push({tipo:'pq', data:p.data||p.horaInicio, lote:p.lote, obj:p});
   });
-  // Câmaras de cura 1-5
+  // Câmaras de cura 1-5 (lotes ainda em câmara)
   var e=getEstado();
   [1,2,3,4,5].forEach(function(c) {
     (e[c]||[]).forEach(function(l) {
       todos.push({tipo:'camara', camara:c, data:l.data, lote:l.lote, obj:l});
     });
+  });
+  // Histórico de saídas
+  getHistorico().forEach(function(r) {
+    if (r.operacao==='saida') {
+      todos.push({tipo:'saida', data:r.data, lote:r.lote, obj:r});
+    }
   });
   return todos;
 }
@@ -9327,9 +9333,10 @@ function _rlFiltrar() {
   var porLote={};
   res.forEach(function(r){
     var k=(r.lote||'(sem lote)').trim();
-    if(!porLote[k]) porLote[k]={pq:null, camaras:[]};
+    if(!porLote[k]) porLote[k]={pq:null, camaras:[], saidas:[]};
     if(r.tipo==='pq' && !porLote[k].pq) porLote[k].pq = r.obj;
     if(r.tipo==='camara') porLote[k].camaras.push(r.obj);
+    if(r.tipo==='saida')  porLote[k].saidas.push(r);
   });
   return porLote;
 }
@@ -9368,7 +9375,7 @@ function _rlHTML(porLote) {
 
   Object.keys(porLote).sort().forEach(function(loteNum) {
     var d=porLote[loteNum];
-    var pq=d.pq, cams=d.camaras;
+    var pq=d.pq, cams=d.camaras, saidass=d.saidas||[];
 
     var tipo=pq?pq.tipo:'';
     var cor=COR[tipo]||'#1e3a5f';
@@ -9437,12 +9444,12 @@ function _rlHTML(porLote) {
       if(salKg>0) {
         html+='<div style="display:grid;grid-template-columns:1fr'+(cardoKg>0?' 1fr':'')+';gap:8px;margin-bottom:10px">'+
           '<div style="background:#fff1f2;border:1px solid #fecdd3;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px">'+
-          '<span style="font-size:20px">\uD83E\uDEC0</span>'+
+          '<span style="display:inline-block;vertical-align:middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="28" height="28"><rect x="10" y="14" width="12" height="14" rx="3" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1.5"/><rect x="9" y="10" width="14" height="5" rx="2" fill="#cbd5e1" stroke="#94a3b8" stroke-width="1.5"/><rect x="13" y="7" width="6" height="4" rx="1.5" fill="#94a3b8"/><circle cx="13" cy="12.5" r="0.8" fill="#64748b"/><circle cx="16" cy="12.5" r="0.8" fill="#64748b"/><circle cx="19" cy="12.5" r="0.8" fill="#64748b"/><circle cx="13" cy="19" r="1" fill="white" opacity="0.7"/><circle cx="16" cy="21" r="1" fill="white" opacity="0.7"/><circle cx="19" cy="19" r="1" fill="white" opacity="0.7"/><circle cx="14" cy="24" r="0.8" fill="white" opacity="0.6"/><circle cx="18" cy="24" r="0.8" fill="white" opacity="0.6"/></svg></span>'+
           '<div><div style="font-size:10px;font-weight:800;color:#9f1239;text-transform:uppercase">Sal</div>'+
           '<div style="font-size:18px;font-weight:900;color:#e11d48">'+salKg.toFixed(2)+' <span style="font-size:12px">kg</span></div></div></div>'+
           (cardoKg>0?
             '<div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:10px">'+
-            '<span style="font-size:20px">\uD83C\uDF3F</span>'+
+            '<span style="display:inline-block;vertical-align:middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="28" height="28"><line x1="16" y1="32" x2="16" y2="20" stroke="#4d7c0f" stroke-width="2"/><ellipse cx="16" cy="20" rx="7" ry="5" fill="#84cc16" stroke="#4d7c0f" stroke-width="1"/><path d="M9,20 Q7,17 9,15 Q10,18 11,18Z" fill="#65a30d"/><path d="M23,20 Q25,17 23,15 Q22,18 21,18Z" fill="#65a30d"/><path d="M13,16 Q12,13 14,12 Q14,15 15,15Z" fill="#65a30d"/><path d="M19,16 Q20,13 18,12 Q18,15 17,15Z" fill="#65a30d"/><g stroke="#7c3aed" stroke-width="1.2" stroke-linecap="round"><line x1="16" y1="14" x2="16" y2="4"/><line x1="16" y1="14" x2="20" y2="5"/><line x1="16" y1="14" x2="23" y2="8"/><line x1="16" y1="14" x2="24" y2="12"/><line x1="16" y1="14" x2="12" y2="5"/><line x1="16" y1="14" x2="9" y2="8"/><line x1="16" y1="14" x2="8" y2="12"/><line x1="16" y1="14" x2="18" y2="4.5"/><line x1="16" y1="14" x2="14" y2="4.5"/><line x1="16" y1="14" x2="21" y2="6.5"/><line x1="16" y1="14" x2="11" y2="6.5"/><line x1="16" y1="14" x2="23.5" y2="10"/><line x1="16" y1="14" x2="8.5" y2="10"/></g><g fill="#c4b5fd"><circle cx="16" cy="4" r="0.8"/><circle cx="20" cy="5" r="0.8"/><circle cx="23" cy="8" r="0.8"/><circle cx="24" cy="12" r="0.8"/><circle cx="12" cy="5" r="0.8"/><circle cx="9" cy="8" r="0.8"/><circle cx="8" cy="12" r="0.8"/><circle cx="18" cy="4.5" r="0.7"/><circle cx="14" cy="4.5" r="0.7"/><circle cx="21" cy="6.5" r="0.7"/><circle cx="11" cy="6.5" r="0.7"/></g></svg></span>'+
             '<div><div style="font-size:10px;font-weight:800;color:#14532d;text-transform:uppercase">Cardo</div>'+
             '<div style="font-size:18px;font-weight:900;color:#16a34a">'+cardoKg.toFixed(3)+' <span style="font-size:12px">kg</span></div></div></div>':'') +
           '</div>';
@@ -9600,6 +9607,54 @@ function _rlHTML(porLote) {
       html+='</div>'; // fim secção cura
     }
 
+
+    // ── SECÇÃO SAÍDAS ──
+    if(saidass.length) {
+      html+='<div style="padding:14px 18px;border-top:2px solid #f3f4f6">';
+      html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
+        +'<div style="width:28px;height:28px;background:#15803d;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px">📤</div>'
+        +'<div style="font-size:13px;font-weight:800;text-transform:uppercase;color:#15803d;letter-spacing:.05em">Saídas</div>'
+        +'</div>';
+
+      var totalUnSaida=0, totalKgSaida=0;
+      html+='<table style="width:100%;border-collapse:collapse;font-size:12px">'
+        +'<thead><tr style="background:#f0fdf4">'
+          +'<th style="padding:6px 8px;text-align:left;font-weight:800;color:#15803d;border-bottom:2px solid #bbf7d0">Data</th>'
+          +'<th style="padding:6px 8px;text-align:center;font-weight:800;color:#15803d;border-bottom:2px solid #bbf7d0">Qtd</th>'
+          +'<th style="padding:6px 8px;text-align:right;font-weight:800;color:#15803d;border-bottom:2px solid #bbf7d0">Peso (kg)</th>'
+          +'<th style="padding:6px 8px;text-align:left;font-weight:800;color:#15803d;border-bottom:2px solid #bbf7d0">Validade</th>'
+          +'<th style="padding:6px 8px;text-align:left;font-weight:800;color:#15803d;border-bottom:2px solid #bbf7d0">Encomenda / Cliente</th>'
+        +'</tr></thead><tbody>';
+
+      saidass.forEach(function(s,si) {
+        var r=s.obj;
+        var enc=null;
+        if (r.encomendaId) {
+          var encs=getEncomendas();
+          enc=encs.find(function(e){ return e.id===r.encomendaId; });
+        }
+        var destino = enc ? ('#'+enc.nr+' '+enc.cliente)
+                         : (r.clienteManual||r.encPapel||'—');
+        totalUnSaida+=(r.qtdSaida||0);
+        totalKgSaida+=(parseFloat(r.kg)||0);
+        html+='<tr style="border-bottom:1px solid #f0fdf4">'
+          +'<td style="padding:6px 8px;color:#374151">'+(r.dataFormatada||'')+'</td>'
+          +'<td style="padding:6px 8px;text-align:center;font-weight:700;color:#15803d">'+(r.qtdSaida||0)+' un</td>'
+          +'<td style="padding:6px 8px;text-align:right;color:#374151">'+(r.kg?parseFloat(r.kg).toFixed(1)+' kg':'—')+'</td>'
+          +'<td style="padding:6px 8px;font-weight:700;color:#92400e">'+(r.validade||'—')+'</td>'
+          +'<td style="padding:6px 8px;color:#6b7280;font-size:11px">'+destino+'</td>'
+        +'</tr>';
+      });
+
+      html+='</tbody>'
+        +'<tfoot><tr style="background:#f0fdf4;font-weight:900">'
+          +'<td style="padding:6px 8px;color:#15803d">TOTAL</td>'
+          +'<td style="padding:6px 8px;text-align:center;color:#15803d">'+totalUnSaida+' un</td>'
+          +'<td style="padding:6px 8px;text-align:right;color:#15803d">'+(totalKgSaida>0?totalKgSaida.toFixed(1)+' kg':'—')+'</td>'
+          +'<td colspan="2"></td>'
+        +'</tr></tfoot></table>';
+      html+='</div>'; // fim secção saídas
+    }
     html+='</div>'; // fim card lote
   });
 
@@ -9672,6 +9727,21 @@ function _rlXLSX(porLote) {
         }
       });
     }
+
+    // Linhas de saídas
+    (d.saidas||[]).forEach(function(s) {
+      var r=s.obj;
+      var encs=getEncomendas();
+      var enc=r.encomendaId?encs.find(function(e){return e.id===r.encomendaId;}):null;
+      rows.push([loteNum,'SAÍDA','','',
+        '','','','','','','','','','',
+        r.qtdSaida||'', r.kg||'','','',
+        '','',
+        r.camara?'C'+r.camara:'','','','',
+        enc?'#'+enc.nr+' '+enc.cliente:(r.clienteManual||r.encPapel||''),
+        '','','','','','','','','',
+        r.validade||'', r.dataFormatada||'']);
+    });
   });
   exportXLSX(rows,'historico_lotes_'+new Date().toISOString().slice(0,10)+'.xlsx','historico');
 }
