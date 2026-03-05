@@ -10067,20 +10067,43 @@ function _renderPrepLinhas() {
   document.getElementById('enc-prep-linhas').innerHTML = html;
 }
 
-function prepLoteManual(idx) {
-  var val = (document.getElementById('prep-lote-' + idx).value || '').trim();
+function _buscarInfoLote(loteStr) {
+  if (!loteStr) return {camara:null, validade:''};
+  var low = loteStr.toLowerCase();
+  // 1. Câmaras 4 e 5 (lote ainda em câmara)
   var e = getEstado();
-  var found = null;
-  [4, 5].forEach(function(c) {
-    if (found) return;
-    var lote = (e[c] || []).find(function(l){ return (l.lote||'').toLowerCase() === val.toLowerCase(); });
-    if (lote) found = { camara: c, lote: lote.lote, validade: lote.validade || '' };
-  });
+  for (var c=4; c<=5; c++) {
+    var found = (e[c]||[]).find(function(l){ return (l.lote||'').toLowerCase()===low; });
+    if (found) return {camara:c, validade:found.validade||''};
+  }
+  // 2. Histórico de saídas (lote já expedido noutras encomendas)
+  var hist = getHistorico();
+  for (var h=0; h<hist.length; h++) {
+    var r = hist[h];
+    if ((r.lote||'').toLowerCase()===low && r.validade) {
+      return {camara:r.camara||null, validade:r.validade};
+    }
+  }
+  // 3. Câmaras 1-3 (em cura)
+  for (var c2=1; c2<=3; c2++) {
+    var found2 = (e[c2]||[]).find(function(l){ return (l.lote||'').toLowerCase()===low; });
+    if (found2) return {camara:c2, validade:found2.validade||''};
+  }
+  return {camara:null, validade:''};
+}
+
+function prepLoteManual(idx) {
+  var val = (document.getElementById('prep-lote-'+idx).value||'').trim();
   _prepLinhas[idx].lote = val;
-  _prepLinhas[idx].camara = found ? found.camara : null;
-  _prepLinhas[idx].validade = found ? found.validade : '';
-  var kgEl = document.getElementById('prep-kg-' + idx);
-  _prepLinhas[idx].kg = kgEl ? kgEl.value : '';
+  if (val) {
+    var info = _buscarInfoLote(val);
+    _prepLinhas[idx].camara   = info.camara;
+    _prepLinhas[idx].validade = info.validade;
+  } else {
+    _prepLinhas[idx].camara = null;
+    _prepLinhas[idx].validade = '';
+  }
+  _renderPrepLinhas();
 }
 
 function limparLotePrep(idx) {
@@ -10154,12 +10177,10 @@ function enviarParaExpedicao() {
   _prepLinhas.forEach(function(l,i){
     var lotEl = document.getElementById('prep-lote-'+i);
     if (lotEl) l.lote = (lotEl.value||'').trim();
-    if (l.lote) {
-      var e = getEstado();
-      [4,5].forEach(function(c){
-        var found = (e[c]||[]).find(function(x){ return (x.lote||'').toLowerCase()===l.lote.toLowerCase(); });
-        if (found) { l.camara=c; l.validade=found.validade||''; }
-      });
+    if (l.lote && (!l.camara || !l.validade)) {
+      var info = _buscarInfoLote(l.lote);
+      if (!l.camara)   l.camara   = info.camara;
+      if (!l.validade) l.validade = info.validade;
     }
   });
   var semLote = _prepLinhas.filter(function(l){ return !l.lote; });
@@ -10309,148 +10330,215 @@ function abrirExpDetalhe(id) {
 }
 
 function _renderExpDet(exp) {
-  var editable=(exp.estado==='pronta');
-  var html='';
-  exp.linhas.forEach(function(l,i){
-    var haLote=!!l.lote;
-    var va=_vaInfo(l.validade);
-    var needsVal=haLote&&!l.validade;
-    var valISO='';
-    if (l.validade) {
-      var pts=l.validade.split('/');
-      if(pts.length===3) valISO=pts[2]+'-'+pts[1]+'-'+pts[0];
-    }
+  var editable = (exp.estado==='pronta');
+  var isAdmin  = temPermissao('admin');
+  var html = '';
 
-    var internalBlock='';
+  exp.linhas.forEach(function(l,i){
+    var haLote   = !!l.lote;
+    var va       = _vaInfo(l.validade);
+    var needsVal = haLote && !l.validade;
+    var valISO   = '';
+    if (l.validade) {
+      var pts = l.validade.split('/');
+      if (pts.length===3) valISO = pts[2]+'-'+pts[1]+'-'+pts[0];
+    }
+    // Câmara display (null → "?" se não encontrada)
+    var camDisplay = l.camara ? 'C'+l.camara : (l.lote ? '⚠ Sem câmara' : '?');
+    var camColor   = l.camara ? '#0369a1' : '#f97316';
+
+    var internalBlock = '';
     if (!haLote) {
-      internalBlock='<div style="margin-top:8px;padding:10px;background:#fff7ed;border-radius:10px;font-size:13px;color:#f97316;font-weight:700">⚠️ Sem lote — volte a Preparar</div>';
+      internalBlock = '<div style="margin-top:8px;padding:10px;background:#fff7ed;border-radius:10px;font-size:13px;color:#f97316;font-weight:700">⚠️ Sem lote — volte a Preparar</div>';
+
     } else if (editable) {
-      // Bloco lote
-      internalBlock='<div style="margin-top:10px;background:white;border:2px solid #e5e7eb;border-radius:12px;padding:12px">'
+      // ── Cabeçalho lote + câmara ──
+      internalBlock = '<div style="margin-top:10px;background:white;border:2px solid #e5e7eb;border-radius:12px;padding:12px">'
         +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
           +'<span style="font-family:monospace;font-weight:900;font-size:17px;color:#1e3a5f">'+l.lote+'</span>'
-          +'<span style="font-size:13px;color:#0369a1;font-weight:800;background:#eff6ff;padding:3px 10px;border-radius:8px">Câmara '+l.camara+'</span>'
+          +'<span style="font-size:12px;font-weight:800;background:#eff6ff;padding:3px 10px;border-radius:8px;color:'+camColor+'">'+camDisplay+'</span>'
         +'</div>';
 
-      // Campo KG
-      internalBlock+='<div style="margin-bottom:12px">'
+      // ── Peso ──
+      internalBlock += '<div style="margin-bottom:12px">'
         +'<div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Peso (kg)</div>'
         +'<input type="number" id="exp-kg-'+i+'" value="'+(l.kg||'')+'" placeholder="Ex: 48.5" step="0.1" min="0"'
         +' style="width:100%;padding:14px;font-size:18px;font-weight:700;border:2px solid #e5e7eb;border-radius:12px;color:#1e3a5f;box-sizing:border-box">'
         +'</div>';
 
-      // Campo VALIDADE — destaque máximo
-      var valBorder = needsVal ? '#ef4444' : '#fbbf24';
-      var valBg = needsVal ? '#fef2f2' : '#fffbeb';
-      var valLabel = needsVal
-        ? '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="font-size:16px">⚠️</span><span style="font-size:12px;font-weight:900;color:#dc2626;text-transform:uppercase;letter-spacing:.04em">Validade obrigatória</span></div>'
-        : '<div style="font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">📅 Validade</div>';
+      // ── Validade ──
+      if (l.validade && !needsVal) {
+        // Tem validade: mostrar valor + botão OK
+        // Admin pode também alterar; outros apenas confirmar
+        internalBlock += '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px">'
+          +'<div style="font-size:11px;font-weight:800;color:#15803d;text-transform:uppercase;letter-spacing:.04em;margin-bottom:8px">📅 Validade</div>'
+          +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+            +'<div style="font-size:20px;font-weight:900;color:'+va.color+'">'
+              +l.validade+va.badge
+            +'</div>'
+            +'<button type="button" id="exp-ok-'+i+'" onclick="expConfirmarValidade('+i+')"'
+              +' style="padding:10px 20px;background:#15803d;color:white;border:none;border-radius:10px;font-size:14px;font-weight:900;cursor:pointer">✓ OK</button>'
+          +'</div>';
+        // Admin: input opcional para alterar
+        if (isAdmin) {
+          internalBlock += '<div style="margin-top:10px;border-top:1px solid #bbf7d0;padding-top:10px">'
+            +'<div style="font-size:10px;font-weight:700;color:#6b7280;margin-bottom:5px">Admin: alterar validade</div>'
+            +'<input type="date" id="exp-val-'+i+'" value="'+valISO+'"'
+            +' style="width:100%;padding:10px;font-size:15px;font-weight:700;border:2px solid #fbbf24;border-radius:10px;background:white;color:#92400e;box-sizing:border-box">'
+            +'</div>';
+        } else {
+          // Input hidden com valor já definido (para finalizarExpedicao ler)
+          internalBlock += '<input type="hidden" id="exp-val-'+i+'" value="'+valISO+'">';
+        }
+        internalBlock += '</div>';
 
-      internalBlock+='<div style="background:'+valBg+';border:2px solid '+valBorder+';border-radius:12px;padding:12px">'
-        +valLabel
-        +(l.validade ? '<div style="font-size:13px;font-weight:800;color:'+va.color+';margin-bottom:8px">Actual: '+l.validade+va.badge+'</div>' : '')
-        +'<input type="date" id="exp-val-'+i+'" value="'+valISO+'"'
-        +' style="width:100%;padding:14px;font-size:17px;font-weight:800;border:2px solid '+valBorder+';border-radius:10px;background:white;color:#92400e;box-sizing:border-box">'
-        +'</div>';
+      } else {
+        // Sem validade: input obrigatório para todos
+        internalBlock += '<div style="background:#fef2f2;border:2px solid #ef4444;border-radius:12px;padding:12px">'
+          +'<div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">'
+            +'<span style="font-size:16px">⚠️</span>'
+            +'<span style="font-size:12px;font-weight:900;color:#dc2626;text-transform:uppercase;letter-spacing:.04em">Validade obrigatória</span>'
+          +'</div>'
+          +'<input type="date" id="exp-val-'+i+'" value="'+valISO+'"'
+          +' style="width:100%;padding:14px;font-size:17px;font-weight:800;border:2px solid #ef4444;border-radius:10px;background:white;color:#92400e;box-sizing:border-box">'
+          +'</div>';
+      }
 
-      internalBlock+='</div>';
+      internalBlock += '</div>'; // fim bloco branco
+
     } else {
       // Vista (expedida)
-      internalBlock='<div style="margin-top:8px;background:white;border-radius:10px;padding:10px 12px">'
+      internalBlock = '<div style="margin-top:8px;background:white;border-radius:10px;padding:10px 12px">'
         +'<div style="display:flex;justify-content:space-between;align-items:center">'
           +'<span style="font-family:monospace;font-weight:900;font-size:16px;color:#1e3a5f">'+l.lote+'</span>'
-          +'<span style="font-size:12px;color:#6b7280">C'+(l.camara||'?')+(l.kg?' · '+parseFloat(l.kg).toFixed(1)+' kg':'')+'</span>'
+          +'<span style="font-size:12px;color:#6b7280">'+camDisplay+(l.kg?' \xb7 '+parseFloat(l.kg).toFixed(1)+' kg':'')+'</span>'
         +'</div>'
         +(l.validade
-          ? '<div style="font-size:13px;font-weight:800;color:'+va.color+';margin-top:6px">📅 Validade: '+l.validade+va.badge+'</div>'
+          ? '<div style="font-size:13px;font-weight:800;color:'+va.color+';margin-top:6px">\ud83d\udcc5 '+l.validade+va.badge+'</div>'
           : '<div style="font-size:11px;color:#9ca3af;margin-top:4px">Sem validade</div>')
       +'</div>';
     }
 
-    var borderColor = !haLote ? '#fed7aa' : (needsVal&&editable ? '#fca5a5' : '#93c5fd');
+    var borderColor = !haLote ? '#fed7aa' : (needsVal&&editable ? '#fca5a5' : (editable&&!l._valOk&&!l.validade?'#fca5a5':'#93c5fd'));
     var bgColor     = !haLote ? '#fff7ed' : '#f0f9ff';
 
-    html+='<div style="background:'+bgColor+';border:2px solid '+borderColor+';border-radius:16px;padding:16px;margin-bottom:12px">'
-      +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
-        +'<div>'
-          +'<div style="font-size:10px;font-weight:900;color:#6b7280;text-transform:uppercase;letter-spacing:.06em">Linha '+(i+1)+'</div>'
-          +'<div style="font-size:16px;font-weight:800;color:#1e3a5f;margin-top:3px">'+l.artigo+'</div>'
-          +'<div style="font-size:12px;color:#6b7280;margin-top:2px">'+l.qtd+' un · '+l.caixas+' cx'+(l.marca?' · '+l.marca:'')+'</div>'
-        +'</div>'
-        +(haLote&&!editable ? '' : '')
-      +'</div>'
+    html += '<div style="background:'+bgColor+';border:2px solid '+borderColor+';border-radius:16px;padding:16px;margin-bottom:12px">'
+      +'<div style="font-size:10px;font-weight:900;color:#6b7280;text-transform:uppercase;letter-spacing:.06em">Linha '+(i+1)+'</div>'
+      +'<div style="font-size:16px;font-weight:800;color:#1e3a5f;margin-top:3px">'+l.artigo+'</div>'
+      +'<div style="font-size:12px;color:#6b7280;margin-top:2px">'+l.qtd+' un \xb7 '+l.caixas+' cx'+(l.marca?' \xb7 '+l.marca:'')+'</div>'
       +internalBlock
     +'</div>';
   });
 
-  document.getElementById('exp-det-corpo').innerHTML=html;
+  document.getElementById('exp-det-corpo').innerHTML = html;
 
-  var btns='';
+  var btns = '';
   if (editable) {
-    btns='<button class="btn-primary" style="background:#15803d;font-size:15px;padding:16px;margin-bottom:8px" onclick="finalizarExpedicao()">✓ Finalizar e Expedir</button>'
-        +'<button class="btn-primary" style="background:#6d28d9" onclick="voltarParaPrepararDoExp()">✎ Reeditar Lotes</button>';
+    btns = '<button class="btn-primary" style="background:#15803d;font-size:15px;padding:16px;margin-bottom:8px" onclick="finalizarExpedicao()">\u2713 Finalizar e Expedir</button>'
+          +'<button class="btn-primary" style="background:#6d28d9" onclick="voltarParaPrepararDoExp()">\u270e Reeditar Lotes</button>';
   } else {
     var eId=exp.encId, xId=exp.id;
-    btns='<button class="btn-primary" style="background:#0369a1" onclick="emailEncomenda(\''+eId+'\')">📧 Enviar por Email</button>'
-        +'<button class="btn-primary" style="background:#7c3aed;margin-top:6px" onclick="imprimirExpedicao(\''+xId+'\')">🖨️ Imprimir / PDF</button>'
-        +'<button class="btn-primary" style="background:#15803d;margin-top:6px" onclick="expXLSX(\''+xId+'\')">📊 Exportar Excel</button>';
+    btns = '<button class="btn-primary" style="background:#0369a1" onclick="emailEncomenda(\''+eId+'\')">📧 Enviar por Email</button>'
+          +'<button class="btn-primary" style="background:#7c3aed;margin-top:6px" onclick="imprimirExpedicao(\''+xId+'\')">🖨️ Imprimir / PDF</button>'
+          +'<button class="btn-primary" style="background:#15803d;margin-top:6px" onclick="expXLSX(\''+xId+'\')">📊 Exportar Excel</button>';
   }
-  document.getElementById('exp-det-botoes').innerHTML=btns;
+  document.getElementById('exp-det-botoes').innerHTML = btns;
+}
+
+function expConfirmarValidade(idx) {
+  // Botão OK — marcar linha como validade confirmada visualmente
+  var btn = document.getElementById('exp-ok-'+idx);
+  if (btn) {
+    btn.textContent = '✓ Confirmado';
+    btn.style.background = '#064e3b';
+    btn.disabled = true;
+  }
 }
 
 function finalizarExpedicao() {
-  var exps=getExpedicoes();
-  var exp=exps.find(function(e){ return e.id===_expDetId; });
+  var exps = getExpedicoes();
+  var exp  = exps.find(function(e){ return e.id===_expDetId; });
   if (!exp) return;
-  var errosVal=[];
+  var errosVal = [];
+
   exp.linhas.forEach(function(l,i){
-    var kgEl=document.getElementById('exp-kg-'+i);
-    var valEl=document.getElementById('exp-val-'+i);
-    if (kgEl && kgEl.value!=='') l.kg=parseFloat(kgEl.value)||null;
+    var kgEl  = document.getElementById('exp-kg-'+i);
+    var valEl = document.getElementById('exp-val-'+i);
+    if (kgEl && kgEl.value!=='') l.kg = parseFloat(kgEl.value)||null;
     if (valEl && valEl.value) {
-      var d=new Date(valEl.value+'T12:00:00');
-      l.validade=('0'+d.getDate()).slice(-2)+'/'
-                +('0'+(d.getMonth()+1)).slice(-2)+'/'
-                +d.getFullYear();
-      if (l.camara) {
-        var st=getEstado();
-        var lo=(st[l.camara]||[]).find(function(x){ return (x.lote||'').toLowerCase()===(l.lote||'').toLowerCase(); });
-        if (lo&&!lo.validade){ lo.validade=l.validade; salvarEstado(st); }
-      }
+      var d = new Date(valEl.value+'T12:00:00');
+      l.validade = ('0'+d.getDate()).slice(-2)+'/'
+                  +('0'+(d.getMonth()+1)).slice(-2)+'/'
+                  +d.getFullYear();
     }
-    if (l.lote&&!l.validade) errosVal.push('Linha '+(i+1)+' sem validade');
+    if (l.lote && !l.validade) errosVal.push('Linha '+(i+1)+' sem validade');
+
+    // Resolver câmara se ainda null
+    if (l.lote && !l.camara) {
+      var info = _buscarInfoLote(l.lote);
+      if (info.camara) l.camara = info.camara;
+    }
+    // Propagar validade no lote da câmara
+    if (l.validade && l.camara) {
+      var st = getEstado();
+      var lo = (st[l.camara]||[]).find(function(x){ return (x.lote||'').toLowerCase()===(l.lote||'').toLowerCase(); });
+      if (lo) { lo.validade = l.validade; salvarEstado(st); }
+    }
   });
-  if (errosVal.length){ mostrarStatus('status-exp-det','\u26a0\ufe0f '+errosVal.join(' \xb7 '),'error'); return; }
-  var e=getEstado(); var erros=[];
+
+  if (errosVal.length) {
+    mostrarStatus('status-exp-det','\u26a0\ufe0f '+errosVal.join(' \xb7 '),'error');
+    return;
+  }
+
+  // Abater lotes nas câmaras (só os que existem)
+  var e = getEstado();
+  var avisos = [];
   exp.linhas.forEach(function(l){
-    if (!l.lote||!l.camara) return;
-    var arr=e[l.camara]||[];
-    var lo=arr.find(function(x){ return (x.lote||'').toLowerCase()===l.lote.toLowerCase(); });
-    if (!lo){ erros.push('Lote '+l.lote+' n\xe3o encontrado em C'+l.camara); return; }
-    lo.qtd-=(l.qtd||0); if (lo.qtd<=0) arr.splice(arr.indexOf(lo),1);
+    if (!l.lote || !l.camara) return;
+    var arr = e[l.camara]||[];
+    var lo  = arr.find(function(x){ return (x.lote||'').toLowerCase()===l.lote.toLowerCase(); });
+    if (!lo) {
+      avisos.push(l.lote+' não encontrado em câmara (já expedido?)');
+      return; // não é erro fatal — regista histórico mesmo assim
+    }
+    lo.qtd -= (l.qtd||0);
+    if (lo.qtd<=0) arr.splice(arr.indexOf(lo),1);
   });
-  if (erros.length){ mostrarStatus('status-exp-det','\u26a0\ufe0f '+erros.join('; '),'error'); return; }
-  salvarEstado(e); atualizarResumoCamaras();
+  salvarEstado(e);
+  atualizarResumoCamaras();
+
+  // Histórico
   exp.linhas.forEach(function(l){
     if (!l.lote) return;
-    addHistorico({id:Date.now()+Math.random(),lote:l.lote,qtdSaida:l.qtd,
-      kg:l.kg||null,validade:l.validade||null,
-      data:new Date().toISOString(),dataFormatada:dataHoje(),
-      camara:l.camara,operacao:'saida',encomendaId:exp.encId});
+    addHistorico({id:Date.now()+Math.random(), lote:l.lote, qtdSaida:l.qtd,
+      kg:l.kg||null, validade:l.validade||null,
+      data:new Date().toISOString(), dataFormatada:dataHoje(),
+      camara:l.camara||null, operacao:'saida', encomendaId:exp.encId});
   });
-  exp.estado='expedida'; exp.dataExpedicao=new Date().toISOString(); exp.dataExpFormatada=dataHoje();
+
+  exp.estado = 'expedida';
+  exp.dataExpedicao = new Date().toISOString();
+  exp.dataExpFormatada = dataHoje();
   salvarExpedicoes(exps);
-  var encs=getEncomendas(); var enc=encs.find(function(x){ return x.id===exp.encId; });
-  if (enc){
-    enc.estado='concluida'; if (!enc.lotes) enc.lotes=[];
+
+  var encs = getEncomendas();
+  var enc  = encs.find(function(x){ return x.id===exp.encId; });
+  if (enc) {
+    enc.estado = 'concluida';
+    if (!enc.lotes) enc.lotes = [];
     exp.linhas.forEach(function(l){
       if (l.lote) enc.lotes.push({lote:l.lote,qtd:l.qtd,kg:l.kg||null,validade:l.validade||null,data:dataHoje()});
     });
     salvarEncomendas(encs);
   }
-  _atualizarBadgeExp(); enviarParaCloud({operacao:'expedicao',exp:exp});
-  mostrarStatus('status-exp-det','\u2713 Expedi\xe7\xe3o finalizada! Lotes abatidos das c\xe2maras.','success');
-  setTimeout(function(){ _renderExpDet(exp); },600);
+
+  _atualizarBadgeExp();
+  enviarParaCloud({operacao:'expedicao',exp:exp});
+  var msg = '\u2713 Expedi\xe7\xe3o finalizada!';
+  if (avisos.length) msg += ' (\u26a0\ufe0f '+avisos.join('; ')+')';
+  mostrarStatus('status-exp-det', msg, 'success');
+  setTimeout(function(){ _renderExpDet(exp); }, 600);
 }
 
 function imprimirExpedicao(expId) {
