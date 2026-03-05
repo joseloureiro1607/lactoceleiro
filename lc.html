@@ -1401,7 +1401,87 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
     </div>
 
 <!-- ENCOMENDAS HUB -->
-    <div class="screen" id="screen-enc-hub">
+        <!-- ══════════════════════════════ -->
+    <!-- PREPARAR ENCOMENDA (atribuir lotes por linha) -->
+    <!-- ══════════════════════════════ -->
+    <div class="screen" id="screen-enc-preparar">
+      <div class="breadcrumb">
+        <span class="bc-link" onclick="irPara('screen-home')">In&#237;cio</span> <span>&#8250;</span>
+        <span class="bc-link" onclick="irPara('screen-enc-lista')">Encomendas</span> <span>&#8250;</span>
+        <strong id="bc-enc-prep">Preparar</strong>
+      </div>
+      <div style="background:linear-gradient(135deg,#0369a1,#0284c7);border-radius:14px;padding:14px 16px;margin-bottom:14px;color:white">
+        <div style="font-size:11px;opacity:0.7;text-transform:uppercase;margin-bottom:2px">A preparar</div>
+        <div style="font-size:16px;font-weight:700" id="enc-prep-titulo">Encomenda</div>
+        <div style="font-size:12px;opacity:0.8;margin-top:2px" id="enc-prep-sub"></div>
+      </div>
+      <div id="enc-prep-linhas"></div>
+      <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <button class="btn-back" onclick="voltarPagina()">&#8592; Voltar</button>
+        <button class="btn-primary" style="background:#0369a1;margin:0" onclick="enviarParaExpedicao()">
+          &#128666; Enviar para Expedi&#231;&#227;o
+        </button>
+      </div>
+      <div class="status" id="status-enc-prep"></div>
+    </div>
+
+    <!-- ══════════════════════════════ -->
+    <!-- EXPEDIÇÃO                      -->
+    <!-- ══════════════════════════════ -->
+    <div class="screen" id="screen-expedicao">
+      <div class="breadcrumb">
+        <span class="bc-link" onclick="irPara('screen-home')">In&#237;cio</span> <span>&#8250;</span>
+        <span class="bc-link" onclick="irPara('screen-enc-hub')">Encomendas</span> <span>&#8250;</span>
+        <strong>Expedi&#231;&#227;o</strong>
+      </div>
+      <div style="background:linear-gradient(135deg,#0369a1,#0284c7);border-radius:14px;padding:14px 16px;margin-bottom:14px;color:white">
+        <div style="font-size:11px;opacity:0.7;text-transform:uppercase;margin-bottom:2px">M&#243;dulo</div>
+        <div style="font-size:16px;font-weight:700">&#128666; Expedi&#231;&#227;o</div>
+      </div>
+      <div class="section-title">Prontas para expedir</div>
+      <div id="exp-lista-pronta"></div>
+      <div class="divider" style="margin:14px 0"></div>
+      <div class="section-title" style="cursor:pointer" onclick="toggleExpConcluidas()">
+        Expedidas <span id="exp-toggle-icon">&#9660;</span>
+      </div>
+      <div id="exp-lista-expedida" style="display:none"></div>
+      <div style="margin-top:12px"><button class="btn-back" onclick="irPara('screen-enc-hub')">&#8592; Voltar</button></div>
+    </div>
+
+    <!-- ══════════════════════════════ -->
+    <!-- DETALHE EXPEDIÇÃO              -->
+    <!-- ══════════════════════════════ -->
+    <div class="screen" id="screen-exp-detalhe">
+      <div class="breadcrumb">
+        <span class="bc-link" onclick="irPara('screen-home')">In&#237;cio</span> <span>&#8250;</span>
+        <span class="bc-link" onclick="abrirExpedicao()">Expedi&#231;&#227;o</span> <span>&#8250;</span>
+        <strong id="bc-exp-det">Detalhe</strong>
+      </div>
+      <div style="background:linear-gradient(135deg,#0369a1,#0284c7);border-radius:14px;padding:14px 16px;margin-bottom:14px;color:white">
+        <div style="font-size:11px;opacity:0.7;text-transform:uppercase;margin-bottom:2px">Expedi&#231;&#227;o</div>
+        <div style="font-size:16px;font-weight:700" id="exp-det-titulo">—</div>
+        <div style="font-size:12px;opacity:0.8;margin-top:2px" id="exp-det-sub">—</div>
+      </div>
+      <div id="exp-det-corpo"></div>
+      <div id="exp-det-botoes" style="margin-top:14px"></div>
+      <div style="margin-top:8px"><button class="btn-back" onclick="abrirExpedicao()">&#8592; Voltar</button></div>
+      <div class="status" id="status-exp-det"></div>
+    </div>
+
+    <!-- PICKER DE LOTE (modal) -->
+    <div id="lote-picker-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:600;align-items:flex-end">
+      <div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;margin:0 auto;max-height:80vh;overflow-y:auto">
+        <div style="font-size:15px;font-weight:800;color:#0369a1;margin-bottom:4px">&#128666; Selecionar lote</div>
+        <div id="lote-picker-sub" style="font-size:12px;color:#6b7280;margin-bottom:12px"></div>
+        <div id="lote-picker-lista"></div>
+        <button type="button" onclick="fecharLotePicker()"
+          style="width:100%;margin-top:12px;padding:14px;background:#f3f4f6;border:none;border-radius:12px;font-size:14px;font-weight:700;color:#6b7280;cursor:pointer">
+          Cancelar
+        </button>
+      </div>
+    </div>
+
+<div class="screen" id="screen-enc-hub">
       <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <strong>Encomendas</strong></div>
       <div style="background:linear-gradient(135deg,#6d28d9,#7c3aed);border-radius:16px;padding:14px 16px;margin-bottom:16px;color:white">
         <div style="font-size:11px;opacity:0.7;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Módulo</div>
@@ -1413,6 +1493,14 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         </button>
         <button class="main-btn main-btn-saida" onclick="irPara('screen-saida-camara')">
           <span class="icon">📤</span>SAÍDAS DE CÂMARA
+        </button>
+      </div>
+      <div style="margin-top:8px">
+        <button class="main-btn" onclick="abrirExpedicao()"
+          style="width:100%;padding:18px 12px;background:linear-gradient(135deg,#0369a1,#0284c7);color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
+          <span style="font-size:22px">🚚</span>
+          <span>EXPEDI&#199;&#195;O</span>
+          <span id="badge-expedicao" style="background:white;color:#0369a1;border-radius:20px;padding:2px 8px;font-size:12px;font-weight:900;display:none">0</span>
         </button>
       </div>
       <div style="margin-top:2px">
@@ -2701,7 +2789,7 @@ function renderizarEncomendas() {
   const concluidas = encs.filter(e => e.estado === 'concluida');
 
   const renderCard = (enc) => {
-    const estadoLabel = { aberta:'Aberta', parcial:'Parcial', concluida:'Concluída' };
+    const estadoLabel = { aberta:'Aberta', parcial:'Parcial', 'em-expedicao':'Em Expedição', concluida:'Concluída' };
     const totalAbatido = (enc.lotes||[]).reduce((a,l) => a+l.qtd, 0);
     return `<div class="enc-card" onclick="abrirEncomenda('${enc.id}')">
       <div class="ec-header">
@@ -2888,8 +2976,11 @@ function abrirEncomenda(id) {
   document.getElementById('enc-det-corpo').innerHTML = corpo;
 
   let botoes = '';
-  if (enc.estado !== 'concluida' && restante > 0) {
-    botoes += `<button class="btn-primary laranja" onclick="irParaSaidaDeEncomenda()">📤 Ir para Saídas (abater lote)</button>`;
+  if (enc.estado !== 'concluida' && enc.estado !== 'em-expedicao') {
+    botoes += `<button class="btn-primary" style="background:#0369a1" onclick="prepararEncomenda('${enc.id}')">&#128666; Preparar / Atribuir Lotes</button>`;
+  }
+  if (enc.estado === 'em-expedicao') {
+    botoes += `<button class="btn-primary" style="background:#0284c7" onclick="abrirExpDetalhe('${enc.id}')">&#128666; Ver na Expedi&#231;&#227;o</button>`;
   }
   botoes += `<button class="btn-primary" style="background:#7c3aed;margin-top:4px" onclick="emailEncomenda('${enc.id}')">&#128231; Enviar por Email</button>`;
   if (enc.estado !== 'concluida') {
@@ -9823,6 +9914,477 @@ function pmConfirmar() {
     'Lote ' + loteDest + ' criado na Camara ' + _pmCamaraDestino + ' (' + qtdUsar + ' un' + (peso ? ' / ' + peso.toFixed(1) + ' kg' : '') + ')', 'success');
   setTimeout(function(){ irParaProducaoManual(); }, 2000);
 }
+
+// ═══════════════════════════════════════════════════════════════
+// EXPEDIÇÃO — storage
+// ═══════════════════════════════════════════════════════════════
+function getExpedicoes() {
+  try { return JSON.parse(localStorage.getItem('lc_expedicoes_v1') || '[]'); } catch(e) { return []; }
+}
+function salvarExpedicoes(arr) {
+  localStorage.setItem('lc_expedicoes_v1', JSON.stringify(arr));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PREPARAR ENCOMENDA — atribuir lotes a cada linha
+// ═══════════════════════════════════════════════════════════════
+var _prepEncId = null;
+var _prepLinhas = []; // [{...linha, lote:'', kg:'', camara:null}]
+var _pickerCallback = null;
+
+function prepararEncomenda(id) {
+  var encs = getEncomendas();
+  var enc = encs.find(function(e){ return e.id === id; });
+  if (!enc) return;
+  _prepEncId = id;
+
+  // Inicializar linhas de preparação (preservar o que já estava)
+  var prev = enc.prepLinhas || [];
+  _prepLinhas = (enc.linhas || [{ artigo: enc.artigo||'', qtd: enc.qtd||0, caixas: enc.caixas||0 }]).map(function(l, i) {
+    var p = prev[i] || {};
+    return {
+      artigo: l.artigo || '',
+      qtd: l.qtd || 0,
+      caixas: l.caixas || 0,
+      marca: l.marca || '',
+      lote: p.lote || '',
+      kg: p.kg || '',
+      camara: p.camara || null,
+      validade: p.validade || ''
+    };
+  });
+
+  document.getElementById('bc-enc-prep').textContent = 'Encomenda #' + enc.nr;
+  document.getElementById('enc-prep-titulo').textContent = 'Encomenda #' + enc.nr + ' — ' + enc.cliente;
+  document.getElementById('enc-prep-sub').textContent = enc.artigo + (enc.obs ? ' · ' + enc.obs : '');
+  document.getElementById('status-enc-prep').className = 'status';
+
+  _renderPrepLinhas();
+  irPara('screen-enc-preparar');
+}
+
+function _renderPrepLinhas() {
+  var e = getEstado();
+  // Todos os lotes disponíveis em câmaras 4 e 5
+  var lotesDisp = [];
+  [4, 5].forEach(function(c) {
+    (e[c] || []).forEach(function(l) {
+      lotesDisp.push({ camara: c, lote: l.lote, qtd: l.qtd, peso: l.peso || 0, validade: l.validade || '', ref: l });
+    });
+  });
+
+  var html = '';
+  _prepLinhas.forEach(function(l, i) {
+    var loteInfo = '';
+    if (l.lote) {
+      var found = lotesDisp.find(function(ld){ return ld.lote === l.lote; });
+      var dispStr = found ? ' (disp. ' + found.qtd + ' un)' : ' ⚠️ não encontrado';
+      loteInfo = '<div style="font-size:11px;color:#0369a1;margin-top:3px;font-weight:700">' +
+        '&#128666; C' + (l.camara || '?') + ' · ' + l.lote + dispStr + '</div>';
+      if (l.validade) {
+        loteInfo += '<div style="font-size:11px;color:#92400e;font-weight:700">&#128197; Validade: ' + l.validade + '</div>';
+      }
+    }
+
+    html += '<div style="background:white;border:2px solid ' + (l.lote ? '#bfdbfe' : '#e5e7eb') + ';border-radius:14px;padding:14px;margin-bottom:10px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">' +
+        '<div>' +
+          '<div style="font-size:12px;font-weight:800;color:#1e3a5f;text-transform:uppercase;letter-spacing:.04em">Linha ' + (i+1) + '</div>' +
+          '<div style="font-size:14px;font-weight:700;color:#374151;margin-top:2px">' + l.artigo + '</div>' +
+          '<div style="font-size:12px;color:#6b7280">' + l.qtd + ' un · ' + l.caixas + ' cx' + (l.marca ? ' · ' + l.marca : '') + '</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px;align-items:flex-start">' +
+          (l.lote ? '<button type="button" onclick="limparLotePrep(' + i + ')" style="padding:6px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">&#10005;</button>' : '') +
+        '</div>' +
+      '</div>' +
+      loteInfo +
+      '<div style="display:flex;gap:8px;margin-top:10px">' +
+        '<input type="text" id="prep-lote-' + i + '" placeholder="Nº lote (manual)" value="' + (l.lote || '') + '"' +
+          ' style="flex:1;padding:10px;border:2px solid #e5e7eb;border-radius:10px;font-family:\'DM Mono\',monospace;font-weight:700;font-size:14px"' +
+          ' oninput="prepLoteManual(' + i + ')">' +
+        '<input type="number" id="prep-kg-' + i + '" placeholder="kg" value="' + (l.kg || '') + '"' +
+          ' style="width:70px;padding:10px;border:2px solid #e5e7eb;border-radius:10px;font-size:14px">' +
+        '<button type="button" onclick="abrirLotePicker(' + i + ')"' +
+          ' style="padding:10px 14px;background:#0369a1;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px">Lista</button>' +
+      '</div>' +
+    '</div>';
+  });
+
+  document.getElementById('enc-prep-linhas').innerHTML = html;
+}
+
+function prepLoteManual(idx) {
+  var val = (document.getElementById('prep-lote-' + idx).value || '').trim();
+  var e = getEstado();
+  var found = null;
+  [4, 5].forEach(function(c) {
+    if (found) return;
+    var lote = (e[c] || []).find(function(l){ return (l.lote||'').toLowerCase() === val.toLowerCase(); });
+    if (lote) found = { camara: c, lote: lote.lote, validade: lote.validade || '' };
+  });
+  _prepLinhas[idx].lote = val;
+  _prepLinhas[idx].camara = found ? found.camara : null;
+  _prepLinhas[idx].validade = found ? found.validade : '';
+  var kgEl = document.getElementById('prep-kg-' + idx);
+  _prepLinhas[idx].kg = kgEl ? kgEl.value : '';
+}
+
+function limparLotePrep(idx) {
+  _prepLinhas[idx].lote = '';
+  _prepLinhas[idx].camara = null;
+  _prepLinhas[idx].validade = '';
+  _prepLinhas[idx].kg = '';
+  _renderPrepLinhas();
+}
+
+// ── Picker de lote ──────────────────────────────────────────
+function abrirLotePicker(idx) {
+  _pickerCallback = function(camara, lote, validade) {
+    _prepLinhas[idx].lote = lote;
+    _prepLinhas[idx].camara = camara;
+    _prepLinhas[idx].validade = validade;
+    _renderPrepLinhas();
+  };
+
+  var e = getEstado();
+  var html = '';
+  var total = 0;
+  [4, 5].forEach(function(c) {
+    var arr = e[c] || [];
+    if (!arr.length) return;
+    html += '<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#6b7280;margin:8px 0 4px">Câmara ' + c + '</div>';
+    arr.forEach(function(l) {
+      total++;
+      var bg = l.validade ? '#fef3c7' : '#f9fafb';
+      var border = l.validade ? '#fbbf24' : '#e5e7eb';
+      html += '<div onclick="_pickerSelecionar(' + c + ',\'' + l.lote + '\',\'' + (l.validade||'') + '\')" ' +
+        'style="background:' + bg + ';border:2px solid ' + border + ';border-radius:12px;padding:12px 14px;margin-bottom:6px;cursor:pointer">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+          '<span style="font-family:\'DM Mono\',monospace;font-weight:800;font-size:15px;color:#1e3a5f">' + l.lote + '</span>' +
+          '<span style="font-size:13px;color:#6b7280;font-weight:700">' + l.qtd + ' un</span>' +
+        '</div>' +
+        (l.validade ? '<div style="font-size:11px;font-weight:700;color:#92400e;margin-top:3px">&#128197; Val: ' + l.validade + '</div>' : '') +
+        (l.peso ? '<div style="font-size:11px;color:#6b7280;margin-top:2px">' + Number(l.peso).toFixed(1) + ' kg</div>' : '') +
+      '</div>';
+    });
+  });
+
+  if (!total) html = '<div style="text-align:center;padding:20px;color:#9ca3af;font-size:14px">Sem lotes nas câmaras 4 e 5</div>';
+
+  document.getElementById('lote-picker-sub').textContent = 'Câmaras 4 e 5 — selecione o lote para esta linha';
+  document.getElementById('lote-picker-lista').innerHTML = html;
+  var ov = document.getElementById('lote-picker-overlay');
+  ov.style.display = 'flex';
+}
+
+function _pickerSelecionar(camara, lote, validade) {
+  fecharLotePicker();
+  if (_pickerCallback) _pickerCallback(camara, lote, validade);
+}
+
+function fecharLotePicker() {
+  document.getElementById('lote-picker-overlay').style.display = 'none';
+}
+
+// ── Guardar estado de preparação e enviar para expedição ─────
+function enviarParaExpedicao() {
+  // Ler kg actuais dos inputs
+  _prepLinhas.forEach(function(l, i) {
+    var lotEl = document.getElementById('prep-lote-' + i);
+    var kgEl  = document.getElementById('prep-kg-' + i);
+    if (lotEl) l.lote = (lotEl.value || '').trim();
+    if (kgEl)  l.kg = kgEl.value;
+    // Tentar encontrar validade se não tiver
+    if (l.lote && !l.validade) {
+      var e = getEstado();
+      [4, 5].forEach(function(c) {
+        var found = (e[c]||[]).find(function(x){ return (x.lote||'').toLowerCase() === l.lote.toLowerCase(); });
+        if (found) { l.camara = c; l.validade = found.validade || ''; }
+      });
+    }
+  });
+
+  // Validar: todas as linhas têm lote?
+  var semLote = _prepLinhas.filter(function(l){ return !l.lote; });
+  if (semLote.length) {
+    mostrarStatus('status-enc-prep',
+      '⚠️ ' + semLote.length + ' linha(s) sem lote atribuído. Preencha todos os lotes ou continue assim.',
+      'warning');
+    // Permitir continuar mesmo assim após 2s
+    setTimeout(function(){
+      document.getElementById('status-enc-prep').className = 'status';
+    }, 4000);
+    return; // barrar aqui — utilizador terá de confirmar 2ª vez ou preencher
+  }
+
+  _confirmarEnvioExpedicao();
+}
+
+function _confirmarEnvioExpedicao() {
+  var encs = getEncomendas();
+  var enc = encs.find(function(e){ return e.id === _prepEncId; });
+  if (!enc) return;
+
+  // Guardar linhas de preparação na encomenda
+  enc.prepLinhas = _prepLinhas.map(function(l){ return Object.assign({}, l); });
+  enc.estado = 'em-expedicao';
+  salvarEncomendas(encs);
+
+  // Criar registo de expedição
+  var exps = getExpedicoes();
+  var expId = 'exp_' + Date.now();
+  exps.push({
+    id: expId,
+    encId: _prepEncId,
+    nr: enc.nr,
+    cliente: enc.cliente,
+    artigo: enc.artigo,
+    obs: enc.obs || '',
+    linhas: _prepLinhas.map(function(l){ return Object.assign({}, l); }),
+    estado: 'pronta',
+    dataCriacao: new Date().toISOString(),
+    dataFormatada: dataHoje()
+  });
+  salvarExpedicoes(exps);
+
+  // Atualizar badge
+  _atualizarBadgeExp();
+
+  mostrarStatus('status-enc-prep', '✓ Encomenda #' + enc.nr + ' enviada para Expedição!', 'success');
+  setTimeout(function(){
+    renderizarEncomendas();
+    irPara('screen-enc-lista');
+  }, 1600);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPEDIÇÃO — listar e gerir
+// ═══════════════════════════════════════════════════════════════
+var _expConcluiModal = false;
+
+function abrirExpedicao() {
+  _renderExpedicao();
+  irPara('screen-expedicao');
+}
+
+function _renderExpedicao() {
+  var exps = getExpedicoes();
+  var prontas   = exps.filter(function(e){ return e.estado === 'pronta'; });
+  var expedidas = exps.filter(function(e){ return e.estado === 'expedida'; });
+
+  var renderCard = function(exp) {
+    var temValidade = exp.linhas.some(function(l){ return l.validade; });
+    var alertaVal = '';
+    if (temValidade) {
+      var hoje = new Date();
+      var alerta = exp.linhas.some(function(l){
+        if (!l.validade) return false;
+        var pts = l.validade.split('/');
+        if (pts.length !== 3) return false;
+        var d = new Date(parseInt(pts[2]), parseInt(pts[1])-1, parseInt(pts[0]));
+        var diff = (d - hoje) / (1000*60*60*24);
+        return diff < 30;
+      });
+      if (alerta) alertaVal = '<span style="font-size:11px;background:#fee2e2;color:#dc2626;border-radius:6px;padding:2px 6px;font-weight:700;margin-left:6px">⚠️ Validade</span>';
+    }
+
+    var totalUn = exp.linhas.reduce(function(a,l){ return a+(l.qtd||0); }, 0);
+    return '<div style="background:white;border:2px solid ' + (exp.estado==='pronta'?'#bfdbfe':'#d1fae5') + ';border-radius:14px;padding:14px;margin-bottom:8px;cursor:pointer" onclick="abrirExpDetalhe(\'' + exp.id + '\')">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start">' +
+        '<div>' +
+          '<div style="font-size:13px;font-weight:800;color:#1e3a5f">Enc. #' + exp.nr + ' — ' + exp.cliente + alertaVal + '</div>' +
+          '<div style="font-size:12px;color:#6b7280;margin-top:2px">' + exp.artigo + ' · ' + totalUn + ' un · ' + exp.dataFormatada + '</div>' +
+          (exp.obs ? '<div style="font-size:11px;color:#9ca3af;margin-top:1px">📝 ' + exp.obs + '</div>' : '') +
+        '</div>' +
+        '<div style="font-size:11px;font-weight:800;padding:4px 8px;border-radius:8px;background:' + (exp.estado==='pronta'?'#dbeafe':'#d1fae5') + ';color:' + (exp.estado==='pronta'?'#1e40af':'#065f46') + '">' +
+          (exp.estado==='pronta'?'Pronta':'Expedida') +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  };
+
+  var elPronta = document.getElementById('exp-lista-pronta');
+  elPronta.innerHTML = prontas.length
+    ? prontas.map(renderCard).join('')
+    : '<div style="padding:20px;text-align:center;color:#9ca3af;font-size:13px">Sem encomendas prontas para expedir</div>';
+
+  var elExp = document.getElementById('exp-lista-expedida');
+  elExp.innerHTML = expedidas.length
+    ? expedidas.map(renderCard).join('')
+    : '<div style="padding:12px;font-size:13px;color:#9ca3af">Sem expedições concluídas</div>';
+
+  _atualizarBadgeExp();
+}
+
+function toggleExpConcluidas() {
+  var el = document.getElementById('exp-lista-expedida');
+  var ic = document.getElementById('exp-toggle-icon');
+  if (el.style.display === 'none') { el.style.display = 'block'; ic.innerHTML = '&#9650;'; }
+  else { el.style.display = 'none'; ic.innerHTML = '&#9660;'; }
+}
+
+function _atualizarBadgeExp() {
+  var exps = getExpedicoes();
+  var n = exps.filter(function(e){ return e.estado === 'pronta'; }).length;
+  var badge = document.getElementById('badge-expedicao');
+  if (!badge) return;
+  badge.textContent = n;
+  badge.style.display = n > 0 ? 'inline-block' : 'none';
+}
+
+// ── Detalhe da expedição ────────────────────────────────────
+var _expDetId = null;
+
+function abrirExpDetalhe(id) {
+  var exps = getExpedicoes();
+  var exp = exps.find(function(e){ return e.id === id; });
+  // Se id é de encomenda (vem de abrirEncomenda)
+  if (!exp) exp = exps.find(function(e){ return e.encId === id; });
+  if (!exp) return;
+  _expDetId = exp.id;
+
+  document.getElementById('bc-exp-det').textContent = 'Encomenda #' + exp.nr;
+  document.getElementById('exp-det-titulo').textContent = '#' + exp.nr + ' — ' + exp.cliente;
+  document.getElementById('exp-det-sub').textContent = exp.artigo + (exp.obs ? ' · ' + exp.obs : '') + ' · ' + exp.dataFormatada;
+  document.getElementById('status-exp-det').className = 'status';
+
+  var hoje = new Date();
+  var html = '<div class="section-title" style="margin-bottom:10px">Linhas de expedi&#231;&#227;o</div>';
+
+  exp.linhas.forEach(function(l, i) {
+    // Verificar validade
+    var alertVal = '';
+    var valColor = '#374151';
+    if (l.validade) {
+      var pts = l.validade.split('/');
+      if (pts.length === 3) {
+        var d = new Date(parseInt(pts[2]), parseInt(pts[1])-1, parseInt(pts[0]));
+        var diff = Math.ceil((d - hoje) / (1000*60*60*24));
+        if (diff < 0) {
+          alertVal = ' <span style="background:#fee2e2;color:#dc2626;border-radius:6px;padding:2px 5px;font-size:10px;font-weight:800">EXPIRADA</span>';
+          valColor = '#dc2626';
+        } else if (diff < 30) {
+          alertVal = ' <span style="background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 5px;font-size:10px;font-weight:800">' + diff + 'd</span>';
+          valColor = '#92400e';
+        }
+      }
+    }
+
+    var haLote = !!l.lote;
+    html += '<div style="background:' + (haLote?'#f0f9ff':'#fff7ed') + ';border:2px solid ' + (haLote?'#bae6fd':'#fed7aa') + ';border-radius:14px;padding:14px;margin-bottom:8px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">' +
+        '<div>' +
+          '<div style="font-size:12px;font-weight:800;color:#0369a1;text-transform:uppercase">Linha ' + (i+1) + '</div>' +
+          '<div style="font-size:14px;font-weight:700;color:#1e3a5f">' + l.artigo + '</div>' +
+          '<div style="font-size:12px;color:#6b7280">' + l.qtd + ' un · ' + l.caixas + ' cx' + (l.marca ? ' · ' + l.marca : '') + '</div>' +
+        '</div>' +
+      '</div>' +
+      (haLote ?
+        '<div style="background:white;border-radius:10px;padding:10px 12px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center">' +
+            '<span style="font-family:\'DM Mono\',monospace;font-weight:900;font-size:16px;color:#1e3a5f">' + l.lote + '</span>' +
+            '<span style="font-size:12px;color:#6b7280">C' + (l.camara||'?') + (l.kg ? ' · ' + parseFloat(l.kg).toFixed(1) + ' kg' : '') + '</span>' +
+          '</div>' +
+          (l.validade ?
+            '<div style="font-size:12px;font-weight:800;color:' + valColor + ';margin-top:4px">&#128197; Validade: ' + l.validade + alertVal + '</div>'
+          : '<div style="font-size:11px;color:#9ca3af;margin-top:4px">Sem validade registada</div>') +
+        '</div>'
+      : '<div style="font-size:12px;color:#f97316;font-weight:700">&#9888; Sem lote atribuído</div>') +
+    '</div>';
+  });
+
+  document.getElementById('exp-det-corpo').innerHTML = html;
+
+  var btns = '';
+  if (exp.estado === 'pronta') {
+    btns += '<button class="btn-primary" style="background:#15803d" onclick="confirmarExpedicao()">&#10003; Confirmar Expedi&#231;&#227;o</button>';
+    btns += '<button class="btn-primary" style="background:#0369a1;margin-top:6px" onclick="emailEncomenda(\'' + exp.encId + '\')">&#128231; Enviar por Email</button>';
+    btns += '<button class="btn-primary" style="background:#6d28d9;margin-top:6px" onclick="voltarParaPrepararDoExp()">&#9998; Reeditar Lotes</button>';
+  } else {
+    btns += '<button class="btn-primary" style="background:#7c3aed" onclick="emailEncomenda(\'' + exp.encId + '\')">&#128231; Enviar por Email / Fatura&#231;&#227;o</button>';
+  }
+  document.getElementById('exp-det-botoes').innerHTML = btns;
+
+  irPara('screen-exp-detalhe');
+}
+
+function confirmarExpedicao() {
+  var exps = getExpedicoes();
+  var exp = exps.find(function(e){ return e.id === _expDetId; });
+  if (!exp) return;
+
+  // Abater os lotes nas câmaras
+  var e = getEstado();
+  var erros = [];
+  exp.linhas.forEach(function(l) {
+    if (!l.lote || !l.camara) return;
+    var arr = e[l.camara] || [];
+    var loteObj = arr.find(function(x){ return (x.lote||'').toLowerCase() === l.lote.toLowerCase(); });
+    if (!loteObj) { erros.push('Lote ' + l.lote + ' não encontrado na Câmara ' + l.camara); return; }
+    loteObj.qtd -= (l.qtd || 0);
+    if (loteObj.qtd < 0) loteObj.qtd = 0;
+    if (loteObj.qtd === 0) arr.splice(arr.indexOf(loteObj), 1);
+  });
+
+  if (erros.length) {
+    mostrarStatus('status-exp-det', '⚠️ ' + erros.join('; '), 'error');
+    return;
+  }
+
+  salvarEstado(e);
+  atualizarResumoCamaras();
+
+  // Registar no histórico
+  exp.linhas.forEach(function(l) {
+    if (!l.lote) return;
+    addHistorico({
+      id: Date.now() + Math.random(),
+      lote: l.lote, qtdSaida: l.qtd, kg: l.kg || null, validade: l.validade || null,
+      data: new Date().toISOString(), dataFormatada: dataHoje(),
+      camara: l.camara, operacao: 'saida', encomendaId: exp.encId
+    });
+  });
+
+  // Marcar expedição como expedida
+  exp.estado = 'expedida';
+  exp.dataExpedicao = new Date().toISOString();
+  exp.dataExpFormatada = dataHoje();
+  salvarExpedicoes(exps);
+
+  // Marcar encomenda como concluída
+  var encs = getEncomendas();
+  var enc = encs.find(function(x){ return x.id === exp.encId; });
+  if (enc) {
+    enc.estado = 'concluida';
+    if (!enc.lotes) enc.lotes = [];
+    exp.linhas.forEach(function(l) {
+      if (l.lote) enc.lotes.push({ lote: l.lote, qtd: l.qtd, kg: parseFloat(l.kg)||null, validade: l.validade||null, data: dataHoje() });
+    });
+    salvarEncomendas(encs);
+  }
+
+  _atualizarBadgeExp();
+  enviarParaCloud({ operacao: 'expedicao', exp: exp });
+  mostrarStatus('status-exp-det', '✓ Expedição confirmada! Lotes abatidos das câmaras.', 'success');
+  setTimeout(function(){ abrirExpedicao(); }, 2000);
+}
+
+function voltarParaPrepararDoExp() {
+  var exps = getExpedicoes();
+  var exp = exps.find(function(e){ return e.id === _expDetId; });
+  if (!exp) return;
+  // Remover da expedição e repor encomenda como aberta
+  exps.splice(exps.indexOf(exp), 1);
+  salvarExpedicoes(exps);
+  var encs = getEncomendas();
+  var enc = encs.find(function(x){ return x.id === exp.encId; });
+  if (enc) { enc.estado = 'parcial'; salvarEncomendas(encs); }
+  _atualizarBadgeExp();
+  prepararEncomenda(exp.encId);
+}
+
+// Chamar ao arrancar
+setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
 </script>
 </body>
 </html>
