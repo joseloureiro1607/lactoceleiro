@@ -10246,57 +10246,84 @@ function _renderExpDet(exp) {
     var va=_vaInfo(l.validade);
     var needsVal=haLote&&!l.validade;
     var valISO='';
-    if (l.validade) { var pts=l.validade.split('/'); if(pts.length===3) valISO=pts[2]+'-'+pts[1]+'-'+pts[0]; }
-    var inner='';
+    if (l.validade) {
+      var pts=l.validade.split('/');
+      if(pts.length===3) valISO=pts[2]+'-'+pts[1]+'-'+pts[0];
+    }
+
+    var internalBlock='';
     if (!haLote) {
-      inner='<div style="margin-top:8px;padding:8px 10px;background:#fff7ed;border-radius:8px;font-size:12px;color:#f97316;font-weight:700">\u26a0\ufe0f Sem lote \u2014 volte a Preparar</div>';
+      internalBlock='<div style="margin-top:8px;padding:10px;background:#fff7ed;border-radius:10px;font-size:13px;color:#f97316;font-weight:700">⚠️ Sem lote — volte a Preparar</div>';
     } else if (editable) {
-      inner='<div style="margin-top:10px;background:white;border-radius:10px;padding:10px 12px">'
-        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
-          +'<span style="font-family:monospace;font-weight:900;font-size:16px;color:#1e3a5f">'+l.lote+'</span>'
-          +'<span style="font-size:12px;color:#0369a1;font-weight:700">C'+(l.camara||'?')+'</span>'
-        +'</div>'
-        +(l.validade?'<div style="font-size:12px;font-weight:800;color:'+va.color+';margin-bottom:8px">\ud83d\udcc5 '+l.validade+va.badge+'</div>':'')
-        +'<div class="form-row" style="margin-bottom:0">'
-          +'<div class="form-group" style="margin-bottom:0">'
-            +'<label style="font-size:11px">Peso (kg)</label>'
-            +'<input type="number" id="exp-kg-'+i+'" value="'+(l.kg||'')+'" placeholder="0.0" step="0.1" min="0" style="font-size:14px">'
-          +'</div>'
-          +'<div class="form-group" style="margin-bottom:0">'
-            +'<label style="font-size:11px;color:'+(needsVal?'#dc2626':'#92400e')+'">'+(needsVal?'\u26a0\ufe0f Validade (obrigat\xf3ria)':'Validade')+'</label>'
-            +'<input type="date" id="exp-val-'+i+'" value="'+valISO+'" style="font-size:14px;font-weight:700;border-color:'+(needsVal?'#f87171':'#fbbf24')+';color:#92400e">'
-          +'</div>'
-        +'</div>'
-      +'</div>';
+      // Bloco lote
+      internalBlock='<div style="margin-top:10px;background:white;border:2px solid #e5e7eb;border-radius:12px;padding:12px">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'
+          +'<span style="font-family:monospace;font-weight:900;font-size:17px;color:#1e3a5f">'+l.lote+'</span>'
+          +'<span style="font-size:13px;color:#0369a1;font-weight:800;background:#eff6ff;padding:3px 10px;border-radius:8px">Câmara '+l.camara+'</span>'
+        +'</div>';
+
+      // Campo KG
+      internalBlock+='<div style="margin-bottom:12px">'
+        +'<div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">Peso (kg)</div>'
+        +'<input type="number" id="exp-kg-'+i+'" value="'+(l.kg||'')+'" placeholder="Ex: 48.5" step="0.1" min="0"'
+        +' style="width:100%;padding:14px;font-size:18px;font-weight:700;border:2px solid #e5e7eb;border-radius:12px;color:#1e3a5f;box-sizing:border-box">'
+        +'</div>';
+
+      // Campo VALIDADE — destaque máximo
+      var valBorder = needsVal ? '#ef4444' : '#fbbf24';
+      var valBg = needsVal ? '#fef2f2' : '#fffbeb';
+      var valLabel = needsVal
+        ? '<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px"><span style="font-size:16px">⚠️</span><span style="font-size:12px;font-weight:900;color:#dc2626;text-transform:uppercase;letter-spacing:.04em">Validade obrigatória</span></div>'
+        : '<div style="font-size:11px;font-weight:800;color:#92400e;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px">📅 Validade</div>';
+
+      internalBlock+='<div style="background:'+valBg+';border:2px solid '+valBorder+';border-radius:12px;padding:12px">'
+        +valLabel
+        +(l.validade ? '<div style="font-size:13px;font-weight:800;color:'+va.color+';margin-bottom:8px">Actual: '+l.validade+va.badge+'</div>' : '')
+        +'<input type="date" id="exp-val-'+i+'" value="'+valISO+'"'
+        +' style="width:100%;padding:14px;font-size:17px;font-weight:800;border:2px solid '+valBorder+';border-radius:10px;background:white;color:#92400e;box-sizing:border-box">'
+        +'</div>';
+
+      internalBlock+='</div>';
     } else {
-      inner='<div style="margin-top:8px;background:white;border-radius:10px;padding:10px 12px">'
+      // Vista (expedida)
+      internalBlock='<div style="margin-top:8px;background:white;border-radius:10px;padding:10px 12px">'
         +'<div style="display:flex;justify-content:space-between;align-items:center">'
           +'<span style="font-family:monospace;font-weight:900;font-size:16px;color:#1e3a5f">'+l.lote+'</span>'
-          +'<span style="font-size:12px;color:#6b7280">C'+(l.camara||'?')+(l.kg?' \xb7 '+parseFloat(l.kg).toFixed(1)+' kg':'')+'</span>'
+          +'<span style="font-size:12px;color:#6b7280">C'+(l.camara||'?')+(l.kg?' · '+parseFloat(l.kg).toFixed(1)+' kg':'')+'</span>'
         +'</div>'
-        +(l.validade?'<div style="font-size:12px;font-weight:800;color:'+va.color+';margin-top:4px">\ud83d\udcc5 '+l.validade+va.badge+'</div>'
-                    :'<div style="font-size:11px;color:#9ca3af;margin-top:4px">Sem validade</div>')
+        +(l.validade
+          ? '<div style="font-size:13px;font-weight:800;color:'+va.color+';margin-top:6px">📅 Validade: '+l.validade+va.badge+'</div>'
+          : '<div style="font-size:11px;color:#9ca3af;margin-top:4px">Sem validade</div>')
       +'</div>';
     }
-    html+='<div style="background:'+(haLote?'#f0f9ff':'#fff7ed')+';border:2px solid '
-      +(haLote?(needsVal&&editable?'#fca5a5':'#93c5fd'):'#fed7aa')
-      +';border-radius:14px;padding:14px;margin-bottom:10px">'
-      +'<div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase">Linha '+(i+1)+'</div>'
-      +'<div style="font-size:15px;font-weight:700;color:#1e3a5f;margin-top:2px">'+l.artigo+'</div>'
-      +'<div style="font-size:12px;color:#6b7280">'+l.qtd+' un \xb7 '+l.caixas+' cx'+(l.marca?' \xb7 '+l.marca:'')+'</div>'
-      +inner
+
+    var borderColor = !haLote ? '#fed7aa' : (needsVal&&editable ? '#fca5a5' : '#93c5fd');
+    var bgColor     = !haLote ? '#fff7ed' : '#f0f9ff';
+
+    html+='<div style="background:'+bgColor+';border:2px solid '+borderColor+';border-radius:16px;padding:16px;margin-bottom:12px">'
+      +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
+        +'<div>'
+          +'<div style="font-size:10px;font-weight:900;color:#6b7280;text-transform:uppercase;letter-spacing:.06em">Linha '+(i+1)+'</div>'
+          +'<div style="font-size:16px;font-weight:800;color:#1e3a5f;margin-top:3px">'+l.artigo+'</div>'
+          +'<div style="font-size:12px;color:#6b7280;margin-top:2px">'+l.qtd+' un · '+l.caixas+' cx'+(l.marca?' · '+l.marca:'')+'</div>'
+        +'</div>'
+        +(haLote&&!editable ? '' : '')
+      +'</div>'
+      +internalBlock
     +'</div>';
   });
+
   document.getElementById('exp-det-corpo').innerHTML=html;
+
   var btns='';
   if (editable) {
-    btns='<button class="btn-primary" style="background:#15803d;font-size:15px;padding:16px" onclick="finalizarExpedicao()">\u2713 Finalizar e Expedir</button>'
-      +'<button class="btn-primary" style="background:#6d28d9;margin-top:6px" onclick="voltarParaPrepararDoExp()">\u270e Reeditar Lotes</button>';
+    btns='<button class="btn-primary" style="background:#15803d;font-size:15px;padding:16px;margin-bottom:8px" onclick="finalizarExpedicao()">✓ Finalizar e Expedir</button>'
+        +'<button class="btn-primary" style="background:#6d28d9" onclick="voltarParaPrepararDoExp()">✎ Reeditar Lotes</button>';
   } else {
     var eId=exp.encId, xId=exp.id;
-    btns='<button class="btn-primary" style="background:#0369a1" onclick="emailEncomenda(\''+eId+'\')">\ud83d\udce7 Enviar por Email</button>'
-      +'<button class="btn-primary" style="background:#7c3aed;margin-top:6px" onclick="imprimirExpedicao(\''+xId+'\')">\ud83d\udda8\ufe0f Imprimir / PDF</button>'
-      +'<button class="btn-primary" style="background:#15803d;margin-top:6px" onclick="expXLSX(\''+xId+'\')">\ud83d\udcca Exportar Excel</button>';
+    btns='<button class="btn-primary" style="background:#0369a1" onclick="emailEncomenda(\''+eId+'\')">📧 Enviar por Email</button>'
+        +'<button class="btn-primary" style="background:#7c3aed;margin-top:6px" onclick="imprimirExpedicao(\''+xId+'\')">🖨️ Imprimir / PDF</button>'
+        +'<button class="btn-primary" style="background:#15803d;margin-top:6px" onclick="expXLSX(\''+xId+'\')">📊 Exportar Excel</button>';
   }
   document.getElementById('exp-det-botoes').innerHTML=btns;
 }
