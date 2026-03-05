@@ -9610,13 +9610,29 @@ function _rlHTML(porLote) {
 
     // ── SECÇÃO SAÍDAS ──
     if(saidass.length) {
+      // Ordenar saídas por data
+      var saidasOrd = saidass.slice().sort(function(a,b){ return (a.obj.data||'') < (b.obj.data||'') ? -1 : 1; });
+      var totalUnSaida=0, totalKgSaida=0;
+      var datas = saidasOrd.map(function(s){ return s.obj.data||''; }).filter(Boolean);
+      var dataInicioVenda = datas.length ? datas[0] : null;
+      var dataFimVenda    = datas.length ? datas[datas.length-1] : null;
+      var qtdFabrico = pq ? Number(pq.qtd||pq._tempQtd||0) : 0;
+      var pesoFabrico = pq ? Number(pq.peso||pq._tempPeso||0) : 0;
+      // Data de fabrico (ISO)
+      var dataFabricoISO = pq ? (pq.data||pq.horaInicio||null) : null;
+      if (!dataFabricoISO && cams.length) dataFabricoISO = cams[0].data||null;
+
+      function _diasEntre(isoA, isoB) {
+        if (!isoA||!isoB) return null;
+        return Math.round((new Date(isoB)-new Date(isoA))/864e5);
+      }
+
       html+='<div style="padding:14px 18px;border-top:2px solid #f3f4f6">';
       html+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">'
         +'<div style="width:28px;height:28px;background:#15803d;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px">📤</div>'
         +'<div style="font-size:13px;font-weight:800;text-transform:uppercase;color:#15803d;letter-spacing:.05em">Saídas</div>'
         +'</div>';
 
-      var totalUnSaida=0, totalKgSaida=0;
       html+='<table style="width:100%;border-collapse:collapse;font-size:12px">'
         +'<thead><tr style="background:#f0fdf4">'
           +'<th style="padding:6px 8px;text-align:left;font-weight:800;color:#15803d;border-bottom:2px solid #bbf7d0">Data</th>'
@@ -9626,15 +9642,14 @@ function _rlHTML(porLote) {
           +'<th style="padding:6px 8px;text-align:left;font-weight:800;color:#15803d;border-bottom:2px solid #bbf7d0">Encomenda / Cliente</th>'
         +'</tr></thead><tbody>';
 
-      saidass.forEach(function(s,si) {
+      saidasOrd.forEach(function(s) {
         var r=s.obj;
         var enc=null;
         if (r.encomendaId) {
           var encs=getEncomendas();
           enc=encs.find(function(e){ return e.id===r.encomendaId; });
         }
-        var destino = enc ? ('#'+enc.nr+' '+enc.cliente)
-                         : (r.clienteManual||r.encPapel||'—');
+        var destino = enc ? ('#'+enc.nr+' '+enc.cliente) : (r.clienteManual||r.encPapel||'—');
         totalUnSaida+=(r.qtdSaida||0);
         totalKgSaida+=(parseFloat(r.kg)||0);
         html+='<tr style="border-bottom:1px solid #f0fdf4">'
@@ -9653,8 +9668,112 @@ function _rlHTML(porLote) {
           +'<td style="padding:6px 8px;text-align:right;color:#15803d">'+(totalKgSaida>0?totalKgSaida.toFixed(1)+' kg':'—')+'</td>'
           +'<td colspan="2"></td>'
         +'</tr></tfoot></table>';
+
+      // ── PAINEL ANALÍTICO (quando lote esgotado ou tem vendas significativas) ──
+      var loteConcluido = qtdFabrico>0 && totalUnSaida>=qtdFabrico;
+      var temDados = totalKgSaida>0 || dataInicioVenda;
+
+      if (temDados) {
+        var diasVenda   = _diasEntre(dataInicioVenda, dataFimVenda);
+        var diasFabrico = _diasEntre(dataFabricoISO,  dataFimVenda);
+        var perdaPct    = (pesoFabrico>0 && totalKgSaida>0)
+                          ? ((pesoFabrico-totalKgSaida)/pesoFabrico*100) : null;
+        var perdaKgAbs  = (pesoFabrico>0 && totalKgSaida>0) ? (pesoFabrico-totalKgSaida) : null;
+
+        // Cor fundo: vermelho escuro se lote esgotado, azul se parcial
+        var panelBg = loteConcluido
+          ? 'linear-gradient(135deg,#14532d,#166534)'
+          : 'linear-gradient(135deg,#1e3a5f,#1e40af)';
+
+        html+='<div style="margin-top:12px;background:'+panelBg+';border-radius:14px;padding:14px 16px;color:white">'
+          +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;opacity:.7;margin-bottom:10px">'
+            +(loteConcluido?'✓ Lote Concluído — Análise Final':'📊 Análise Parcial de Vendas')
+          +'</div>'
+          +'<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px">';
+
+        // Célula helper
+        function celPainel(label,val,sub,cor) {
+          return '<div style="background:rgba(255,255,255,.1);border-radius:10px;padding:10px 12px;text-align:center">'
+            +'<div style="font-size:9px;opacity:.6;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">'+label+'</div>'
+            +'<div style="font-size:22px;font-weight:900;'+(cor?'color:'+cor+';':'')+'line-height:1">'+val+'</div>'
+            +(sub?'<div style="font-size:10px;opacity:.6;margin-top:2px">'+sub+'</div>':'')
+          +'</div>';
+        }
+
+        // % perda de peso fabrico → saídas
+        if (perdaPct!==null) {
+          var pCor = perdaPct>15?'#fca5a5':perdaPct>8?'#fde68a':'#86efac';
+          html+=celPainel(
+            '\u2193 Perda peso fabrico\u2192venda',
+            perdaPct.toFixed(1)+'%',
+            perdaKgAbs.toFixed(1)+' kg ('+pesoFabrico.toFixed(1)+' \u2192 '+totalKgSaida.toFixed(1)+' kg)',
+            pCor
+          );
+        }
+
+        // Dias 1ª venda → última venda
+        if (diasVenda!==null && diasVenda>=0) {
+          html+=celPainel(
+            '\ud83d\udcc5 Duração das vendas',
+            diasVenda===0 ? '1 dia' : diasVenda+' dias',
+            (saidasOrd[0].obj.dataFormatada||'')+' \u2192 '+(saidasOrd[saidasOrd.length-1].obj.dataFormatada||''),
+            '#bfdbfe'
+          );
+        }
+
+        // Dias fabrico → última venda
+        if (diasFabrico!==null && diasFabrico>=0) {
+          html+=celPainel(
+            '\ud83c\udfed Fabrico \u2192 \xfaltima sa\xedda',
+            diasFabrico+' dias',
+            dataFabricoISO?(new Date(dataFabricoISO).toLocaleDateString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric'})):''
+              +' \u2192 '+(saidasOrd[saidasOrd.length-1].obj.dataFormatada||''),
+            '#a5f3fc'
+          );
+        }
+
+        // Nº saídas e média por saída
+        if (saidasOrd.length>0) {
+          var mediaUn = (totalUnSaida/saidasOrd.length).toFixed(1);
+          html+=celPainel(
+            '\ud83d\udce6 N\xba sa\xeddas / M\xe9dia',
+            saidasOrd.length+(saidasOrd.length===1?' saída':' saídas'),
+            mediaUn+' un/saída'+(totalKgSaida>0?' \xb7 '+( totalKgSaida/saidasOrd.length).toFixed(1)+' kg/saída':''),
+            '#d9f99d'
+          );
+        }
+
+        html+='</div></div>';
+      }
+
       html+='</div>'; // fim secção saídas
     }
+
+    // ── PERDAS ENTRE CÂMARAS (se houver câmaras consecutivas com peso) ──
+    if(cams.length>=2) {
+      var camComPeso = cams.filter(function(c){ return Number(c.pesoOriginal||c.peso||0)>0; });
+      if (camComPeso.length>=2) {
+        html+='<div style="padding:0 18px 14px">';
+        html+='<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#6b7280;letter-spacing:.05em;margin-bottom:8px">📉 Perdas entre câmaras</div>';
+        html+='<div style="display:flex;flex-direction:column;gap:4px">';
+        for (var ci=1; ci<camComPeso.length; ci++) {
+          var cA=camComPeso[ci-1], cB=camComPeso[ci];
+          var pA=Number(cA.pesoOriginal||cA.peso||0);
+          var pB=Number(cB.pesoOriginal||cB.peso||0);
+          if (pA>0 && pB>0 && pA>pB) {
+            var dpK=(pA-pB), dpP=(dpK/pA*100);
+            html+='<div style="display:flex;align-items:center;gap:8px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:7px 10px">'
+              +'<span style="font-size:11px;font-weight:800;color:#1e3a5f;flex-shrink:0">C'+cA.camara+' \u2192 C'+cB.camara+'</span>'
+              +'<span style="font-size:11px;color:#6b7280;flex:1">'+pA.toFixed(1)+' kg \u2192 '+pB.toFixed(1)+' kg</span>'
+              +'<span style="font-size:13px;font-weight:900;color:#dc2626">\u2212'+dpK.toFixed(2)+' kg</span>'
+              +'<span style="font-size:12px;font-weight:800;background:#fee2e2;color:#991b1b;border-radius:5px;padding:2px 7px">'+dpP.toFixed(1)+'%</span>'
+            +'</div>';
+          }
+        }
+        html+='</div></div>';
+      }
+    }
+
     html+='</div>'; // fim card lote
   });
 
