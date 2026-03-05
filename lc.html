@@ -595,7 +595,10 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
           <span class="home-btn-label">ENCOMENDAS</span>
         </button>
       
-        <button class="home-btn" id="btn-home-export" onclick="irPara('screen-export')" style="display:none;background:#1e40af;color:white;grid-column:1/-1;padding:16px">EXPORTAR RELATORIOS</button></div>
+        <button class="home-btn" id="btn-home-export" onclick="irPara('screen-export')" style="display:none;background:#1e40af;color:white;grid-column:1/-1;padding:16px">EXPORTAR RELATORIOS</button>
+        <button class="home-btn" id="btn-home-prod-manual" onclick="irParaProducaoManual()" style="display:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;grid-column:1/-1;padding:16px">
+          <span style="font-size:18px">&#128295;</span>&nbsp; PRODU&#199;&#195;O MANUAL
+        </button></div>
       <div id="home-resumo-section" style="margin-top:20px">
         <div class="section-title">Resumo de Hoje</div>
         <div id="home-resumo-hoje" class="home-resumo-hoje"></div>
@@ -1363,6 +1366,40 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
       </div>
     </div>
 
+    <div class="screen" id="screen-prod-manual">
+      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">In&#237;cio</span> <span>&#8250;</span> <strong>Produ&#231;&#227;o Manual</strong></div>
+      <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);border-radius:14px;padding:14px 16px;margin-bottom:16px;color:white"><div style="font-size:11px;opacity:0.7;text-transform:uppercase;margin-bottom:2px">Admin</div><div style="font-size:16px;font-weight:700">&#128295; Criar Lote Manual</div><div style="font-size:11px;opacity:0.7;margin-top:2px">Ex: queijo velho &#8594; amanteigado</div></div>
+      <div class="section-title">1. Lote de origem</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px"><input type="text" id="pm-lote-origem" placeholder="N&#250;mero do lote (c&#226;maras ou congela&#231;&#227;o)" style="flex:1;font-family:'DM Mono',monospace;font-weight:700;font-size:15px;padding:12px;border:2px solid #c4b5fd;border-radius:10px" autocomplete="off"><button type="button" onclick="pmVerificarOrigem()" style="padding:12px 18px;background:#7c3aed;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer">OK</button></div>
+      <div id="pm-origem-info" style="display:none;background:#f5f3ff;border:2px solid #c4b5fd;border-radius:12px;padding:12px 14px;margin-bottom:14px">
+        <div id="pm-origem-detalhe" style="font-size:14px;font-weight:800;color:#4c1d95;margin-bottom:10px"></div>
+        <label style="font-size:12px;font-weight:700;color:#6d28d9">Quantidade a usar deste lote</label>
+        <div style="display:flex;gap:8px;align-items:center;margin-top:6px"><input type="number" id="pm-qtd-origem" class="big" placeholder="0" min="1" style="flex:1"><span id="pm-qtd-max" style="font-size:12px;color:#7c3aed;white-space:nowrap;font-weight:700"></span></div>
+        <div id="pm-qtd-erro" style="font-size:11px;color:#dc2626;margin-top:4px;display:none"></div>
+        <button type="button" onclick="pmAvancar()" style="margin-top:10px;width:100%;padding:12px;background:#7c3aed;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer">Avan&#231;ar &#8594;</button>
+      </div>
+      <div id="pm-destino-area" style="display:none">
+        <div class="section-title">2. Lote de destino</div>
+        <div class="form-row"><div class="form-group"><label>N&#186; do novo lote</label><input type="text" id="pm-lote-dest" placeholder="ex: 261050" style="font-family:'DM Mono',monospace;font-weight:700" autocomplete="off"></div><div class="form-group"><label>Peso (kg)</label><input type="number" id="pm-peso-dest" class="big" placeholder="0.0" step="0.1" min="0"></div></div>
+        <div class="form-group"><label>C&#226;mara de destino</label><div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-top:4px"><button type="button" onclick="pmSelCamara(1)" id="pm-c1" class="camara-btn"><span class="cb-num">1</span></button><button type="button" onclick="pmSelCamara(2)" id="pm-c2" class="camara-btn"><span class="cb-num">2</span></button><button type="button" onclick="pmSelCamara(3)" id="pm-c3" class="camara-btn"><span class="cb-num">3</span></button><button type="button" onclick="pmSelCamara(4)" id="pm-c4" class="camara-btn" style="border-color:#d97706;background:#fffbeb"><span class="cb-num" style="color:#92400e">4</span></button><button type="button" onclick="pmSelCamara(5)" id="pm-c5" class="camara-btn" style="border-color:#7f1d1d;background:#fff1f2"><span class="cb-num" style="color:#7f1d1d">5</span></button></div></div>
+        <div class="form-group"><label>Observa&#231;&#227;o / motivo</label><input type="text" id="pm-obs" placeholder="ex: Velho para amanteigado" autocomplete="off"></div>
+        <button class="btn-primary" style="background:#7c3aed" onclick="pmConfirmar()">&#10003; Criar Lote</button>
+      </div>
+      <div class="status" id="status-prod-manual"></div>
+      <div style="margin-top:8px"><button class="btn-back" onclick="irPara('screen-home')">&#8592; Voltar</button></div>
+    </div>
+
+    <div class="screen" id="screen-enc-email">
+      <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">In&#237;cio</span> <span>&#8250;</span> <span class="bc-link" onclick="irPara('screen-enc-lista')">Encomendas</span> <span>&#8250;</span> <strong>Enviar Encomenda</strong></div>
+      <div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);border-radius:14px;padding:14px 16px;margin-bottom:16px;color:white"><div style="font-size:11px;opacity:0.7;text-transform:uppercase;margin-bottom:2px">Fatura&#231;&#227;o</div><div style="font-size:16px;font-weight:700" id="enc-email-titulo">&#128231; Enviar Encomenda</div></div>
+      <div id="enc-email-preview" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:14px;font-size:12px;white-space:pre-wrap;font-family:monospace;max-height:280px;overflow-y:auto"></div>
+      <div class="form-group"><label>Email de destino</label><input type="email" id="enc-email-dest" placeholder="faturacao@empresa.pt" autocomplete="off"></div>
+      <div class="form-group"><label>Assunto</label><input type="text" id="enc-email-assunto" placeholder="Encomenda #..." autocomplete="off"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px"><button class="btn-primary" style="background:#7c3aed" onclick="enviarEmailEncomenda()">&#128231; Enviar Email</button><button class="btn-primary" style="background:#0891b2" onclick="copiarEmailEncomenda()">&#128203; Copiar texto</button></div>
+      <button class="btn-back" onclick="voltarPagina()" style="margin-top:8px">&#8592; Voltar</button>
+      <div class="status" id="status-enc-email"></div>
+    </div>
+
 <!-- ENCOMENDAS HUB -->
     <div class="screen" id="screen-enc-hub">
       <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <strong>Encomendas</strong></div>
@@ -1436,7 +1473,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <div class="sl-stock" id="saida-lote-stock">Stock disponível: —</div>
       </div>
 
-      <div class="form-group"><label>Quantidade a retirar (un)</label><input type="number" id="saida-qtd" class="big" placeholder="0" min="1"></div>
+      <div id="saida-validade-box" style="display:none;background:#fef3c7;border:2px solid #fbbf24;border-radius:10px;padding:10px 14px;margin-bottom:10px"><div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:3px">&#128197; Validade do lote</div><div id="saida-validade-val" style="font-size:18px;font-weight:900;color:#92400e;font-family:'DM Mono',monospace">&#8212;</div></div><div class="form-row"><div class="form-group"><label>Quantidade (un)</label><input type="number" id="saida-qtd" class="big" placeholder="0" min="1"></div><div class="form-group"><label>Peso (kg)</label><input type="number" id="saida-kg" class="big" placeholder="0.0" step="0.1" min="0"></div></div>
 
       <!-- Destino da saída — só visível quando NÃO vem de encomenda do sistema -->
       <div id="saida-destino-campos" style="margin-top:4px">
@@ -2507,11 +2544,14 @@ function abrirFormSaida(idx, l) {
   document.getElementById('saida-lote-stock').textContent =
     `Stock disponível: ${l.qtd} un${l.peso ? ' . '+l.peso.toFixed(1)+' kg' : ''}`;
   document.getElementById('saida-qtd').value = '';
+  var _skEl = document.getElementById('saida-kg'); if (_skEl) _skEl.value = '';
   document.getElementById('saida-cliente-manual').value = '';
   document.getElementById('saida-enc-papel').value = '';
   document.getElementById('status-saida').className = 'status';
   document.getElementById('saida-enc-info').style.display = 'none';
   document.getElementById('saida-destino-campos').style.display = 'block';
+  var _vb = document.getElementById('saida-validade-box');
+  if (_vb) { if (l.validade) { document.getElementById('saida-validade-val').textContent = l.validade; _vb.style.display = 'block'; } else { _vb.style.display = 'none'; } }
 
   // Popular select de encomendas do sistema (abertas/parciais)
   const encs = getEncomendas().filter(e => e.estado !== 'concluida');
@@ -2594,10 +2634,12 @@ function confirmarSaida() {
   }
 
   const nomeLote = lote.lote;
+  const kgSaida = parseFloat((document.getElementById('saida-kg')||{value:''}).value) || null;
+  const validade = lote.validade || null;
   const clienteManual = document.getElementById('saida-cliente-manual') ? document.getElementById('saida-cliente-manual').value.trim() : '';
   const encPapel = document.getElementById('saida-enc-papel') ? document.getElementById('saida-enc-papel').value.trim() : '';
   const reg = {
-    id: Date.now(), lote: nomeLote, qtdSaida: qtd,
+    id: Date.now(), lote: nomeLote, qtdSaida: qtd, kg: kgSaida, validade: validade,
     data: new Date().toISOString(), dataFormatada: dataHoje(),
     camara: camaraAtual, operacao: 'saida',
     encomendaId: encAtualId || null,
@@ -2620,7 +2662,7 @@ function confirmarSaida() {
     const enc = encs.find(x => x.id === encAtualId);
     if (enc) {
       if (!enc.lotes) enc.lotes = [];
-      enc.lotes.push({ lote: nomeLote, qtd, data: dataHoje() });
+      enc.lotes.push({ lote: nomeLote, qtd, kg: kgSaida, validade: validade, data: dataHoje() });
       const totalAbatido = enc.lotes.reduce((a, l) => a + l.qtd, 0);
       enc.estado = totalAbatido > 0 ? 'parcial' : 'aberta';
       salvarEncomendas(encs);
@@ -2830,11 +2872,15 @@ function abrirEncomenda(id) {
   `;
 
   if (enc.lotes && enc.lotes.length) {
-    corpo += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--texto-suave);margin-bottom:8px">Lotes atribuídos</div>`;
+    corpo += `<div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--texto-suave);margin-bottom:8px">'Lotes atribuídos</div>`;
     corpo += enc.lotes.map(l =>
-      `<div style="background:var(--cinza-claro);border-radius:10px;padding:10px 14px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center">
-        <span style="font-family:'DM Mono',monospace;font-weight:700;color:var(--verde-escuro)">${l.lote}</span>
-        <span style="font-size:13px;color:var(--texto-suave)">${l.qtd} un . ${l.data}</span>
+      `<div style="background:var(--cinza-claro);border-radius:10px;padding:10px 14px;margin-bottom:6px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-family:'DM Mono',monospace;font-weight:700;color:var(--verde-escuro)">${l.lote}</span>
+          <span style="font-size:13px;color:var(--texto-suave)">${l.qtd} un${l.kg ? ' &middot; ' + l.kg.toFixed(1) + ' kg' : ''}</span>
+        </div>
+        ${l.validade ? '<div style="font-size:11px;font-weight:700;color:#92400e;margin-top:3px">&#128197; Validade: ' + l.validade + '</div>' : ''}
+        <div style="font-size:11px;color:var(--texto-suave);margin-top:2px">${l.data}</div>
       </div>`
     ).join('');
   }
@@ -2845,8 +2891,9 @@ function abrirEncomenda(id) {
   if (enc.estado !== 'concluida' && restante > 0) {
     botoes += `<button class="btn-primary laranja" onclick="irParaSaidaDeEncomenda()">📤 Ir para Saídas (abater lote)</button>`;
   }
+  botoes += `<button class="btn-primary" style="background:#7c3aed;margin-top:4px" onclick="emailEncomenda('${enc.id}')">&#128231; Enviar por Email</button>`;
   if (enc.estado !== 'concluida') {
-    botoes += `<button class="btn-primary" style="background:#15803d" onclick="concluirEncomenda('${enc.id}')">✓ Marcar como Concluída</button>`;
+    botoes += `<button class="btn-primary" style="background:#15803d" onclick="concluirEncomenda('${enc.id}')">&#10003; Marcar como Concluída</button>`;
   } else {
     botoes += `<button class="btn-primary" style="background:#6d28d9" onclick="pedirReabrirEncomenda('${enc.id}')">🔓 Reabrir Encomenda</button>`;
   }
@@ -2949,9 +2996,14 @@ function expFiltrarHistorico(operacao) {
 function expFiltrarEncomendas() {
   const f = getExpFiltros();
   return getEncomendas().filter(enc => {
-    const data = (enc.data || '').slice(0,10);
-    if (f.dataIni && data < f.dataIni) return false;
-    if (f.dataFim && data > f.dataFim) return false;
+    // Suporta enc.data (ISO) ou enc.dataFormatada (DD/MM/YYYY)
+    let data = (enc.data || '').slice(0,10);
+    if (!data && enc.dataFormatada) {
+      const pts = enc.dataFormatada.split('/');
+      if (pts.length === 3) data = pts[2]+'-'+pts[1]+'-'+pts[0];
+    }
+    if (f.dataIni && data && data < f.dataIni) return false;
+    if (f.dataFim && data && data > f.dataFim) return false;
     return true;
   });
 }
@@ -3188,12 +3240,14 @@ function gerarHTMLEncomendas(encs) {
     if (enc.lotes && enc.lotes.length) {
       html += `<div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#6b7280;margin-bottom:6px">Lotes Saídos</div>
         <table class="dados-table"><thead><tr>
-          <th>Lote</th><th>Quantidade</th><th>Data Saída</th>
+          <th>Lote</th><th>Qtd</th><th>Peso (kg)</th><th>Validade</th><th>Data Saída</th>
         </tr></thead><tbody>`;
       enc.lotes.forEach(l => {
         html += `<tr>
           <td style="font-family:monospace;font-weight:700;color:#111111">${l.lote||''}</td>
           <td>${l.qtd} un</td>
+          <td>${l.kg ? l.kg.toFixed(1)+' kg' : '—'}</td>
+          <td style="font-weight:700;color:${l.validade?'#92400e':'#9ca3af'}">${l.validade||'—'}</td>
           <td>${l.data||''}</td>
         </tr>`;
       });
@@ -7808,6 +7862,8 @@ function aplicarPermissoesHome() {
   // Exportar no home so para admin/direcao
   const btnHomeExp = document.getElementById('btn-home-export');
   if (btnHomeExp) btnHomeExp.style.display = temPermissao('ver-relatorios') ? 'flex' : 'none';
+  const btnHomePM = document.getElementById('btn-home-prod-manual');
+  if (btnHomePM) btnHomePM.style.display = temPermissao('admin') ? 'flex' : 'none';
   // Exportar enc no hub (encomendas/expedicao/admin/gestor)
   const btnEncExp = document.getElementById('btn-enc-export');
   if (btnEncExp) btnEncExp.style.display = temPermissao('exportar-enc') ? '' : 'none';
@@ -8774,7 +8830,8 @@ function abrirDetalhesCamara(num) {
     lista.innerHTML = lotes.map(function(l, idx) {
       var nLav = (l.lavagens||[]).length;
       var adminBtn = temPermissao('admin') ?
-        '<button onclick="editarLoteCamara(' + num + ',' + l.id + ')" style="width:36px;height:36px;border:2px solid #bfdbfe;border-radius:9px;background:#dbeafe;color:#1e40af;font-size:14px;cursor:pointer">&#9999;&#65039;</button>' : '';
+        '<button onclick="editarLoteCamara(' + num + ',' + l.id + ')" style="width:36px;height:36px;border:2px solid #bfdbfe;border-radius:9px;background:#dbeafe;color:#1e40af;font-size:14px;cursor:pointer">&#9999;&#65039;</button>' +
+        '<button onclick="editarValidadeLote(' + num + ',' + l.id + ')" style="width:36px;height:36px;border:2px solid #fbbf24;border-radius:9px;background:#fef3c7;color:#92400e;font-weight:800;font-size:11px;cursor:pointer">VAL</button>' : '';
       return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">' +
         '<div onclick="abrirDetalhesLote(' + num + ',' + idx + ')" style="flex:1;background:white;border:2px solid #e5e7eb;border-radius:12px;padding:12px 14px;cursor:pointer">' +
         '<div style="display:flex;justify-content:space-between;align-items:center">' +
@@ -8783,6 +8840,8 @@ function abrirDetalhesCamara(num) {
         '</div>' +
         '<div style="font-size:11px;color:#9ca3af;margin-top:4px">' + (l.dataFormatada||'') +
         (nLav ? ' &nbsp;·&nbsp; \uD83E\uDDFC ' + nLav + ' lavagem' + (nLav>1?'ns':'') : '') + '</div>' +
+        (l.validade ? '<div style="font-size:11px;font-weight:700;color:#92400e;margin-top:2px">&#128197; ' + l.validade + '</div>' : '') +
+        (l.validade ? '<div style="font-size:11px;font-weight:700;color:#92400e;margin-top:2px">&#128197; ' + l.validade + '</div>' : '') +
         '</div>' +
         adminBtn +
         '<button onclick="pedirEliminarLote(' + num + ',' + idx + ')" style="width:36px;height:36px;border:2px solid #fca5a5;border-radius:9px;background:#fee2e2;color:#dc2626;font-size:14px;cursor:pointer">\uD83D\uDDD1\uFE0F</button>' +
@@ -9531,6 +9590,238 @@ function _rlXLSX(porLote) {
     }
   });
   exportXLSX(rows,'historico_lotes_'+new Date().toISOString().slice(0,10)+'.xlsx','historico');
+}
+
+// === EMAIL ENCOMENDA ===
+function emailEncomenda(id) {
+  var encs = getEncomendas();
+  var enc = encs.find(function(e){ return e.id === id; });
+  if (!enc) return;
+  encAtualId = id;
+  var lbl = { aberta:'Aberta', parcial:'Parcial', concluida:'Conclui\u00eda' };
+  var totalAb = (enc.lotes||[]).reduce(function(a,l){ return a+(l.qtd||0); }, 0);
+  var totalKg = (enc.lotes||[]).reduce(function(a,l){ return a+(l.kg||0); }, 0);
+  var restante = enc.qtd - totalAb;
+  var linhas = enc.linhas || [{ artigo: enc.artigo||'', qtd: enc.qtd||0, caixas: enc.caixas||0, marca: enc.marca||'' }];
+  var txtLin = linhas.map(function(l){ return '  - ' + l.artigo + (l.marca ? ' (' + l.marca + ')' : '') + ': ' + l.qtd + ' un, ' + (l.caixas||0) + ' cx'; }).join('\n');
+  var txtLotes = (enc.lotes||[]).map(function(l, i){
+    return '  ' + (i+1) + '. Lote ' + l.lote +
+      ' - ' + l.qtd + ' un' + (l.kg ? ' / ' + Number(l.kg).toFixed(1) + ' kg' : '') +
+      (l.validade ? ' - val. ' + l.validade : '') +
+      ' - saida ' + (l.data||'');
+  }).join('\n');
+
+  var corpo = 'Encomenda #' + enc.nr + ' - LactoCeleiro\n' +
+    '================================\n' +
+    'Cliente: ' + enc.cliente + '\n' +
+    'Data: ' + (enc.dataFormatada||'') + '\n' +
+    'Estado: ' + (lbl[enc.estado]||enc.estado) + '\n' +
+    (enc.obs ? 'Obs: ' + enc.obs + '\n' : '') +
+    '\nARTIGOS:\n' + txtLin + '\n' +
+    '\nRESUMO:\n' +
+    '  Pedido:  ' + enc.qtd + ' un\n' +
+    '  Abatido: ' + totalAb + ' un' + (totalKg > 0 ? ' / ' + totalKg.toFixed(1) + ' kg' : '') + '\n' +
+    (restante > 0 ? '  Por abastecer: ' + restante + ' un\n' : '') +
+    (enc.lotes && enc.lotes.length ? '\nLOTES SAIDOS:\n' + txtLotes + '\n' : '') +
+    '================================\n' +
+    'LactoCeleiro - Gestao de Producao';
+
+  document.getElementById('enc-email-titulo').textContent = 'Encomenda #' + enc.nr;
+  document.getElementById('enc-email-assunto').value = 'Encomenda #' + enc.nr + ' - ' + enc.cliente + ' - LactoCeleiro';
+  document.getElementById('enc-email-dest').value = '';
+  document.getElementById('enc-email-preview').textContent = corpo;
+  document.getElementById('status-enc-email').className = 'status';
+  irPara('screen-enc-email');
+}
+
+function enviarEmailEncomenda() {
+  var dest  = (document.getElementById('enc-email-dest').value||'').trim();
+  var ass   = document.getElementById('enc-email-assunto').value;
+  var corpo = document.getElementById('enc-email-preview').textContent;
+  if (!dest) { mostrarStatus('status-enc-email', 'Introduza o email de destino', 'error'); return; }
+  window.location.href = 'mailto:' + encodeURIComponent(dest) + '?subject=' + encodeURIComponent(ass) + '&body=' + encodeURIComponent(corpo);
+  mostrarStatus('status-enc-email', 'Cliente de email aberto', 'success');
+}
+
+function copiarEmailEncomenda() {
+  var txt = document.getElementById('enc-email-preview').textContent;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(txt).then(function(){ mostrarStatus('status-enc-email', 'Copiado!', 'success'); });
+  } else {
+    var ta = document.createElement('textarea'); ta.value = txt;
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta);
+    mostrarStatus('status-enc-email', 'Copiado!', 'success');
+  }
+}
+
+// === VALIDADE NOS LOTES ===
+function editarValidadeLote(camaraNum, loteId) {
+  var e = getEstado();
+  var lote = (e[camaraNum]||[]).find(function(l){ return l.id === loteId; });
+  if (!lote) return;
+  var oldPanel = document.getElementById('edit-validade-panel');
+  if (oldPanel) oldPanel.remove();
+  // converter DD/MM/YYYY -> YYYY-MM-DD
+  var valInput = '';
+  if (lote.validade) {
+    var pts = lote.validade.split('/');
+    if (pts.length === 3) valInput = pts[2] + '-' + pts[1] + '-' + pts[0];
+  }
+  var panel = document.createElement('div');
+  panel.id = 'edit-validade-panel';
+  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:500;display:flex;align-items:flex-end';
+  var html = '<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;margin:0 auto">';
+  html += '<div style="font-size:15px;font-weight:800;color:#92400e;margin-bottom:14px">Validade - ' + lote.lote + '</div>';
+  html += '<div class="form-group"><label>Data de Validade</label>';
+  html += '<input type="date" id="ev-data" value="' + valInput + '" style="font-size:16px;font-weight:700;color:#92400e;border:2px solid #fbbf24"></div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+  html += '<button type="button" id="ev-cancel-btn" style="padding:14px;background:#f3f4f6;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">Cancelar</button>';
+  html += '<button type="button" id="ev-save-btn" style="padding:14px;background:#92400e;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">Guardar</button>';
+  html += '</div></div>';
+  panel.innerHTML = html;
+  document.body.appendChild(panel);
+  panel.querySelector('#ev-cancel-btn').onclick = function(){ panel.remove(); };
+  panel.querySelector('#ev-save-btn').onclick = function(){ _guardarValidade(camaraNum, loteId); };
+}
+
+function _guardarValidade(camaraNum, loteId) {
+  var val = (document.getElementById('ev-data')||{}).value;
+  if (!val) return;
+  var e = getEstado();
+  var lote = (e[camaraNum]||[]).find(function(l){ return l.id === loteId; });
+  if (!lote) return;
+  var d = new Date(val + 'T12:00:00');
+  lote.validade = d.getDate().toString().padStart(2,'0') + '/' + (d.getMonth()+1).toString().padStart(2,'0') + '/' + d.getFullYear();
+  salvarEstado(e);
+  var panel = document.getElementById('edit-validade-panel');
+  if (panel) panel.remove();
+  var screenCam = document.getElementById('screen-camara-detalhe');
+  var screenLote = document.getElementById('screen-lote-detalhe');
+  if (screenCam && screenCam.classList.contains('active')) abrirDetalhesCamara(camaraNum);
+  if (screenLote && screenLote.classList.contains('active')) {
+    var idx = (e[camaraNum]||[]).findIndex(function(l){ return l.id === loteId; });
+    if (idx >= 0) abrirDetalhesLote(camaraNum, idx);
+  }
+}
+
+// === PRODUCAO MANUAL (ADMIN) ===
+var _pmOrigemInfo = null;
+var _pmCamaraDestino = null;
+
+function irParaProducaoManual() {
+  if (!temPermissao('admin')) return;
+  document.getElementById('pm-lote-origem').value = '';
+  document.getElementById('pm-origem-info').style.display = 'none';
+  document.getElementById('pm-destino-area').style.display = 'none';
+  var err = document.getElementById('pm-qtd-erro'); if (err) err.style.display = 'none';
+  document.getElementById('status-prod-manual').className = 'status';
+  _pmOrigemInfo = null; _pmCamaraDestino = null;
+  [1,2,3,4,5].forEach(function(n){ var b = document.getElementById('pm-c'+n); if (b) b.style.outline = ''; });
+  irPara('screen-prod-manual');
+}
+
+function pmVerificarOrigem() {
+  var loteStr = (document.getElementById('pm-lote-origem').value||'').trim();
+  if (!loteStr) return;
+  var e = getEstado(), encontrado = null;
+  for (var c = 1; c <= 5 && !encontrado; c++) {
+    var arr = e[c] || [];
+    for (var i = 0; i < arr.length; i++) {
+      if ((arr[i].lote||'').toLowerCase() === loteStr.toLowerCase()) {
+        encontrado = { fonte:'camara', camara:c, idx:i, lote:arr[i].lote, qtdDisp:arr[i].qtd||0, peso:arr[i].peso||0 }; break;
+      }
+    }
+  }
+  if (!encontrado) {
+    var congs = getCongelacoes();
+    for (var j = 0; j < congs.length; j++) {
+      if ((congs[j].lote||'').toLowerCase() === loteStr.toLowerCase()) {
+        encontrado = { fonte:'congelacao', idx:j, lote:congs[j].lote, qtdDisp:congs[j].qtd||0, peso:congs[j].peso||0, camara:congs[j].camara }; break;
+      }
+    }
+  }
+  if (!encontrado) {
+    mostrarStatus('status-prod-manual', 'Lote "' + loteStr + '" nao encontrado nas camaras nem na congelacao', 'error');
+    document.getElementById('pm-origem-info').style.display = 'none'; return;
+  }
+  _pmOrigemInfo = encontrado;
+  document.getElementById('status-prod-manual').className = 'status';
+  document.getElementById('pm-origem-detalhe').innerHTML =
+    '<strong style="font-family:\'DM Mono\',monospace">' + encontrado.lote + '</strong>' +
+    ' &nbsp;-&nbsp; ' + (encontrado.fonte === 'congelacao' ? 'Congelacao C' + encontrado.camara : 'Camara ' + encontrado.camara) +
+    '<br>Disponivel: <strong style="color:#6d28d9">' + encontrado.qtdDisp + ' un' + (encontrado.peso ? ' / ' + Number(encontrado.peso).toFixed(1) + ' kg' : '') + '</strong>';
+  document.getElementById('pm-qtd-max').textContent = 'max ' + encontrado.qtdDisp;
+  document.getElementById('pm-qtd-origem').value = '';
+  document.getElementById('pm-qtd-origem').max = encontrado.qtdDisp;
+  document.getElementById('pm-qtd-erro').style.display = 'none';
+  document.getElementById('pm-origem-info').style.display = 'block';
+  document.getElementById('pm-destino-area').style.display = 'none';
+  _pmCamaraDestino = null;
+  [1,2,3,4,5].forEach(function(n){ var b = document.getElementById('pm-c'+n); if (b) b.style.outline = ''; });
+}
+
+function pmAvancar() {
+  if (!_pmOrigemInfo) return;
+  var qtd = parseInt(document.getElementById('pm-qtd-origem').value);
+  var err = document.getElementById('pm-qtd-erro');
+  if (!qtd || qtd <= 0) { err.textContent = 'Introduza uma quantidade'; err.style.display = 'block'; return; }
+  if (qtd > _pmOrigemInfo.qtdDisp) { err.textContent = 'Maximo disponivel: ' + _pmOrigemInfo.qtdDisp + ' un'; err.style.display = 'block'; return; }
+  err.style.display = 'none';
+  document.getElementById('pm-lote-dest').value = '';
+  document.getElementById('pm-peso-dest').value = '';
+  document.getElementById('pm-obs').value = '';
+  document.getElementById('pm-destino-area').style.display = 'block';
+  document.getElementById('pm-destino-area').scrollIntoView({ behavior: 'smooth' });
+}
+
+function pmSelCamara(num) {
+  _pmCamaraDestino = num;
+  [1,2,3,4,5].forEach(function(n){ var b = document.getElementById('pm-c'+n); if (b) b.style.outline = (n === num ? '3px solid #7c3aed' : ''); });
+}
+
+function pmConfirmar() {
+  if (!_pmOrigemInfo) { mostrarStatus('status-prod-manual','Verifique o lote de origem','error'); return; }
+  if (!_pmCamaraDestino) { mostrarStatus('status-prod-manual','Seleccione a camara de destino','error'); return; }
+  var loteDest = (document.getElementById('pm-lote-dest').value||'').trim();
+  var peso = parseFloat(document.getElementById('pm-peso-dest').value) || 0;
+  var qtdUsar = parseInt(document.getElementById('pm-qtd-origem').value) || 0;
+  var obs = (document.getElementById('pm-obs').value||'').trim();
+  if (!loteDest) { mostrarStatus('status-prod-manual','Introduza o nr do lote de destino','error'); return; }
+  if (!qtdUsar || qtdUsar <= 0) { mostrarStatus('status-prod-manual','Verifique a quantidade','error'); return; }
+
+  var e = getEstado();
+  if (_pmOrigemInfo.fonte === 'camara') {
+    var arr = e[_pmOrigemInfo.camara] || [];
+    var orig = null;
+    for (var k = 0; k < arr.length; k++) { if (arr[k].lote === _pmOrigemInfo.lote) { orig = arr[k]; break; } }
+    if (!orig) { mostrarStatus('status-prod-manual','Lote de origem nao encontrado','error'); return; }
+    orig.qtd -= qtdUsar;
+    if (orig.qtd <= 0) arr.splice(arr.indexOf(orig), 1);
+  } else {
+    var congs = getCongelacoes();
+    var co = null;
+    for (var m = 0; m < congs.length; m++) { if (congs[m].lote === _pmOrigemInfo.lote) { co = congs[m]; break; } }
+    if (!co) { mostrarStatus('status-prod-manual','Lote de origem nao encontrado','error'); return; }
+    co.qtd -= qtdUsar;
+    if (co.qtd <= 0) congs.splice(congs.indexOf(co), 1);
+    localStorage.setItem('lc_congelacoes_v1', JSON.stringify(congs));
+  }
+
+  var novoLote = {
+    id: Date.now(), lote: loteDest, qtd: qtdUsar, qtdOriginal: qtdUsar,
+    peso: peso, pesoOriginal: peso,
+    data: new Date().toISOString(), dataFormatada: dataHoje(),
+    camara: _pmCamaraDestino, origemCamara: _pmOrigemInfo.camara,
+    origemLote: _pmOrigemInfo.lote, operacao: 'manual', obs: obs, lavagens: []
+  };
+  e[_pmCamaraDestino] = e[_pmCamaraDestino] || [];
+  e[_pmCamaraDestino].push(novoLote);
+  salvarEstado(e);
+  addHistorico(novoLote);
+  atualizarResumoCamaras();
+  mostrarStatus('status-prod-manual',
+    'Lote ' + loteDest + ' criado na Camara ' + _pmCamaraDestino + ' (' + qtdUsar + ' un' + (peso ? ' / ' + peso.toFixed(1) + ' kg' : '') + ')', 'success');
+  setTimeout(function(){ irParaProducaoManual(); }, 2000);
 }
 </script>
 </body>
