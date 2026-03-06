@@ -162,6 +162,13 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
 @media (min-width:600px) { .body { padding:24px 28px; } }
 .screen { display:none; }
 .screen.active { display:block; }
+/* Screens outside .container still need background */
+.container ~ .screen.active, .screen.active:not(.container *) {
+  background: var(--branco, #fff);
+  min-height: 50vh;
+  padding: 16px;
+}
+#screen-home.active { display:block !important; }
 
 /* MAIN BUTTONS */
 .main-btns { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
@@ -8228,17 +8235,18 @@ const PERFIS = {
 };
 
 
-renderizarEncomendas();
+try { renderizarEncomendas(); } catch(e) {}
 
 // Inicializar módulos de produção após página carregar completamente
 setTimeout(function() {
+  if (!_utilizadorAtual) return; // só se estiver logado
   try { atualizarResumoHome(); } catch(e) {}
   try { atualizarUltimaProd(); } catch(e) {}
   try { atualizarUltimaProdRequeijao(); } catch(e) {}
   try { inicializarFormPQ(); } catch(e) {}
   try { inicializarFormLeite(); } catch(e) {}
   try { inicializarFormPRQ(); } catch(e) {}
-}, 100);
+}, 500);
 
 window.addEventListener('online', () => {
   mostrarEstadoSync('syncing');
@@ -8712,11 +8720,17 @@ function entrarNaApp() {
   }
   // Aplicar permissoes aos botoes do home
   aplicarPermissoesHome();
-  // Disparar sync
-  setTimeout(() => { mostrarEstadoSync('syncing'); sincronizarTudo().catch(()=>{}); }, 500);
-  setTimeout(puxarDadosServidor, 800);
-  // Ir para home
+  // Ir para home PRIMEIRO - antes de qualquer sync
   irPara('screen-home');
+  // Forçar visibilidade (redundante mas seguro)
+  setTimeout(function() {
+    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
+    var sh = document.getElementById('screen-home');
+    if (sh) { sh.classList.add('active'); sh.style.display = 'block'; }
+  }, 50);
+  // Disparar sync depois - não bloqueia o UI
+  setTimeout(() => { try { mostrarEstadoSync('syncing'); sincronizarTudo().catch(()=>{}); } catch(e){} }, 1000);
+  setTimeout(() => { try { puxarDadosServidor(); } catch(e){} }, 1200);
 }
 
 function aplicarPermissoesHome() {
@@ -13776,6 +13790,7 @@ function _adminGuardarGeminiKey() {
   mostrarStatus('status-home', 'Chave Gemini guardada com sucesso!', 'success');
 }
 </script>
+
     <div class="screen" id="screen-admin">
       <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <strong>Administração</strong></div>
       <div style="background:linear-gradient(135deg,#1e3a5f,#2d5282);border-radius:16px;padding:14px 16px;margin-bottom:16px;color:white">
@@ -13798,8 +13813,7 @@ function _adminGuardarGeminiKey() {
       </div>
       <div id="admin-panel-utilizadores">
         <div id="admin-lista-utilizadores" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px"></div>
-        <button onclick="adminNovoUtilizador()"
-          style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
+        <button onclick="adminNovoUtilizador()" style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
           + Novo Utilizador
         </button>
       </div>
