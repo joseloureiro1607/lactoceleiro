@@ -2122,8 +2122,8 @@ function dataHoje() { return dataFormatada(new Date()); }
 // --- NAVEGAÇÃO --
 
 // Gemini API config
-var GEMINI_API_KEY = localStorage.getItem('lc_gemini_key') || 'AIzaSyAJwk3thbRGMRqpbs9QxhtzEjuuyxdlXO0';
-var GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=';
+var GEMINI_API_KEY = localStorage.getItem('lc_gemini_key') || '';
+var GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=';
 var PROMPT_GEMINI_ENC = 'Esta e uma encomenda de queijo ou requeijao do LactoCeleiro. '
   + 'Extrai os dados e responde APENAS com JSON puro sem markdown. '
   + 'Formato: {"cliente":"nome","dataEntrega":"DD/MM/YYYY ou vazio","dataExpedicao":"DD/MM/YYYY ou vazio","marca":"","obs":"","linhas":['
@@ -9018,13 +9018,17 @@ function abrirAdmin() {
 }
 
 function adminTab(tab) {
-  document.getElementById('admin-panel-utilizadores').style.display = tab === 'utilizadores' ? '' : 'none';
-  document.getElementById('admin-panel-dados').style.display        = tab === 'dados'        ? '' : 'none';
-  document.getElementById('tab-utilizadores').style.background = tab === 'utilizadores' ? '#1e3a5f' : '#f3f4f6';
-  document.getElementById('tab-utilizadores').style.color      = tab === 'utilizadores' ? 'white'   : '#6b7280';
-  document.getElementById('tab-dados').style.background = tab === 'dados' ? '#1e3a5f' : '#f3f4f6';
-  document.getElementById('tab-dados').style.color      = tab === 'dados' ? 'white'   : '#6b7280';
-  if (tab === 'utilizadores') adminRenderUtilizadores();
+  ['utilizadores','dados','config'].forEach(function(t) {
+    var panel = document.getElementById('admin-panel-'+t);
+    var btn   = document.getElementById('tab-'+t);
+    if (panel) panel.style.display = (tab===t) ? '' : 'none';
+    if (btn) {
+      btn.style.background = (tab===t) ? '#1e3a5f' : '#f3f4f6';
+      btn.style.color      = (tab===t) ? 'white'   : '#6b7280';
+    }
+  });
+  if (tab==='config') _mostrarGeminiStatus();
+  if (tab==='utilizadores') renderAdminUtilizadores();
 }
 
 function adminRenderUtilizadores() {
@@ -13719,6 +13723,32 @@ function testarGemini() {
     if (btn) { btn.textContent = 'Testar ligacao Gemini'; btn.disabled = false; }
   });
 }
+
+function _mostrarGeminiStatus() {
+  var el = document.getElementById('gemini-key-status');
+  if (!el) return;
+  var key = localStorage.getItem('lc_gemini_key') || '';
+  if (key) {
+    var masked = key.slice(0,10)+'...'+key.slice(-4);
+    el.innerHTML = '<span style="color:#15803d;font-weight:700">Chave configurada: <code style="background:#f0fdf4;padding:2px 6px;border-radius:4px">'+masked+'</code></span>';
+  } else {
+    el.innerHTML = '<span style="color:#dc2626;font-weight:700">Sem chave configurada — importar foto nao funciona</span>';
+  }
+}
+
+function _adminGuardarGeminiKey() {
+  var inp = document.getElementById('admin-gemini-key-inp');
+  var key = (inp && inp.value || '').trim();
+  if (!key || !key.startsWith('AIza')) {
+    alert('Chave invalida — deve comecar por AIza...');
+    return;
+  }
+  localStorage.setItem('lc_gemini_key', key);
+  GEMINI_API_KEY = key;
+  if (inp) inp.value = '';
+  _mostrarGeminiStatus();
+  mostrarStatus('status-home', 'Chave Gemini guardada com sucesso!', 'success');
+}
 </script>
 </body>
 </html>
@@ -13742,6 +13772,10 @@ function testarGemini() {
         <button id="tab-dados" onclick="adminTab('dados')"
           style="flex:1;padding:10px;border-radius:10px;border:none;background:#f3f4f6;color:#6b7280;font-weight:700;font-size:13px;cursor:pointer">
           🗑️ Dados
+        </button>
+        <button id="tab-config" onclick="adminTab('config')"
+          style="flex:1;padding:10px;border-radius:10px;border:none;background:#f3f4f6;color:#6b7280;font-weight:700;font-size:13px;cursor:pointer">
+          ⚙️ Config
         </button>
       </div>
 
@@ -13773,6 +13807,27 @@ function testarGemini() {
             </button>
             <button onclick="adminEliminar('tudo')" style="padding:12px;background:#fef2f2;border:2px solid #dc2626;border-radius:10px;color:#dc2626;font-weight:800;font-size:13px;cursor:pointer;text-align:left">
               ☠️ ELIMINAR TUDO (reset total)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL CONFIG -->
+      <div id="admin-panel-config" style="display:none">
+        <div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:14px;padding:16px;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:800;color:#1e40af;margin-bottom:4px">🤖 Gemini AI — Leitura de Encomendas</div>
+          <div style="font-size:12px;color:#6b7280;margin-bottom:12px">Chave necessária para importar encomendas por foto ou PDF.</div>
+          <div id="gemini-key-status" style="font-size:12px;margin-bottom:10px"></div>
+          <input type="password" id="admin-gemini-key-inp" placeholder="Cole aqui a chave API (AIzaSy...)"
+            style="width:100%;padding:10px;border:2px solid #bfdbfe;border-radius:8px;font-size:13px;font-family:monospace;box-sizing:border-box;margin-bottom:8px">
+          <div style="display:flex;gap:8px">
+            <button onclick="_adminGuardarGeminiKey()"
+              style="flex:2;padding:10px;background:#1e40af;color:white;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px">
+              💾 Guardar Chave
+            </button>
+            <button onclick="testarGemini()"
+              style="flex:1;padding:10px;background:#f0fdf4;border:2px solid #86efac;border-radius:8px;font-weight:700;color:#15803d;cursor:pointer;font-size:12px">
+              ✓ Testar
             </button>
           </div>
         </div>
