@@ -3653,7 +3653,45 @@ function triggerDownload(blob, filename, msgEl) {
         + '<div class="fn">' + filename + '</div>'
         + '<a href="' + dataUrl + '" download="' + filename + '">\u2B07\uFE0F Guardar ficheiro</a>'
         + '<small>Toque em <strong>Guardar ficheiro</strong><br>O ficheiro vai para a pasta Downloads</small>'
-        + '</div></body></html>');
+        + '</div>
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  function addAdminTools(){
+    var admin = document.getElementById("screen-admin");
+    if(!admin) return;
+
+    if(document.getElementById("lc-admin-tools")) return;
+
+    var box = document.createElement("div");
+    box.id = "lc-admin-tools";
+    box.style.marginTop = "20px";
+    box.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:800;margin-bottom:8px">👥 Utilizadores</div>
+        <button onclick="abrirGestaoUtilizadores()"
+          style="width:100%;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Gerir utilizadores
+        </button>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px">
+        <div style="font-weight:800;margin-bottom:8px">🤖 Inteligência Artificial</div>
+        <button onclick="abrirGeminiSettings()"
+          style="width:100%;padding:10px;background:#15803d;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Configurar API Gemini
+        </button>
+      </div>
+    `;
+
+    admin.appendChild(box);
+  }
+
+  setTimeout(addAdminTools, 500);
+});
+</script>
+
+</body></html>');
       w.document.close();
       if (typeof el === 'string') mostrarStatus(el, '\u2713 Toque em "Guardar ficheiro" na janela que abriu', 'success');
     } else {
@@ -3738,7 +3776,45 @@ function gerarHTMLParaImpressao(innerHtml, nomeFicheiro) {
     + '<button class="btn-p" onclick="window.print()">&#128438; Imprimir / PDF</button>'
     + '</div>'
     + innerHtml
-    + '</body></html>');
+    + '
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  function addAdminTools(){
+    var admin = document.getElementById("screen-admin");
+    if(!admin) return;
+
+    if(document.getElementById("lc-admin-tools")) return;
+
+    var box = document.createElement("div");
+    box.id = "lc-admin-tools";
+    box.style.marginTop = "20px";
+    box.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:800;margin-bottom:8px">👥 Utilizadores</div>
+        <button onclick="abrirGestaoUtilizadores()"
+          style="width:100%;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Gerir utilizadores
+        </button>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px">
+        <div style="font-weight:800;margin-bottom:8px">🤖 Inteligência Artificial</div>
+        <button onclick="abrirGeminiSettings()"
+          style="width:100%;padding:10px;background:#15803d;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Configurar API Gemini
+        </button>
+      </div>
+    `;
+
+    admin.appendChild(box);
+  }
+
+  setTimeout(addAdminTools, 500);
+});
+</script>
+
+</body></html>');
   novaTab.document.close();
   mostrarStatus('status-export', '✓ Relatório aberto numa nova aba — use o menu do browser para imprimir ou guardar PDF', 'success');
 }
@@ -3821,6 +3897,44 @@ function exportDocxHtml(htmlContent, filename) {
 </head>
 <body>
 ${htmlContent}
+
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  function addAdminTools(){
+    var admin = document.getElementById("screen-admin");
+    if(!admin) return;
+
+    if(document.getElementById("lc-admin-tools")) return;
+
+    var box = document.createElement("div");
+    box.id = "lc-admin-tools";
+    box.style.marginTop = "20px";
+    box.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:800;margin-bottom:8px">👥 Utilizadores</div>
+        <button onclick="abrirGestaoUtilizadores()"
+          style="width:100%;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Gerir utilizadores
+        </button>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px">
+        <div style="font-weight:800;margin-bottom:8px">🤖 Inteligência Artificial</div>
+        <button onclick="abrirGeminiSettings()"
+          style="width:100%;padding:10px;background:#15803d;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Configurar API Gemini
+        </button>
+      </div>
+    `;
+
+    admin.appendChild(box);
+  }
+
+  setTimeout(addAdminTools, 500);
+});
+</script>
+
 </body>
 </html>`;
   const blob = new Blob([doc], { type: 'application/msword;charset=utf-8;' });
@@ -6523,7 +6637,45 @@ function exportarRegistoDiario(lista) {
     }); // end prods.forEach
   }); // end Object.keys
 
-  w.document.write('</body></html>');
+  w.document.write('
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  function addAdminTools(){
+    var admin = document.getElementById("screen-admin");
+    if(!admin) return;
+
+    if(document.getElementById("lc-admin-tools")) return;
+
+    var box = document.createElement("div");
+    box.id = "lc-admin-tools";
+    box.style.marginTop = "20px";
+    box.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:800;margin-bottom:8px">👥 Utilizadores</div>
+        <button onclick="abrirGestaoUtilizadores()"
+          style="width:100%;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Gerir utilizadores
+        </button>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px">
+        <div style="font-weight:800;margin-bottom:8px">🤖 Inteligência Artificial</div>
+        <button onclick="abrirGeminiSettings()"
+          style="width:100%;padding:10px;background:#15803d;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Configurar API Gemini
+        </button>
+      </div>
+    `;
+
+    admin.appendChild(box);
+  }
+
+  setTimeout(addAdminTools, 500);
+});
+</script>
+
+</body></html>');
   w.document.close();
 }
 
@@ -6563,7 +6715,45 @@ function exportarWordProducoes(lista) {
     html += '<tr><td>' + (r.leiteTotal!=null?r.leiteTotal.toFixed(0)+' L':'') + '</td><td>' + (r.temperatura||'') + ' °C</td><td style="font-size:8pt">' + lotesStr + '</td><td>' + (r.qtd||'') + '</td><td>' + (r.peso||'') + ' kg</td><td>' + (r.camaraDestino?'C'+r.camaraDestino:'') + '</td></tr></table>';
     if (r.obs) html += '<p style="font-size:9pt"><em>Obs: ' + r.obs + '</em></p>';
   });
-  html += '</body></html>';
+  html += '
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  function addAdminTools(){
+    var admin = document.getElementById("screen-admin");
+    if(!admin) return;
+
+    if(document.getElementById("lc-admin-tools")) return;
+
+    var box = document.createElement("div");
+    box.id = "lc-admin-tools";
+    box.style.marginTop = "20px";
+    box.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:800;margin-bottom:8px">👥 Utilizadores</div>
+        <button onclick="abrirGestaoUtilizadores()"
+          style="width:100%;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Gerir utilizadores
+        </button>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px">
+        <div style="font-weight:800;margin-bottom:8px">🤖 Inteligência Artificial</div>
+        <button onclick="abrirGeminiSettings()"
+          style="width:100%;padding:10px;background:#15803d;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Configurar API Gemini
+        </button>
+      </div>
+    `;
+
+    admin.appendChild(box);
+  }
+
+  setTimeout(addAdminTools, 500);
+});
+</script>
+
+</body></html>';
   const blob = new Blob([html], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -6640,7 +6830,45 @@ function exportarWordProducoes(lista) {
     ${r.obs ? '<p><em>Obs: ' + r.obs + '</em></p>' : ''}`;
   });
 
-  html += '</body></html>';
+  html += '
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  function addAdminTools(){
+    var admin = document.getElementById("screen-admin");
+    if(!admin) return;
+
+    if(document.getElementById("lc-admin-tools")) return;
+
+    var box = document.createElement("div");
+    box.id = "lc-admin-tools";
+    box.style.marginTop = "20px";
+    box.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:800;margin-bottom:8px">👥 Utilizadores</div>
+        <button onclick="abrirGestaoUtilizadores()"
+          style="width:100%;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Gerir utilizadores
+        </button>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px">
+        <div style="font-weight:800;margin-bottom:8px">🤖 Inteligência Artificial</div>
+        <button onclick="abrirGeminiSettings()"
+          style="width:100%;padding:10px;background:#15803d;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Configurar API Gemini
+        </button>
+      </div>
+    `;
+
+    admin.appendChild(box);
+  }
+
+  setTimeout(addAdminTools, 500);
+});
+</script>
+
+</body></html>';
   const blob = new Blob([html], { type: 'application/msword' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -6921,7 +7149,45 @@ function _gerarRelLeite(modo) {
       pHTML+='<div class="row"><span>'+cfg.icon+' '+m.descricao+' <span style="color:#9ca3af">('+fmtD(m.data)+')</span></span>'
         +'<span style="font-weight:700;color:'+(m.sentido==='entrada'?cfg.cor:'#dc2626')+'">'+(m.sentido==='entrada'?'+':'−')+Math.round(m.litros)+' L</span></div>';
     });
-    pHTML+='</body></html>';
+    pHTML+='
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  function addAdminTools(){
+    var admin = document.getElementById("screen-admin");
+    if(!admin) return;
+
+    if(document.getElementById("lc-admin-tools")) return;
+
+    var box = document.createElement("div");
+    box.id = "lc-admin-tools";
+    box.style.marginTop = "20px";
+    box.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:800;margin-bottom:8px">👥 Utilizadores</div>
+        <button onclick="abrirGestaoUtilizadores()"
+          style="width:100%;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Gerir utilizadores
+        </button>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px">
+        <div style="font-weight:800;margin-bottom:8px">🤖 Inteligência Artificial</div>
+        <button onclick="abrirGeminiSettings()"
+          style="width:100%;padding:10px;background:#15803d;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Configurar API Gemini
+        </button>
+      </div>
+    `;
+
+    admin.appendChild(box);
+  }
+
+  setTimeout(addAdminTools, 500);
+});
+</script>
+
+</body></html>';
     var w=window.open('','_blank'); w.document.write(pHTML); w.document.close();
     setTimeout(function(){w.print();},400);
     return;
@@ -9518,7 +9784,45 @@ function exportarEncomendas(formato) {
     html += '</div>';
   });
   
-  html += '</body></html>';
+  html += '
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  function addAdminTools(){
+    var admin = document.getElementById("screen-admin");
+    if(!admin) return;
+
+    if(document.getElementById("lc-admin-tools")) return;
+
+    var box = document.createElement("div");
+    box.id = "lc-admin-tools";
+    box.style.marginTop = "20px";
+    box.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:800;margin-bottom:8px">👥 Utilizadores</div>
+        <button onclick="abrirGestaoUtilizadores()"
+          style="width:100%;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Gerir utilizadores
+        </button>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px">
+        <div style="font-weight:800;margin-bottom:8px">🤖 Inteligência Artificial</div>
+        <button onclick="abrirGeminiSettings()"
+          style="width:100%;padding:10px;background:#15803d;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Configurar API Gemini
+        </button>
+      </div>
+    `;
+
+    admin.appendChild(box);
+  }
+
+  setTimeout(addAdminTools, 500);
+});
+</script>
+
+</body></html>';
   
   if (formato === 'print') {
     const w = window.open('','_blank');
@@ -11175,7 +11479,45 @@ function _gerarPercursoLotes(ini, fim, loteF) {
 function _gerarRelCamaras(modo) {
   modo = modo || 'preview';
   var tipo  = window._rcamTipoAtual||'entrada';
-  if (tipo === 'percurso') { var loteF=((document.getElementById('rcam-lote')||{}).value||'').trim().toLowerCase(); var ini=(document.getElementById('rcam-ini')||{}).value||''; var fim=(document.getElementById('rcam-fim')||{}).value||''; var html=_gerarPercursoLotes(ini,fim,loteF); var res=document.getElementById('rcam-resultado'); if (modo==='preview'&&res) { res.innerHTML=html+'<div style="display:flex;gap:8px;margin-top:12px"><button onclick="_gerarRelCamaras(\'print\')" style="flex:1;padding:11px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer">🖨️ Imprimir</button></div>'; } else if(modo==='print') { var win=window.open('','_blank'); if(win){win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Percurso Lotes</title><style>body{font-family:sans-serif;font-size:12px;padding:20px}</style></head><body><h2>Percurso por Lote</h2>'+html+'</body></html>'); win.document.close(); setTimeout(function(){win.print();},500);} } return; }
+  if (tipo === 'percurso') { var loteF=((document.getElementById('rcam-lote')||{}).value||'').trim().toLowerCase(); var ini=(document.getElementById('rcam-ini')||{}).value||''; var fim=(document.getElementById('rcam-fim')||{}).value||''; var html=_gerarPercursoLotes(ini,fim,loteF); var res=document.getElementById('rcam-resultado'); if (modo==='preview'&&res) { res.innerHTML=html+'<div style="display:flex;gap:8px;margin-top:12px"><button onclick="_gerarRelCamaras(\'print\')" style="flex:1;padding:11px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer">🖨️ Imprimir</button></div>'; } else if(modo==='print') { var win=window.open('','_blank'); if(win){win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Percurso Lotes</title><style>body{font-family:sans-serif;font-size:12px;padding:20px}</style></head><body><h2>Percurso por Lote</h2>'+html+'
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  function addAdminTools(){
+    var admin = document.getElementById("screen-admin");
+    if(!admin) return;
+
+    if(document.getElementById("lc-admin-tools")) return;
+
+    var box = document.createElement("div");
+    box.id = "lc-admin-tools";
+    box.style.marginTop = "20px";
+    box.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:800;margin-bottom:8px">👥 Utilizadores</div>
+        <button onclick="abrirGestaoUtilizadores()"
+          style="width:100%;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Gerir utilizadores
+        </button>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px">
+        <div style="font-weight:800;margin-bottom:8px">🤖 Inteligência Artificial</div>
+        <button onclick="abrirGeminiSettings()"
+          style="width:100%;padding:10px;background:#15803d;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Configurar API Gemini
+        </button>
+      </div>
+    `;
+
+    admin.appendChild(box);
+  }
+
+  setTimeout(addAdminTools, 500);
+});
+</script>
+
+</body></html>'); win.document.close(); setTimeout(function(){win.print();},500);} } return; }
   var ini   = (document.getElementById('rcam-ini')||{}).value||'';
   var fim   = (document.getElementById('rcam-fim')||{}).value||'';
   var loteF = ((document.getElementById('rcam-lote')||{}).value||'').trim().toLowerCase();
@@ -11271,7 +11613,45 @@ function _gerarRelCamaras(modo) {
     var titulo = 'Relatório Câmaras — ' + (window._rcamTipoAtual==='entrada'?'Entradas':'Saídas');
     win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+titulo+'</title>'
       +'<style>body{font-family:sans-serif;font-size:12px;padding:20px} table{border-collapse:collapse;width:100%} th,td{border:1px solid #ccc;padding:6px 8px;text-align:left} th{background:#1e3a5f;color:white} h2{color:#1e3a5f}</style>'
-      +'</head><body><h2>'+titulo+'</h2>'+html+'</body></html>');
+      +'</head><body><h2>'+titulo+'</h2>'+html+'
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  function addAdminTools(){
+    var admin = document.getElementById("screen-admin");
+    if(!admin) return;
+
+    if(document.getElementById("lc-admin-tools")) return;
+
+    var box = document.createElement("div");
+    box.id = "lc-admin-tools";
+    box.style.marginTop = "20px";
+    box.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:800;margin-bottom:8px">👥 Utilizadores</div>
+        <button onclick="abrirGestaoUtilizadores()"
+          style="width:100%;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Gerir utilizadores
+        </button>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px">
+        <div style="font-weight:800;margin-bottom:8px">🤖 Inteligência Artificial</div>
+        <button onclick="abrirGeminiSettings()"
+          style="width:100%;padding:10px;background:#15803d;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Configurar API Gemini
+        </button>
+      </div>
+    `;
+
+    admin.appendChild(box);
+  }
+
+  setTimeout(addAdminTools, 500);
+});
+</script>
+
+</body></html>');
     win.document.close();
     win.focus();
     setTimeout(function(){ win.print(); }, 500);
@@ -11913,7 +12293,45 @@ function gerarGuiaEncomenda() {
       +(totalAb?' | <strong>Abatido:</strong> '+totalAb+' un'+(totalKg>0?' / '+totalKg.toFixed(1)+' kg':''):'')
     +'</div>'
     +'<div style="margin-top:30px;font-size:10px;color:#9ca3af;text-align:right">LactoCeleiro — Guia gerada em '+new Date().toLocaleString('pt-PT')+'</div>'
-    +'</body></html>';
+    +'
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  function addAdminTools(){
+    var admin = document.getElementById("screen-admin");
+    if(!admin) return;
+
+    if(document.getElementById("lc-admin-tools")) return;
+
+    var box = document.createElement("div");
+    box.id = "lc-admin-tools";
+    box.style.marginTop = "20px";
+    box.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:800;margin-bottom:8px">👥 Utilizadores</div>
+        <button onclick="abrirGestaoUtilizadores()"
+          style="width:100%;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Gerir utilizadores
+        </button>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px">
+        <div style="font-weight:800;margin-bottom:8px">🤖 Inteligência Artificial</div>
+        <button onclick="abrirGeminiSettings()"
+          style="width:100%;padding:10px;background:#15803d;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Configurar API Gemini
+        </button>
+      </div>
+    `;
+
+    admin.appendChild(box);
+  }
+
+  setTimeout(addAdminTools, 500);
+});
+</script>
+
+</body></html>';
 
   var win = window.open('', '_blank');
   if (!win) { alert('Permitir popups para abrir a guia'); return; }
@@ -12300,7 +12718,45 @@ function gerarGuiaExpedicao(expId) {
       +'<div><div class="sig-line">Recebido por: _______________________</div></div>'
     +'</div>'
     +'<div style="margin-top:20px;font-size:10px;color:#9ca3af;text-align:right">LactoCeleiro — '+new Date().toLocaleString('pt-PT')+'</div>'
-    +'</body></html>';
+    +'
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  function addAdminTools(){
+    var admin = document.getElementById("screen-admin");
+    if(!admin) return;
+
+    if(document.getElementById("lc-admin-tools")) return;
+
+    var box = document.createElement("div");
+    box.id = "lc-admin-tools";
+    box.style.marginTop = "20px";
+    box.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:800;margin-bottom:8px">👥 Utilizadores</div>
+        <button onclick="abrirGestaoUtilizadores()"
+          style="width:100%;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Gerir utilizadores
+        </button>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px">
+        <div style="font-weight:800;margin-bottom:8px">🤖 Inteligência Artificial</div>
+        <button onclick="abrirGeminiSettings()"
+          style="width:100%;padding:10px;background:#15803d;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Configurar API Gemini
+        </button>
+      </div>
+    `;
+
+    admin.appendChild(box);
+  }
+
+  setTimeout(addAdminTools, 500);
+});
+</script>
+
+</body></html>';
 
   var win = window.open('','_blank');
   if (!win) { alert('Permitir popups para abrir a guia'); return; }
@@ -12972,7 +13428,45 @@ function _gerarRelEnc(modo) {
       if(enc.obs) pHTML+='<div style="font-size:10px;color:#6b7280;margin-top:4px">'+enc.obs+'</div>';
       pHTML+='</div>';
     });
-    pHTML+='</body></html>';
+    pHTML+='
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  function addAdminTools(){
+    var admin = document.getElementById("screen-admin");
+    if(!admin) return;
+
+    if(document.getElementById("lc-admin-tools")) return;
+
+    var box = document.createElement("div");
+    box.id = "lc-admin-tools";
+    box.style.marginTop = "20px";
+    box.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:800;margin-bottom:8px">👥 Utilizadores</div>
+        <button onclick="abrirGestaoUtilizadores()"
+          style="width:100%;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Gerir utilizadores
+        </button>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px">
+        <div style="font-weight:800;margin-bottom:8px">🤖 Inteligência Artificial</div>
+        <button onclick="abrirGeminiSettings()"
+          style="width:100%;padding:10px;background:#15803d;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Configurar API Gemini
+        </button>
+      </div>
+    `;
+
+    admin.appendChild(box);
+  }
+
+  setTimeout(addAdminTools, 500);
+});
+</script>
+
+</body></html>';
     var w=window.open('','_blank'); w.document.write(pHTML); w.document.close();
     setTimeout(function(){w.print();},400);
     return;
@@ -13777,6 +14271,46 @@ function _adminGuardarGeminiKey() {
 }
 </script>
 
+<script>
+document.addEventListener("DOMContentLoaded", function(){
+
+  function addAdminTools(){
+    var admin = document.getElementById("screen-admin");
+    if(!admin) return;
+
+    if(document.getElementById("lc-admin-tools")) return;
+
+    var box = document.createElement("div");
+    box.id = "lc-admin-tools";
+    box.style.marginTop = "20px";
+    box.innerHTML = `
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:800;margin-bottom:8px">👥 Utilizadores</div>
+        <button onclick="abrirGestaoUtilizadores()"
+          style="width:100%;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Gerir utilizadores
+        </button>
+      </div>
+
+      <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:14px">
+        <div style="font-weight:800;margin-bottom:8px">🤖 Inteligência Artificial</div>
+        <button onclick="abrirGeminiSettings()"
+          style="width:100%;padding:10px;background:#15803d;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">
+          Configurar API Gemini
+        </button>
+      </div>
+    `;
+
+    admin.appendChild(box);
+  }
+
+  setTimeout(addAdminTools, 500);
+});
+</script>
+
+</body>
+</html>
+
     <!-- ══════════════════════════════ -->
     <!-- ADMINISTRAÇÃO                  -->
     <!-- ══════════════════════════════ -->
@@ -13868,6 +14402,3 @@ function _adminGuardarGeminiKey() {
       <button class="btn-back" onclick="irPara('screen-home')" style="margin-top:8px">← Voltar ao Início</button>
     </div>
 
-
-</body>
-</html>
