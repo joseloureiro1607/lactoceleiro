@@ -562,8 +562,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
     </div>
   </div>
 </div>
-
-    <div class="screen" id="screen-home">
+<div class="screen" id="screen-home">
       <!-- Utilizador atual + logout -->
       <div id="home-user-bar" style="display:flex;align-items:center;justify-content:space-between;background:white;border-radius:14px;padding:12px 16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
         <div style="display:flex;align-items:center;gap:10px">
@@ -11931,6 +11930,170 @@ function abrirImportarFotoEnc() {
   var modal = document.createElement('div');
   modal.id = 'modal-import-foto';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML =
+    '<div style="background:white;border-radius:20px;padding:22px;width:100%;max-width:400px">'
+    +'<div style="font-size:16px;font-weight:800;color:#1e3a5f;margin-bottom:6px">📷 Importar Encomenda por Foto</div>'
+    +'<div style="font-size:12px;color:#6b7280;margin-bottom:16px">Tira foto à encomenda escrita à mão ou em papel. O sistema lê os artigos e quantidades.</div>'
+    +'<div style="margin-bottom:12px">'
+      +'<label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:6px">FOTO / IMAGEM</label>'
+      +'<input type="file" id="foto-enc-input" accept="image/*" capture="environment" '
+        +'style="width:100%;padding:10px;border:2px dashed #d1d5db;border-radius:10px;font-size:13px;box-sizing:border-box">'
+    +'</div>'
+    +'<div id="foto-enc-preview" style="display:none;margin-bottom:12px">'
+      +'<img id="foto-enc-img" style="width:100%;border-radius:10px;max-height:200px;object-fit:contain;background:#f9fafb">'
+    +'</div>'
+    +'<div id="foto-enc-status" style="font-size:12px;color:#6b7280;min-height:18px;margin-bottom:12px"></div>'
+    +'<div id="foto-enc-resultado" style="display:none;margin-bottom:12px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px">'
+      +'<div style="font-size:11px;font-weight:800;color:#15803d;margin-bottom:8px">✓ ARTIGOS DETECTADOS</div>'
+      +'<div id="foto-enc-linhas"></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
+      +'<button onclick="document.getElementById(\'modal-import-foto\').remove()" '
+        +'style="padding:12px;background:#f3f4f6;color:#6b7280;border:none;border-radius:10px;font-weight:700;cursor:pointer">Cancelar</button>'
+      +'<button id="btn-foto-processar" onclick="processarFotoEnc()" '
+        +'style="padding:12px;background:#0369a1;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer">🔍 Analisar</button>'
+    +'</div>'
+    +'<div id="btn-foto-criar" style="display:none;margin-top:8px">'
+      +'<button onclick="criarEncDeFoto()" style="width:100%;padding:12px;background:#15803d;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer">✓ Criar Encomenda</button>'
+    +'</div>'
+    +'</div>';
+  document.body.appendChild(modal);
+  // Preview da imagem ao seleccionar
+  document.getElementById('foto-enc-input').addEventListener('change', function(e){
+    var f = e.target.files[0];
+    if (!f) return;
+    var url = URL.createObjectURL(f);
+    document.getElementById('foto-enc-img').src = url;
+    document.getElementById('foto-enc-preview').style.display = 'block';
+    document.getElementById('foto-enc-status').textContent = '📷 Imagem carregada — clique em Analisar';
+  });
+}
+
+var _fotoEncLinhas = [];
+
+async function processarFotoEnc() {
+  var input = document.getElementById('foto-enc-input');
+  var status = document.getElementById('foto-enc-status');
+  if (!input || !input.files.length) {
+    status.textContent = '⚠️ Seleciona uma foto primeiro';
+    return;
+  }
+  status.textContent = '⏳ A analisar imagem com IA...';
+  document.getElementById('btn-foto-processar').disabled = true;
+
+  try {
+    var file = input.files[0];
+    var b64 = await new Promise(function(res, rej) {
+      var r = new FileReader();
+      r.onload = function(e){ res(e.target.result.split(',')[1]); };
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+    var mediaType = file.type || 'image/jpeg';
+
+    var artigosList = (typeof ARTIGOS_LIST !== 'undefined') ? ARTIGOS_LIST.join(', ') : '';
+
+    var response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
+            { type: 'text', text: 'Esta é uma encomenda de queijo. Extrai todos os artigos e quantidades em JSON.\nFormato: {"cliente":"nome ou vazio","linhas":[{"artigo":"nome do artigo","qtd":número,"caixas":número}]}\nArtigos possíveis: ' + artigosList + '\nSe não reconheces o artigo exacto, usa o nome mais próximo da lista.\nResponde APENAS com JSON válido, sem mais texto.' }
+          ]
+        }]
+      })
+    });
+
+    if (!response.ok) throw new Error('API erro ' + response.status);
+    var data = await response.json();
+    var text = (data.content||[]).map(function(c){ return c.text||''; }).join('');
+    var clean = text.replace(/```json|```/g,'').trim();
+    var result = JSON.parse(clean);
+
+    _fotoEncLinhas = result.linhas || [];
+    if (!_fotoEncLinhas.length) throw new Error('Nenhum artigo detectado');
+
+    // Mostrar resultado
+    var linhasHTML = _fotoEncLinhas.map(function(l,i){
+      return '<div style="display:grid;grid-template-columns:1fr 70px 60px;gap:6px;align-items:center;margin-bottom:6px">'
+        +'<input type="text" value="'+(l.artigo||'')+'" id="foto-art-'+i+'" '
+          +'style="font-size:12px;padding:5px 8px;border:1.5px solid #86efac;border-radius:7px">'
+        +'<input type="number" value="'+(l.qtd||'')+'" id="foto-qtd-'+i+'" placeholder="un" '
+          +'style="font-size:13px;font-weight:700;padding:5px 6px;border:1.5px solid #86efac;border-radius:7px;text-align:center">'
+        +'<input type="number" value="'+(l.caixas||'')+'" id="foto-cx-'+i+'" placeholder="cx" '
+          +'style="font-size:13px;font-weight:700;padding:5px 6px;border:1.5px solid #86efac;border-radius:7px;text-align:center">'
+      +'</div>';
+    }).join('');
+
+    document.getElementById('foto-enc-linhas').innerHTML =
+      '<div style="display:grid;grid-template-columns:1fr 70px 60px;gap:6px;margin-bottom:4px">'
+      +'<span style="font-size:10px;font-weight:700;color:#6b7280">ARTIGO</span>'
+      +'<span style="font-size:10px;font-weight:700;color:#6b7280">UN</span>'
+      +'<span style="font-size:10px;font-weight:700;color:#6b7280">CX</span></div>'
+      + linhasHTML
+      +(result.cliente?'<div style="margin-top:8px;font-size:12px;color:#0369a1;font-weight:700">👤 Cliente: '+result.cliente+'</div>':'');
+
+    document.getElementById('foto-enc-resultado').style.display = 'block';
+    document.getElementById('btn-foto-criar').style.display = 'block';
+    status.textContent = '✅ '+_fotoEncLinhas.length+' artigo(s) detectado(s) — confirma e cria encomenda';
+    window._fotoEncCliente = result.cliente || '';
+
+  } catch(e) {
+    status.textContent = '❌ Erro: ' + e.message;
+    console.error(e);
+  }
+  document.getElementById('btn-foto-processar').disabled = false;
+}
+
+function criarEncDeFoto() {
+  // Ler os campos editados
+  var n = _fotoEncLinhas.length;
+  var linhas = [];
+  for (var i = 0; i < n; i++) {
+    var art = (document.getElementById('foto-art-'+i)||{value:''}).value.trim();
+    var qtd = parseInt((document.getElementById('foto-qtd-'+i)||{value:0}).value)||0;
+    var cx  = parseInt((document.getElementById('foto-cx-'+i)||{value:0}).value)||0;
+    if (!art || !qtd) continue;
+    linhas.push({ artigo: art, qtd: qtd, caixas: cx||Math.ceil(qtd/4), referencia:'', obsLinha:'' });
+  }
+  if (!linhas.length) { alert('Nenhuma linha válida'); return; }
+  var encs = getEncomendas();
+  var nr = encs.length ? Math.max.apply(null, encs.map(function(e){ return e.nr||0; })) + 1 : 1;
+  var totalQtd = linhas.reduce(function(s,l){ return s+l.qtd; },0);
+  var totalCx  = linhas.reduce(function(s,l){ return s+(l.caixas||0); },0);
+  var enc = {
+    id: 'enc_foto_'+Date.now(),
+    nr: nr,
+    cliente: window._fotoEncCliente || 'Cliente foto',
+    artigo: linhas.map(function(l){ return l.artigo; }).join(' + '),
+    qtd: totalQtd, caixas: totalCx,
+    linhas: linhas, lotes: [],
+    estado: 'aberta',
+    data: new Date().toISOString(),
+    dataFormatada: dataHoje(),
+    obs: 'Importado de foto'
+  };
+  encs.push(enc);
+  salvarEncomendas(encs);
+  marcarModificado('lc_encomendas_v1');
+  document.getElementById('modal-import-foto').remove();
+  renderizarEncomendas();
+  irPara('screen-enc-lista');
+  mostrarStatus('status-enc','✅ Encomenda #'+nr+' criada a partir de foto!','success');
+}
+
+
+function abrirImportarFotoEnc() {
+  var old = document.getElementById('modal-import-foto');
+  if (old) old.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-import-foto';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   modal.innerHTML = '<div style="background:white;border-radius:20px;padding:22px;width:100%;max-width:380px">'
     +'<div style="font-size:15px;font-weight:800;color:#1e3a5f;margin-bottom:4px">\ud83d\udcf7 Importar por Foto/PDF</div>'
     +'<div style="font-size:12px;color:#6b7280;margin-bottom:14px">Tira foto ou carrega imagem/PDF da encomenda.</div>'
@@ -13613,15 +13776,12 @@ function _adminGuardarGeminiKey() {
   mostrarStatus('status-home', 'Chave Gemini guardada com sucesso!', 'success');
 }
 </script>
-
     <div class="screen" id="screen-admin">
       <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <strong>Administração</strong></div>
       <div style="background:linear-gradient(135deg,#1e3a5f,#2d5282);border-radius:16px;padding:14px 16px;margin-bottom:16px;color:white">
         <div style="font-size:11px;opacity:0.7;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Painel</div>
         <div style="font-size:17px;font-weight:700">⚙️ Administração</div>
       </div>
-
-      <!-- TABS -->
       <div style="display:flex;gap:8px;margin-bottom:16px">
         <button id="tab-utilizadores" onclick="adminTab('utilizadores')"
           style="flex:1;padding:10px;border-radius:10px;border:none;background:#1e3a5f;color:white;font-weight:700;font-size:13px;cursor:pointer">
@@ -13636,8 +13796,6 @@ function _adminGuardarGeminiKey() {
           ⚙️ Config
         </button>
       </div>
-
-      <!-- PAINEL UTILIZADORES -->
       <div id="admin-panel-utilizadores">
         <div id="admin-lista-utilizadores" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px"></div>
         <button onclick="adminNovoUtilizador()"
@@ -13645,32 +13803,18 @@ function _adminGuardarGeminiKey() {
           + Novo Utilizador
         </button>
       </div>
-
-      <!-- PAINEL DADOS -->
       <div id="admin-panel-dados" style="display:none">
         <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:12px;padding:14px;margin-bottom:12px">
           <div style="font-weight:700;color:#dc2626;margin-bottom:8px">⚠️ Zona de eliminação — ação irreversível</div>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="adminEliminar('producoes-queijo')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">
-              🧀 Eliminar todas as produções de queijo
-            </button>
-            <button onclick="adminEliminar('producoes-requeijao')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">
-              🥛 Eliminar todas as produções de requeijão
-            </button>
-            <button onclick="adminEliminar('camaras')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">
-              🏭 Eliminar todos os lotes das câmaras
-            </button>
-            <button onclick="adminEliminar('encomendas')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">
-              📦 Eliminar todas as encomendas
-            </button>
-            <button onclick="adminEliminar('tudo')" style="padding:12px;background:#fef2f2;border:2px solid #dc2626;border-radius:10px;color:#dc2626;font-weight:800;font-size:13px;cursor:pointer;text-align:left">
-              ☠️ ELIMINAR TUDO (reset total)
-            </button>
+            <button onclick="adminEliminar('producoes-queijo')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">🧀 Eliminar todas as produções de queijo</button>
+            <button onclick="adminEliminar('producoes-requeijao')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">🥛 Eliminar todas as produções de requeijão</button>
+            <button onclick="adminEliminar('camaras')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">🏭 Eliminar todos os lotes das câmaras</button>
+            <button onclick="adminEliminar('encomendas')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">📦 Eliminar todas as encomendas</button>
+            <button onclick="adminEliminar('tudo')" style="padding:12px;background:#fef2f2;border:2px solid #dc2626;border-radius:10px;color:#dc2626;font-weight:800;font-size:13px;cursor:pointer;text-align:left">☠️ ELIMINAR TUDO (reset total)</button>
           </div>
         </div>
       </div>
-
-      <!-- PAINEL CONFIG -->
       <div id="admin-panel-config" style="display:none">
         <div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:14px;padding:16px;margin-bottom:12px">
           <div style="font-size:13px;font-weight:800;color:#1e40af;margin-bottom:4px">🤖 Gemini AI — Leitura de Encomendas</div>
@@ -13679,21 +13823,13 @@ function _adminGuardarGeminiKey() {
           <input type="password" id="admin-gemini-key-inp" placeholder="Cole aqui a chave API (AIzaSy...)"
             style="width:100%;padding:10px;border:2px solid #bfdbfe;border-radius:8px;font-size:13px;font-family:monospace;box-sizing:border-box;margin-bottom:8px">
           <div style="display:flex;gap:8px">
-            <button onclick="_adminGuardarGeminiKey()"
-              style="flex:2;padding:10px;background:#1e40af;color:white;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px">
-              💾 Guardar Chave
-            </button>
-            <button onclick="testarGemini()"
-              style="flex:1;padding:10px;background:#f0fdf4;border:2px solid #86efac;border-radius:8px;font-weight:700;color:#15803d;cursor:pointer;font-size:12px">
-              ✓ Testar
-            </button>
+            <button onclick="_adminGuardarGeminiKey()" style="flex:2;padding:10px;background:#1e40af;color:white;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px">💾 Guardar Chave</button>
+            <button onclick="testarGemini()" style="flex:1;padding:10px;background:#f0fdf4;border:2px solid #86efac;border-radius:8px;font-weight:700;color:#15803d;cursor:pointer;font-size:12px">✓ Testar</button>
           </div>
         </div>
       </div>
-
       <button class="btn-back" onclick="irPara('screen-home')" style="margin-top:8px">← Voltar ao Início</button>
     </div>
-  </div>
-</div>
+
 </body>
 </html>
