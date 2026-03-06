@@ -8204,6 +8204,30 @@ atualizarDataHora();
 setInterval(atualizarDataHora, 30000);
 atualizarResumoCamaras();
 atualizarBannerOffline();
+// ===
+// SISTEMA DE UTILIZADORES
+// ===
+
+const UTILIZADORES_DEFAULT = [
+  { id:'jose',      nome:'José',      pin:'1234', perfil:'admin',      cor:'#1e3a5f', icon:'👑' },
+  { id:'direcao',   nome:'Direção',   pin:'9999', perfil:'direcao',   cor:'#7c3aed', icon:'👁️' },
+  { id:'joao',      nome:'João',      pin:'5678', perfil:'gestor',     cor:'#0369a1', icon:'👤' },
+  { id:'producao',  nome:'Produção',  pin:'1111', perfil:'producao',   cor:'#15803d', icon:'🏭' },
+  { id:'encomendas',nome:'Encomendas',pin:'2222', perfil:'encomendas', cor:'#6d28d9', icon:'📦' },
+  { id:'expedicao', nome:'Expedição', pin:'3333', perfil:'expedicao',  cor:'#d97706', icon:'🚚' },
+];
+
+// Perfis e permissões
+const PERFIS = {
+  admin:      { label:"Administrador", areas:["queijo","requeijao","cura","encomendas","ver-relatorios","exportar-enc","admin","eliminar","eliminar-prod","criar-enc","ver-enc-expedidas"] },
+  direcao:    { label:"Direção",       areas:["queijo","requeijao","cura","encomendas","ver-relatorios","exportar-enc","ver-enc-expedidas"], readonly:true },
+  gestor:     { label:"Gestor",        areas:["queijo","requeijao","cura","encomendas","criar-enc","exportar-enc","ver-enc-expedidas"] },
+  producao:   { label:"Produção",      areas:["cura"] },
+  encomendas: { label:"Encomendas",    areas:["encomendas","criar-enc","exportar-enc","ver-enc-expedidas","ver-relatorios"] },
+  expedicao:  { label:"Expedição",     areas:["encomendas","criar-enc","exportar-enc","ver-enc-expedidas","ver-relatorios"] },
+};
+
+
 renderizarEncomendas();
 
 // Inicializar módulos de produção após página carregar completamente
@@ -8485,29 +8509,6 @@ function renderizarListaUtilizadores() {
 
 
 
-
-// ===
-// SISTEMA DE UTILIZADORES
-// ===
-
-const UTILIZADORES_DEFAULT = [
-  { id:'jose',      nome:'José',      pin:'1234', perfil:'admin',      cor:'#1e3a5f', icon:'👑' },
-  { id:'direcao',   nome:'Direção',   pin:'9999', perfil:'direcao',   cor:'#7c3aed', icon:'👁️' },
-  { id:'joao',      nome:'João',      pin:'5678', perfil:'gestor',     cor:'#0369a1', icon:'👤' },
-  { id:'producao',  nome:'Produção',  pin:'1111', perfil:'producao',   cor:'#15803d', icon:'🏭' },
-  { id:'encomendas',nome:'Encomendas',pin:'2222', perfil:'encomendas', cor:'#6d28d9', icon:'📦' },
-  { id:'expedicao', nome:'Expedição', pin:'3333', perfil:'expedicao',  cor:'#d97706', icon:'🚚' },
-];
-
-// Perfis e permissões
-const PERFIS = {
-  admin:      { label:"Administrador", areas:["queijo","requeijao","cura","encomendas","ver-relatorios","exportar-enc","admin","eliminar","eliminar-prod","criar-enc","ver-enc-expedidas"] },
-  direcao:    { label:"Direção",       areas:["queijo","requeijao","cura","encomendas","ver-relatorios","exportar-enc","ver-enc-expedidas"], readonly:true },
-  gestor:     { label:"Gestor",        areas:["queijo","requeijao","cura","encomendas","criar-enc","exportar-enc","ver-enc-expedidas"] },
-  producao:   { label:"Produção",      areas:["cura"] },
-  encomendas: { label:"Encomendas",    areas:["encomendas","criar-enc","exportar-enc","ver-enc-expedidas","ver-relatorios"] },
-  expedicao:  { label:"Expedição",     areas:["encomendas","criar-enc","exportar-enc","ver-enc-expedidas","ver-relatorios"] },
-};
 
 var _utilizadorAtual = null;
 var _PIN_BUF = ''; // PIN buffer
