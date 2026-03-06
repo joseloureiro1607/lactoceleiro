@@ -1417,10 +1417,15 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <div style="font-size:12px;opacity:0.8;margin-top:2px" id="enc-prep-sub"></div>
       </div>
       <div id="enc-prep-linhas"></div>
-      <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div id="enc-prep-botoes-area" style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <button class="btn-back" onclick="voltarPagina()">&#8592; Voltar</button>
-        <button class="btn-primary" style="background:#0369a1;margin:0" onclick="enviarParaExpedicao()">
+        <button id="enc-prep-btn-main" class="btn-primary" style="background:#0369a1;margin:0" onclick="enviarParaExpedicao()">
           &#128666; Enviar para Expedi&#231;&#227;o
+        </button>
+      </div>
+      <div id="enc-prep-btn-fechar" style="margin-top:8px;display:none">
+        <button class="btn-primary" style="background:#15803d;width:100%" onclick="fecharEncExpedicao()">
+          &#10003; Fechar Encomenda
         </button>
       </div>
       <div class="status" id="status-enc-prep"></div>
@@ -2115,6 +2120,18 @@ function dataFormatada(dt) {
 function dataHoje() { return dataFormatada(new Date()); }
 
 // --- NAVEGAÇÃO --
+
+// Gemini API config
+var GEMINI_API_KEY = localStorage.getItem('lc_gemini_key') || 'AIzaSyAJwk3thbRGMRqpbs9QxhtzEjuuyxdlXO0';
+var GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=';
+var PROMPT_GEMINI_ENC = 'Esta e uma encomenda de queijo ou requeijao do LactoCeleiro. '
+  + 'Extrai os dados e responde APENAS com JSON puro sem markdown. '
+  + 'Formato: {"cliente":"nome","dataEntrega":"DD/MM/YYYY ou vazio","dataExpedicao":"DD/MM/YYYY ou vazio","marca":"","obs":"","linhas":['
+  + '{"artigo":"nome","qtd":N,"caixas":N,"referencia":"G/P/PP/PPP/DOP ou vazio","obsLinha":""}]} '
+  + 'Regras: qtd=unidades. Se so caixas: G=4/cx, P=8/cx, PP=5/cx, PPP=5/cx, Requeijao=9/cx. '
+  + 'Artigos: Seia Grande=G, Seia Pequeno=P, Queijo Unidade=PP, Queijo Fatia=PPP. '
+  + 'Le quantidades manuscritas com cuidado.';
+
 var _navStack = [];
 var _navCurrent = 'screen-home';
 
@@ -3166,24 +3183,43 @@ function abrirEncomenda(id) {
   const isEnc   = temPermissao('encomendas');
   const isExp   = temPermissao('exportar-enc');
 
+  const isExp2 = temPermissao('expedicao');
+
   let botoes = '';
-  if (enc.estado !== 'concluida' && enc.estado !== 'em-expedicao') {
-    if (isAdmin || isEnc)
+
+  // Utilizador expedição: workflow direto (prepara e fecha na mesma ação)
+  if (isExp2 && !isAdmin && enc.estado !== 'concluida') {
+    botoes += `<button class="btn-primary" style="background:#0369a1" onclick="prepararEncExpedicao('${enc.id}')">&#128666; Registar Expedição</button>`;
+  }
+
+  // Utilizador encomendas / admin: workflow normal
+  if ((isAdmin || isEnc) && !isExp2) {
+    if (enc.estado !== 'concluida' && enc.estado !== 'em-expedicao') {
       botoes += `<button class="btn-primary" style="background:#0369a1" onclick="prepararEncomenda('${enc.id}')">&#128666; Preparar / Atribuir Lotes</button>`;
+      botoes += `<button class="btn-primary" style="background:#0284c7;margin-top:4px" onclick="enviarParaExpedicaoEnc('${enc.id}')">&#128666; Enviar para Expedição</button>`;
+      botoes += `<button class="btn-primary" style="background:#15803d;margin-top:4px" onclick="concluirEncomenda('${enc.id}')">&#10003; Fechar Encomenda</button>`;
+    }
   }
-  if (enc.estado === 'em-expedicao') {
-    botoes += `<button class="btn-primary" style="background:#0284c7" onclick="abrirExpDetalhe('${enc.id}')">&#128666; Ver na Expedição</button>`;
+
+  // Admin tem tudo
+  if (isAdmin) {
+    if (enc.estado !== 'concluida' && enc.estado !== 'em-expedicao') {
+      botoes += `<button class="btn-primary" style="background:#0369a1" onclick="prepararEncomenda('${enc.id}')">&#128666; Preparar / Atribuir Lotes</button>`;
+      botoes += `<button class="btn-primary" style="background:#0284c7;margin-top:4px" onclick="enviarParaExpedicaoEnc('${enc.id}')">&#128666; Enviar para Expedição</button>`;
+    }
+    if (enc.estado === 'em-expedicao') {
+      botoes += `<button class="btn-primary" style="background:#0284c7" onclick="abrirExpDetalhe('${enc.id}')">&#128666; Ver na Expedição</button>`;
+    }
+    if (enc.estado !== 'concluida') {
+      botoes += `<button class="btn-primary" style="background:#15803d;margin-top:4px" onclick="concluirEncomenda('${enc.id}')">&#10003; Fechar Encomenda</button>`;
+    } else {
+      botoes += `<button class="btn-primary" style="background:#6d28d9" onclick="pedirReabrirEncomenda('${enc.id}')">&#128275; Reabrir Encomenda</button>`;
+    }
+    botoes += `<button class="btn-primary" style="background:#dc2626;margin-top:4px" onclick="pedirEliminarEncomenda('${enc.id}')">&#128465; Eliminar Encomenda</button>`;
   }
+
   if (isAdmin || isExp)
     botoes += `<button class="btn-primary" style="background:#7c3aed;margin-top:4px" onclick="emailEncomenda('${enc.id}')">&#128231; Enviar por Email</button>`;
-  if (enc.estado !== 'concluida' && isAdmin) {
-    botoes += `<button class="btn-primary" style="background:#15803d" onclick="concluirEncomenda('${enc.id}')">&#10003; Marcar como Concluída</button>`;
-  } else if (enc.estado === 'concluida' && isAdmin) {
-    botoes += `<button class="btn-primary" style="background:#6d28d9" onclick="pedirReabrirEncomenda('${enc.id}')">🔓 Reabrir Encomenda</button>`;
-  }
-  // Eliminar só para admin
-  if (isAdmin)
-    botoes += `<button class="btn-primary" style="background:#dc2626;margin-top:4px" onclick="pedirEliminarEncomenda('${enc.id}')">🗑️ Eliminar Encomenda</button>`;
 
   document.getElementById('enc-det-botoes').innerHTML = botoes;
   document.getElementById('status-enc-det').className = 'status';
@@ -3220,9 +3256,12 @@ function concluirEncomenda(id) {
   const enc = encs.find(e => e.id === id);
   if (!enc) return;
   enc.estado = 'concluida';
+  enc.dataConcluida = new Date().toISOString();
   salvarEncomendas(encs);
-  mostrarStatus('status-enc-det', '✓ Encomenda marcada como concluída', 'success');
-  setTimeout(() => { abrirEncomenda(id); }, 1500);
+  enviarParaCloud(Object.assign({},enc,{operacao:'enc_concluida'}));
+  mostrarStatus('status-enc-det', 'Encomenda concluida! A preparar email qualidade...', 'success');
+  _enviarEmailQualidade(enc);
+  setTimeout(() => { abrirEncomenda(id); }, 2000);
 }
 
 function pedirReabrirEncomenda(id) {
@@ -10958,6 +10997,8 @@ function abrirRelatorioCamaras() {
   window._rcamTipoAtual = 'entrada';
 }
 
+
+
 function _rcamTipo(tipo) {
   window._rcamTipoAtual = tipo;
   ['ent','sai','per'].forEach(function(t){
@@ -10967,19 +11008,7 @@ function _rcamTipo(tipo) {
     btn.style.background = active ? '#1e3a5f' : '#f3f4f6';
     btn.style.color = active ? 'white' : '#374151';
   });
-}
-
-function _rcamTipo(tipo) {
-  window._rcamTipoAtual = tipo;
-  var names={ent:'entrada',sai:'saida'};
-  ['ent','sai'].forEach(function(t){
-    var b=document.getElementById('rcam-btn-'+t);
-    if(!b)return;
-    var active=tipo===names[t];
-    b.style.background=active?'#1e3a5f':'#f3f4f6';
-    b.style.color=active?'white':'#374151';
-    b.style.fontWeight=active?'800':'700';
-  });
+  _gerarRelCamaras('preview');
 }
 
 
@@ -11691,7 +11720,11 @@ cams.forEach(function(l, ci) {
       }
     }
 
-    html+='</div>'; // fim card lote
+    html+='</div>'; 
+
+
+
+// fim card lote
   });
 
   return html || '<div style="text-align:center;padding:32px;color:#6b7280">Nenhum lote encontrado</div>';
@@ -12062,64 +12095,97 @@ var PROMPT_IMPORT_ENC = 'Esta e uma encomenda de queijo/requeijao. Extrai os dad
 async function _importFotoProcessar(input) {
   if (!input.files || !input.files[0]) return;
   var file = input.files[0];
-  var status   = document.getElementById('import-foto-status');
-  var preview  = document.getElementById('import-foto-preview');
-  var resultado= document.getElementById('import-foto-resultado');
-  var confirmar= document.getElementById('import-foto-confirmar');
-  if (status)    status.textContent = '\u23f3 A analisar...';
-  if (resultado) { resultado.style.display='none'; resultado.innerHTML=''; }
-  if (confirmar) confirmar.style.display='none';
+  var status    = document.getElementById('import-foto-status');
+  var preview   = document.getElementById('import-foto-preview');
+  var resultado = document.getElementById('import-foto-resultado');
+  var confirmar = document.getElementById('import-foto-confirmar');
 
-  if (file.type.startsWith('image/') && preview) {
-    preview.innerHTML = '<img src="'+URL.createObjectURL(file)+'" style="max-width:100%;max-height:140px;border-radius:8px;border:2px solid #e5e7eb">';
-    preview.style.display='block';
+  if (status) { status.textContent = 'A analisar com Gemini AI...'; status.style.color = '#0369a1'; }
+  if (resultado) { resultado.style.display = 'none'; resultado.innerHTML = ''; }
+  if (confirmar) confirmar.style.display = 'none';
+
+  // Preview imediato
+  if (preview) {
+    if (file.type.startsWith('image/')) {
+      preview.innerHTML = '<img src="'+URL.createObjectURL(file)+'" style="max-width:100%;max-height:200px;border-radius:8px;border:2px solid #e5e7eb">';
+      preview.style.display = 'block';
+    } else if (file.type === 'application/pdf') {
+      preview.innerHTML = '<div style="background:#fef3c7;border-radius:8px;padding:10px;font-size:13px;color:#92400e;font-weight:600">PDF: '+file.name+'</div>';
+      preview.style.display = 'block';
+    }
   }
 
-  var base64 = await new Promise(function(res,rej){
-    var r=new FileReader(); r.onload=function(e){res(e.target.result.split(',')[1]);}; r.onerror=rej; r.readAsDataURL(file);
-  });
-  var mediaType = file.type||'image/jpeg';
-  var isPdf = file.type==='application/pdf';
+  // Ler como base64
+  var base64, mimeType = file.type || 'image/jpeg';
+  try {
+    base64 = await new Promise(function(res, rej) {
+      var r = new FileReader();
+      r.onload = function(e) { res(e.target.result.split(',')[1]); };
+      r.onerror = rej;
+      r.readAsDataURL(file);
+    });
+  } catch(e) {
+    if (status) { status.textContent = 'Erro a ler ficheiro: '+e.message; status.style.color='#dc2626'; }
+    return;
+  }
 
   try {
-    var content = isPdf
-      ? [{type:'document',source:{type:'base64',media_type:'application/pdf',data:base64}},{type:'text',text:PROMPT_IMPORT_ENC}]
-      : [{type:'image',source:{type:'base64',media_type:mediaType,data:base64}},{type:'text',text:PROMPT_IMPORT_ENC}];
-    var resp = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:800,messages:[{role:'user',content:content}]})
+    var apiKey = localStorage.getItem('lc_gemini_key') || GEMINI_API_KEY;
+    var url = GEMINI_URL_BASE + apiKey;
+    var resp = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [
+          { inline_data: { mime_type: mimeType, data: base64 } },
+          { text: PROMPT_GEMINI_ENC }
+        ]}]
+      })
     });
+    if (!resp.ok) {
+      var errJson = await resp.json().catch(function(){return {};});
+      throw new Error('Erro ' + resp.status + ': ' + ((errJson.error && errJson.error.message) || resp.statusText));
+    }
     var data = await resp.json();
-    var text = (data.content||[]).map(function(b){return b.text||'';}).join('');
-    var clean = text.replace(/```json|```/g,'').trim();
+    var candidate = (data.candidates || [])[0];
+    var rawText = (candidate && candidate.content && candidate.content.parts && candidate.content.parts[0] && candidate.content.parts[0].text) || '';
+    var clean = rawText.replace(/```json|```/g, '').trim();
     _importFotoData = JSON.parse(clean);
-    if (resultado) {
-      resultado.style.display='block';
-      resultado.innerHTML = '<div style="font-weight:800;color:#15803d;margin-bottom:6px">\u2713 Detectado:</div>'
-        +'<div><strong>Cliente:</strong> '+(_importFotoData.cliente||'?')+'</div>'
-        +(_importFotoData.dataEntrega?'<div><strong>Entrega:</strong> '+_importFotoData.dataEntrega+'</div>':'')
-        +'<div style="margin-top:6px;font-weight:700">Artigos:</div>'
-        +(_importFotoData.linhas||[]).map(function(l){
-          return '<div style="background:#f3f4f6;border-radius:6px;padding:4px 8px;margin-top:3px">'+l.artigo+': '+l.qtd+' un \u00b7 '+l.caixas+' cx'+(l.referencia?' ('+l.referencia+')':'')+'</div>';
-        }).join('');
-    }
-    if (confirmar) confirmar.style.display='block';
-    if (status) status.textContent = '\u2713 Reveja e confirme';
-  } catch(err) {
-    // API inacessível — modo manual
-    if (status) {
-      status.style.color='#d97706';
-      status.textContent = '⚠️ Análise automática indisponível. A imagem está visível acima — preencha a encomenda manualmente.';
-    }
-    if (resultado) {
-      resultado.style.display='block';
-      resultado.innerHTML = '<div style="background:#fef3c7;border-radius:8px;padding:10px;font-size:12px;color:#92400e;font-weight:600">'
-        +'📋 Use a foto como guia e crie a encomenda manualmente.'
-        +'<br><br><button onclick="document.getElementById(\'modal-import-foto\')?.remove();irPara(\'screen-enc-nova\')" '
-          +'style="width:100%;padding:10px;background:#d97706;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">'
-          +'📝 Nova Encomenda Manual</button>'
+
+    var linhasHtml = (_importFotoData.linhas || []).map(function(l) {
+      return '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:6px;padding:6px 10px;margin-top:4px;display:flex;justify-content:space-between">'
+        +'<span style="font-size:13px;font-weight:700;color:#15803d">'+l.artigo+'</span>'
+        +'<span style="font-size:12px;color:#374151">'+l.qtd+' un'+(l.caixas?' / '+l.caixas+' cx':'')+(l.referencia?' ('+l.referencia+')':'')+'</span>'
       +'</div>';
+    }).join('');
+
+    if (resultado) {
+      resultado.style.display = 'block';
+      resultado.innerHTML =
+        '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:10px;padding:12px">'
+        +'<div style="font-size:12px;font-weight:800;color:#15803d;margin-bottom:8px">Gemini detectou:</div>'
+        +'<div style="font-size:13px;margin-bottom:3px"><strong>Cliente:</strong> '+(_importFotoData.cliente||'?')+'</div>'
+        +(_importFotoData.dataEntrega?'<div style="font-size:12px;color:#0369a1"><strong>Entrega:</strong> '+_importFotoData.dataEntrega+'</div>':'')
+        +(_importFotoData.dataExpedicao?'<div style="font-size:12px;color:#0369a1"><strong>Exp.:</strong> '+_importFotoData.dataExpedicao+'</div>':'')
+        +'<div style="margin-top:8px;font-size:11px;font-weight:700;text-transform:uppercase;color:#6b7280">Artigos</div>'
+        +linhasHtml
+        +'</div>';
+    }
+    if (confirmar) confirmar.style.display = 'block';
+    if (status) { status.textContent = 'Reveja os dados e confirme'; status.style.color = '#15803d'; }
+
+  } catch(err) {
+    console.error('Gemini error:', err);
+    if (status) { status.textContent = 'Gemini: '+err.message; status.style.color = '#d97706'; }
+    if (resultado) {
+      resultado.style.display = 'block';
+      resultado.innerHTML =
+        '<div style="background:#fef3c7;border-radius:8px;padding:10px;font-size:12px;color:#92400e;font-weight:600">'
+        +'A imagem esta visivel acima. Preencha manualmente.'
+        +'<br><br><button onclick="fecharImportFoto();irPara(\'screen-enc-nova\')" '
+          +'style="width:100%;padding:10px;background:#d97706;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">'
+          +'Nova Encomenda Manual</button>'
+        +'</div>';
     }
   }
 }
@@ -12510,10 +12576,8 @@ function prepararEncomenda(id) {
 
 function _renderPrepLinhas() {
   var e = getEstado();
-
-  // Montar lista de lotes disponíveis (queijo: C3+C4+C5, requeijão: prod_requeijao)
   var lotesQueijo = {};
-  [3,4,5].forEach(function(c){
+  [1,2,3,4,5].forEach(function(c){
     (e[c]||[]).forEach(function(l){ lotesQueijo[l.lote] = Object.assign({},l,{camara:c}); });
   });
   var lotesReq = {};
@@ -12524,49 +12588,53 @@ function _renderPrepLinhas() {
   var html = '';
   _prepLinhas.forEach(function(l, i) {
     var artigo = (l.artigo||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-    var isReq = artigo.includes('requeijao');
+    var isReq   = artigo.includes('requeijao');
+    var isDOP   = artigo.includes('dop');
+    var isCabra = artigo.includes('cabra');
     var refLinha = (l.referencia||'').toUpperCase().trim();
-
+    var refInferida = refLinha;
+    if (!refInferida && !isReq) {
+      if (artigo.includes('ppp')||artigo.includes('fatia')) refInferida='PPP';
+      else if (artigo.endsWith(' pp')||artigo.includes(' pp ')||artigo.includes('unidade')) refInferida='PP';
+      else if (artigo.includes('pequen')||artigo.endsWith(' p')||artigo.includes(' p ')) refInferida='P';
+      else if (artigo.includes('grande')||artigo.endsWith(' g')||artigo.includes(' g ')||isDOP) refInferida='G';
+    }
     var found = null, dispStr = '', refMismatch = false;
     if (l.lote) {
       if (isReq) {
         found = lotesReq[l.lote];
-        dispStr = found ? ('disp. '+(found.qtdDisponivel||found.qtd||0)+' un') : '⚠️ não encontrado';
+        dispStr = found ? ('disp. '+(found.qtdDisponivel||found.qtd||0)+' un') : 'nao encontrado';
       } else {
         found = lotesQueijo[l.lote];
-        dispStr = found ? ('C'+(found.camara||l.camara||'?')+' · disp. '+(found.qtd||0)+' un') : '⚠️ não encontrado';
-        if (found && refLinha && (found.referencia||'').toUpperCase() !== refLinha) {
-          refMismatch = true;
-        }
+        dispStr = found ? ('C'+(found.camara||l.camara||'?')+' - disp. '+(found.qtd||0)+' un') : 'nao encontrado';
+        if (found && refInferida && (found.referencia||'').toUpperCase() !== refInferida) refMismatch = true;
       }
     }
-
     var infoBlock = '';
     if (l.lote) {
-      var cam = isReq ? '' : ('C'+(l.camara||found?.camara||'?')+' · ');
+      var cam = isReq ? '' : ('C'+(l.camara||(found&&found.camara)||'?')+' - ');
       infoBlock = '<div style="background:'+(refMismatch?'#fef2f2':'#eff6ff')+';border:2px solid '+(refMismatch?'#fca5a5':'#bfdbfe')+';border-radius:8px;padding:8px 10px;margin-top:8px">'
-        +'<div style="font-size:12px;font-weight:800;color:#1e40af">'+cam+l.lote+' · '+dispStr+'</div>'
-        +(l.validade ? '<div style="font-size:11px;color:#92400e;font-weight:700;margin-top:2px">📅 '+l.validade+'</div>' : '')
-        +(refMismatch ? '<div style="font-size:11px;color:#dc2626;font-weight:800;margin-top:4px">⚠️ Ref. incompatível: linha pede '+refLinha+' mas lote tem '+(found?.referencia||'—')+'</div>' : '')
+        +'<div style="font-size:12px;font-weight:800;color:#1e40af">'+cam+l.lote+' - '+dispStr+'</div>'
+        +(l.validade?'<div style="font-size:11px;color:#92400e;font-weight:700;margin-top:2px">Validade: '+l.validade+'</div>':'')
+        +(refMismatch?'<div style="font-size:11px;color:#dc2626;font-weight:800;margin-top:4px">Ref. incompativel: linha pede '+refInferida+' mas lote tem '+(found&&found.referencia||'?')+'</div>':'')
       +'</div>';
     }
-
     html += '<div style="background:white;border:2px solid '+(l.lote?'#93c5fd':'#e5e7eb')+';border-radius:14px;padding:14px;margin-bottom:10px">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
         +'<div style="flex:1">'
           +'<div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase">Linha '+(i+1)+'</div>'
           +'<div style="font-size:15px;font-weight:700;color:#1e3a5f;margin-top:2px">'+l.artigo+'</div>'
-          +'<div style="font-size:12px;color:#6b7280">'+l.qtd+' un · '+l.caixas+' cx'+(l.marca?' · '+l.marca:'')+(refLinha?' · Ref.'+refLinha:'')+'</div>'
+          +'<div style="font-size:12px;color:#6b7280">'+l.qtd+' un - '+l.caixas+' cx'+(l.marca?' - '+l.marca:'')+(refInferida?' - Ref.'+refInferida:'')+'</div>'
         +'</div>'
-        +(l.lote ? '<button type="button" onclick="limparLotePrep('+i+')" style="margin-left:8px;padding:6px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">✕</button>' : '')
+        +(l.lote?'<button type="button" onclick="limparLotePrep('+i+')" style="margin-left:8px;padding:6px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">X Remover</button>':'')
       +'</div>'
       +infoBlock
       +'<div style="display:flex;gap:8px;margin-top:10px">'
-        +'<input type="text" id="prep-lote-'+i+'" placeholder="Nº lote (escrever)" value="'+(l.lote||'')+'" '
+        +'<input type="text" id="prep-lote-'+i+'" placeholder="N lote (escrever)" value="'+(l.lote||'')+'" '
           +'style="flex:1;padding:10px 12px;border:2px solid #e5e7eb;border-radius:10px;font-weight:700;font-size:14px;color:#1e3a5f" '
           +'oninput="prepLoteManual('+i+')">'
         +'<button type="button" onclick="abrirLotePicker('+i+')" '
-          +'style="padding:10px 16px;background:#0369a1;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap">📋 Lista</button>'
+          +'style="padding:10px 16px;background:#0369a1;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap">Lista</button>'
       +'</div>'
     +'</div>';
   });
@@ -12905,36 +12973,29 @@ function abrirLotePicker(idx) {
   _pickerIdx = idx;
   var e = getEstado();
   var linha = _prepLinhas[idx] || {};
-  var artigo = (linha.artigo || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  var refLinha = (linha.referencia || '').toUpperCase().trim();
+  var artigo = (linha.artigo||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  var refLinha = (linha.referencia||'').toUpperCase().trim();
 
-  // Inferir tipo e ref do nome do artigo
-  var isRequeijao = artigo.includes('requeijao') || artigo.includes('requeijão');
+  var isRequeijao = artigo.includes('requeijao');
   var isDOP       = artigo.includes('dop');
   var isCabra     = artigo.includes('cabra');
   var isOvelha    = !isDOP && !isCabra && !isRequeijao;
 
-  // Inferir ref do artigo se não especificada no campo Ref
   var refInferida = refLinha;
   if (!refInferida && !isRequeijao) {
-    if (artigo.includes('ppp') || artigo.includes('fatia')) refInferida = 'PPP';
-    else if (artigo.includes('pp ') || artigo.includes(' pp') || artigo.endsWith('pp')) refInferida = 'PP';
-    else if (artigo.includes('pequen') || artigo.includes(' p ') || artigo.endsWith(' p')) refInferida = 'P';
-    else if (artigo.includes('grande') || artigo.includes(' g ') || artigo.endsWith(' g')) refInferida = 'G';
-    else if (isDOP) refInferida = 'DOP';
+    if (artigo.includes('ppp')||artigo.includes('fatia')) refInferida='PPP';
+    else if (artigo.endsWith(' pp')||artigo.includes(' pp ')||artigo.includes('unidade')) refInferida='PP';
+    else if (artigo.includes('pequen')||artigo.endsWith(' p')||artigo.includes(' p ')) refInferida='P';
+    else if (artigo.includes('grande')||artigo.endsWith(' g')||artigo.includes(' g ')||isDOP) refInferida='G';
   }
 
   var tipoFiltro = isDOP ? 'dop' : (isCabra ? 'cabra' : (isOvelha ? 'ovelha' : null));
 
-  // Câmaras a mostrar por tipo:
-  // ovelha/DOP: C1+C2 (cura normal)
-  // cabra: C3+C5
-  // PP/PPP/fatia: pode estar em C5 também
   var camarasQueijo;
   if (isCabra) {
-    camarasQueijo = [3,5];
-  } else if (refInferida === 'PP' || refInferida === 'PPP' || artigo.includes('fatia')) {
-    camarasQueijo = [1,2,5];
+    camarasQueijo = refInferida==='PPP' ? [5] : refInferida==='G' ? [3] : [3,5];
+  } else if (refInferida==='PP'||refInferida==='PPP'||artigo.includes('fatia')) {
+    camarasQueijo = [5];
   } else {
     camarasQueijo = [1,2];
   }
@@ -12944,68 +13005,64 @@ function abrirLotePicker(idx) {
   var bds   = {1:'#bfdbfe',2:'#bfdbfe',3:'#86efac',4:'#fbbf24',5:'#fca5a5'};
 
   var filtroLabel = '';
-  if (tipoFiltro) filtroLabel += ' — ' + (tipoFiltro==='dop'?'DOP':tipoFiltro.charAt(0).toUpperCase()+tipoFiltro.slice(1));
-  if (refInferida) filtroLabel += ' ref.' + refInferida;
+  if (tipoFiltro) filtroLabel += ' - '+(tipoFiltro==='dop'?'DOP':tipoFiltro.charAt(0).toUpperCase()+tipoFiltro.slice(1));
+  if (refInferida) filtroLabel += ' ref.'+refInferida;
 
   var html = '<div id="modal-picker" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)fecharLotePicker()">'
     +'<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto" onclick="event.stopPropagation()">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
-      +'<div style="font-size:16px;font-weight:800;color:#1e3a5f">📋 Selecionar Lote'+filtroLabel+'</div>'
-      +'<button onclick="fecharLotePicker()" style="background:#f3f4f6;border:none;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer;line-height:36px;text-align:center">✕</button>'
+      +'<div style="font-size:16px;font-weight:800;color:#1e3a5f">Selecionar Lote'+filtroLabel+'</div>'
+      +'<button onclick="fecharLotePicker()" style="background:#f3f4f6;border:none;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer;line-height:36px;text-align:center">X</button>'
     +'</div>';
 
   if (isRequeijao) {
     var prodsReq = (typeof getProdutosRequeijao==='function') ? getProdutosRequeijao() : [];
     var lotesReq = prodsReq.filter(function(p){ return (p.qtdDisponivel||p.qtd||0)>0; });
-    html += '<div style="font-size:11px;font-weight:700;color:#15803d;background:#f0fdf4;border-radius:8px;padding:6px 10px;margin-bottom:10px;text-transform:uppercase">🥛 Lotes Requeijão Disponíveis</div>';
+    html += '<div style="font-size:11px;font-weight:700;color:#15803d;background:#f0fdf4;border-radius:8px;padding:6px 10px;margin-bottom:10px;text-transform:uppercase">Lotes Requeijao Disponiveis</div>';
     if (!lotesReq.length) {
-      html += '<div style="text-align:center;color:#9ca3af;font-size:13px;padding:20px">Sem lotes de requeijão disponíveis</div>';
+      html += '<div style="text-align:center;color:#9ca3af;font-size:13px;padding:20px">Sem lotes disponiveis</div>';
     } else {
       lotesReq.forEach(function(l) {
-        var qtdDisp = l.qtdDisponivel || l.qtd || 0;
-        var loteId = l.lote || l.id;
-        html += '<div onclick="_pickerSelecionarReq(\''+loteId+'\')" '
+        var qtdDisp = l.qtdDisponivel||l.qtd||0;
+        var loteId = l.lote||l.id;
+        html += '<div onclick="_pickerSelecionarReq(\'' + loteId + '\')" '
           +'style="padding:12px;background:#f0fdf4;border:2px solid #86efac;border-radius:10px;margin-bottom:8px;cursor:pointer">'
-          +'<div style="font-family:\'DM Mono\',monospace;font-weight:900;font-size:14px;color:#15803d">'+loteId+'</div>'
-          +'<div style="font-size:12px;color:#6b7280;margin-top:2px">'+qtdDisp+' un disponíveis</div>'
-          +(l.dataFormatada?'<div style="font-size:11px;color:#9ca3af">'+l.dataFormatada+'</div>':'')
+          +'<div style="font-family:monospace;font-weight:900;font-size:14px;color:#15803d">'+loteId+'</div>'
+          +'<div style="font-size:12px;color:#6b7280;margin-top:2px">'+qtdDisp+' un disponiveis</div>'
         +'</div>';
       });
     }
   } else {
     var nCams = camarasQueijo.length;
-    var gridCols = nCams <= 2 ? '1fr 1fr' : '1fr 1fr 1fr';
+    var gridCols = nCams===1 ? '1fr' : '1fr 1fr';
     html += '<div style="display:grid;grid-template-columns:'+gridCols+';gap:10px">';
     camarasQueijo.forEach(function(c) {
       var lotesC = (e[c]||[]).filter(function(l){ return (l.qtd||0)>0; });
-      // Filtrar por tipo
       if (tipoFiltro) {
         var lf = lotesC.filter(function(l){ return (l.tipo||'').toLowerCase()===tipoFiltro; });
         if (lf.length) lotesC = lf;
       }
-      // Filtrar por referência (estrito)
       if (refInferida) {
         var lr = lotesC.filter(function(l){ return (l.referencia||'').toUpperCase()===refInferida; });
         if (lr.length) lotesC = lr;
       }
       html += '<div>'
-        +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:'+cores[c]+';margin-bottom:6px;text-align:center;'
-          +'background:'+bgs[c]+';border:1px solid '+bds[c]+';border-radius:8px;padding:4px">🏠 Câmara '+c+'</div>';
+        +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:'+cores[c]+';margin-bottom:6px;text-align:center;background:'+bgs[c]+';border:1px solid '+bds[c]+';border-radius:8px;padding:4px">Camara '+c+'</div>';
       if (!lotesC.length) {
         html += '<div style="text-align:center;color:#9ca3af;font-size:12px;padding:12px">Vazia</div>';
       } else {
         lotesC.forEach(function(l) {
           var bl = verificarBloqueio30dias(l);
           var blocked = bl.bloqueado && !temPermissao('admin');
-          html += '<div onclick="'+(blocked?'':'_pickerSelecionar('+c+',\''+l.lote+'\',\''+(l.validade||'')+'\')')+'" '
+          var onclick = blocked ? '' : ('_pickerSelecionar('+c+',\'' + l.lote + '\',\'' + (l.validade||'') + '\')');
+          html += '<div onclick="'+onclick+'" '
             +'style="padding:10px;background:'+(blocked?'#f9fafb':bgs[c])+';border:2px solid '+(blocked?'#e5e7eb':bds[c])
-            +';border-radius:10px;margin-bottom:6px;cursor:'+(blocked?'not-allowed':'pointer')
-            +';opacity:'+(blocked?0.5:1)+'">'
-            +'<div style="font-family:\'DM Mono\',monospace;font-weight:900;font-size:13px;color:'+cores[c]+'">'+l.lote+'</div>'
-            +(l.referencia?'<div style="font-size:10px;font-weight:700;color:#6b7280;margin-top:1px">'+(l.tipo||'')+' · '+l.referencia+'</div>':'')
-            +'<div style="font-size:11px;color:#9ca3af;margin-top:2px">'+(l.qtd||0)+' un'+(l.peso?' · '+Number(l.peso).toFixed(1)+' kg':'')+' </div>'
-            +(bl.bloqueado?'<div style="font-size:10px;color:#dc2626;font-weight:700">🔒 '+bl.diasPassados+'/31d DOP</div>':'')
-            +(l.validade?'<div style="font-size:10px;color:#92400e;font-weight:700">📅 '+l.validade+'</div>':'')
+            +';border-radius:10px;margin-bottom:6px;cursor:'+(blocked?'not-allowed':'pointer')+';opacity:'+(blocked?0.5:1)+'">'
+            +'<div style="font-family:monospace;font-weight:900;font-size:13px;color:'+cores[c]+'">'+l.lote+'</div>'
+            +(l.referencia?'<div style="font-size:10px;font-weight:700;color:#6b7280;margin-top:1px">'+(l.tipo||'')+' - '+l.referencia+'</div>':'')
+            +'<div style="font-size:11px;color:#9ca3af;margin-top:2px">'+(l.qtd||0)+' un'+(l.peso?' - '+Number(l.peso).toFixed(1)+' kg':'')+' </div>'
+            +(bl.bloqueado?'<div style="font-size:10px;color:#dc2626;font-weight:700">Bloqueado DOP</div>':'')
+            +(l.validade?'<div style="font-size:10px;color:#92400e;font-weight:700">Val: '+l.validade+'</div>':'')
           +'</div>';
         });
       }
@@ -13015,7 +13072,6 @@ function abrirLotePicker(idx) {
   }
 
   html += '</div></div>';
-
   document.body.insertAdjacentHTML('beforeend', html);
 
   _pickerCallback = function(camara, lote, validade) {
@@ -13028,34 +13084,38 @@ function abrirLotePicker(idx) {
 }
 
 function _pickerSelecionarReq(loteId) {
+  var savedIdx = _pickerIdx;
   fecharLotePicker();
-  if (_pickerCallback) _pickerCallback(0, loteId, '');
-  // Override para requeijão — sem câmara física
-  _prepLinhas[_pickerIdx].lote    = loteId;
-  _prepLinhas[_pickerIdx].camara  = 0;
-  _prepLinhas[_pickerIdx].validade = '';
+  _prepLinhas[savedIdx].lote    = loteId;
+  _prepLinhas[savedIdx].camara  = 0;
+  _prepLinhas[savedIdx].validade = '';
   _renderPrepLinhas();
 }
 
+
+
 function _pickerSelecionar(camara, lote, validade) {
   fecharLotePicker();
-  // Verificar bloqueio DOP no picker
   var e = getEstado();
   var loteObj = (e[camara]||[]).find(function(l){ return l.lote===lote; });
   if (loteObj) {
     var bl = verificarBloqueio30dias(loteObj);
     if (bl.bloqueado && !temPermissao('admin')) {
       mostrarStatus('status-enc-prep',
-        '\uD83D\uDD12 Lote '+lote+' bloqueado — DOP ('+bl.diasPassados+'/31 dias). Necessita autoriza\xE7\xE3o do Administrador.',
+        'Lote '+lote+' bloqueado - DOP ('+bl.diasPassados+'/31 dias). Necessita autorizacao do Administrador.',
         'error');
       return;
     }
-    if (bl.bloqueado && temPermissao('admin')) {
-      mostrarStatus('status-enc-prep',
-        '\u26A0\uFE0F Lote DOP '+lote+' ('+bl.diasPassados+'/31d) — autorizado como Administrador.','warning');
-    }
   }
-  if (_pickerCallback) _pickerCallback(camara, lote, validade);
+  // Usar callback se disponível, senão atualizar diretamente
+  if (_pickerCallback) {
+    _pickerCallback(camara, lote, validade);
+  } else if (_prepLinhas && _pickerIdx !== undefined && _prepLinhas[_pickerIdx] !== undefined) {
+    _prepLinhas[_pickerIdx].lote    = lote;
+    _prepLinhas[_pickerIdx].camara  = camara;
+    _prepLinhas[_pickerIdx].validade = validade || '';
+    _renderPrepLinhas();
+  }
 }
 
 function fecharLotePicker() {
@@ -13524,6 +13584,141 @@ function voltarParaPrepararDoExp() {
 
 // Chamar ao arrancar
 setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
+
+
+
+
+function enviarParaExpedicaoEnc(id) {
+  var encs = getEncomendas();
+  var enc = encs.find(function(e){ return e.id===id; });
+  if (!enc) return;
+  enc.estado = 'em-expedicao';
+  enc.dataExpMovimento = new Date().toISOString();
+  salvarEncomendas(encs);
+  enviarParaCloud(Object.assign({},enc,{operacao:'enc_para_expedicao'}));
+  mostrarStatus('status-enc-det','Encomenda enviada para expedição','success');
+  setTimeout(function(){ abrirEncomenda(id); }, 1000);
+}
+
+function prepararEncExpedicao(id) {
+  // Perfil expedição: workflow simplificado — atribui lote, peso, validade e fecha
+  var encs = getEncomendas();
+  var enc = encs.find(function(e){ return e.id===id; });
+  if (!enc) return;
+  _prepEncId = id;
+  var prev = enc.prepLinhas || [];
+  _prepLinhas = (enc.linhas || [{artigo:enc.artigo||'',qtd:enc.qtd||0,caixas:enc.caixas||0}]).map(function(l,i){
+    var p = prev[i]||{};
+    return { artigo:l.artigo||'', qtd:l.qtd||0, caixas:l.caixas||0, marca:l.marca||'',
+             referencia:l.referencia||'', lote:p.lote||'', kg:p.kg||'', camara:p.camara||null, validade:p.validade||'' };
+  });
+
+  document.getElementById('bc-enc-prep').textContent = 'Encomenda #'+enc.nr;
+  document.getElementById('enc-prep-titulo').textContent = 'Encomenda #'+enc.nr+' - '+enc.cliente+' [EXPEDIÇÃO]';
+  var subParts = [];
+  if (enc.dataEntrega) subParts.push('Entrega: '+enc.dataEntrega);
+  if (enc.dataExpedicao) subParts.push('Exp: '+enc.dataExpedicao);
+  document.getElementById('enc-prep-sub').textContent = subParts.join(' - ')||(enc.artigo||'');
+  document.getElementById('status-enc-prep').className = 'status';
+
+  // Mostrar botão "Fechar Encomenda" em vez de "Confirmar Preparação"
+  window._modoExpedicao = true;
+  _renderPrepLinhas();
+  irPara('screen-enc-preparar');
+  // Ajustar botões para modo expedição
+  setTimeout(function(){
+    var btnMain = document.getElementById('enc-prep-btn-main');
+    var btnFechar = document.getElementById('enc-prep-btn-fechar');
+    if (btnMain) { btnMain.textContent = 'Guardar Lotes'; btnMain.style.background='#0369a1'; }
+    if (btnFechar) btnFechar.style.display='block';
+  }, 100);
+}
+
+function fecharEncExpedicao() {
+  // Guardar os lotes atribuídos e fechar a encomenda directamente
+  enviarParaExpedicao(true);
+}
+
+function _enviarEmailQualidade(enc) {
+  var linhasHtml = '';
+  if (enc.linhas && enc.linhas.length) {
+    linhasHtml = enc.linhas.map(function(l,i){
+      return '<tr><td style="padding:6px 10px">'+(i+1)+'</td>'
+        +'<td style="padding:6px 10px;font-weight:600">'+(l.artigo||'-')+'</td>'
+        +'<td style="padding:6px 10px;text-align:right">'+(l.qtd||0)+' un</td>'
+        +'<td style="padding:6px 10px;text-align:right">'+(l.caixas||0)+' cx</td>'
+      +'</tr>';
+    }).join('');
+  }
+  var lotesStr = (enc.lotes||[]).map(function(l){
+    return '- '+l.lote+': '+l.qtd+' un'+(l.kg?' / '+Number(l.kg).toFixed(1)+'kg':'')+(l.validade?' val:'+l.validade:'');
+  }).join('\n');
+
+  var assunto = encodeURIComponent('Encomenda #'+(enc.nr||'?')+' Concluida - '+(enc.cliente||''));
+  var corpo = encodeURIComponent(
+    'Encomenda #'+(enc.nr||'?')+' concluida\n'
+    +'Cliente: '+(enc.cliente||'-')+'\n'
+    +(enc.dataEntrega ? 'Data Entrega: '+enc.dataEntrega+'\n' : '')
+    +(enc.dataExpedicao ? 'Data Expedicao: '+enc.dataExpedicao+'\n' : '')
+    +'Total: '+(enc.qtd||0)+' un / '+(enc.caixas||0)+' caixas\n\n'
+    +'Lotes expedidos:\n'+lotesStr
+    +'\n\n(Enviado automaticamente pelo sistema LactoCeleiro)'
+  );
+  var mailtoLink = 'mailto:qualidade@lactoceleiro.pt?subject='+assunto+'&body='+corpo;
+  try { window.open(mailtoLink, '_blank'); } catch(e) { console.log('Email nao aberto:', e); }
+}
+
+function abrirGeminiSettings() {
+  var cur = localStorage.getItem('lc_gemini_key') || GEMINI_API_KEY || '';
+  var masked = cur.length > 14 ? cur.slice(0,10)+'...'+cur.slice(-4) : cur;
+  var html = '<div id="modal-gemini-cfg" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px">'
+    +'<div style="background:white;border-radius:16px;padding:22px;width:100%;max-width:360px">'
+      +'<div style="font-size:15px;font-weight:800;color:#1e3a5f;margin-bottom:4px">Gemini API Key</div>'
+      +'<div style="font-size:12px;color:#6b7280;margin-bottom:12px">Chave actual: <code style="background:#f3f4f6;padding:2px 5px;border-radius:4px;font-size:11px">'+masked+'</code></div>'
+      +'<input type="text" id="gemini-key-inp" placeholder="AIzaSy..." style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;font-family:monospace;box-sizing:border-box;margin-bottom:8px">'
+      +'<div style="display:flex;gap:8px;margin-bottom:8px">'
+        +'<button onclick="document.getElementById(\'modal-gemini-cfg\').remove()" style="flex:1;padding:10px;background:#f3f4f6;border:none;border-radius:8px;font-weight:700;cursor:pointer">Cancelar</button>'
+        +'<button onclick="_guardarGeminiKey()" style="flex:2;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:800;cursor:pointer">Guardar</button>'
+      +'</div>'
+      +'<button onclick="testarGemini()" style="width:100%;padding:8px;background:#f0fdf4;border:2px solid #86efac;border-radius:8px;font-weight:700;color:#15803d;cursor:pointer;font-size:12px">Testar ligacao Gemini</button>'
+    +'</div></div>';
+  document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function _guardarGeminiKey() {
+  var key = (document.getElementById('gemini-key-inp')||{}).value||'';
+  if (key && key.startsWith('AIza')) {
+    localStorage.setItem('lc_gemini_key', key);
+    GEMINI_API_KEY = key;
+    document.getElementById('modal-gemini-cfg').remove();
+    mostrarStatus('status-home', 'Chave Gemini guardada!', 'success');
+  } else {
+    alert('Chave invalida — deve comecar por AIza');
+  }
+}
+
+function testarGemini() {
+  var apiKey = localStorage.getItem('lc_gemini_key') || GEMINI_API_KEY;
+  var url = GEMINI_URL_BASE + apiKey;
+  var btn = event && event.target;
+  if (btn) { btn.textContent = 'A testar...'; btn.disabled = true; }
+  fetch(url, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ contents:[{ parts:[{ text:'Responde apenas: OK' }] }] })
+  })
+  .then(function(r){ return r.json(); })
+  .then(function(d){
+    var txt = (((d.candidates||[])[0]||{}).content||{}).parts;
+    txt = (txt && txt[0] && txt[0].text)||'sem resposta';
+    alert('Gemini ligado! Resposta: ' + txt.trim());
+    if (btn) { btn.textContent = 'Testar ligacao Gemini'; btn.disabled = false; }
+  })
+  .catch(function(e){
+    alert('Erro: '+e.message);
+    if (btn) { btn.textContent = 'Testar ligacao Gemini'; btn.disabled = false; }
+  });
+}
 </script>
 </body>
 </html>
