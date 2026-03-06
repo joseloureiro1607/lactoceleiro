@@ -8267,7 +8267,20 @@ window.addEventListener('DOMContentLoaded', () => {
     localStorage.removeItem('lc_utilizadores_v1');
   }
   renderizarListaUtilizadores();
-  // Repor ecrã de login ao estado inicial (lista de utilizadores)
+  // Restaurar sessao se existir
+  try {
+    var sessaoGuardada = JSON.parse(localStorage.getItem('lc_sessao_v1') || 'null');
+    if (sessaoGuardada && sessaoGuardada.id) {
+      var listaU = getUtilizadores();
+      var uGuardado = listaU.find(function(u){ return u.id === sessaoGuardada.id; });
+      if (uGuardado) {
+        _utilizadorAtual = uGuardado;
+        entrarNaApp();
+        return;
+      }
+    }
+  } catch(e) {}
+  // Sem sessao guardada — ir para login
   if (typeof lcVoltar === 'function') lcVoltar();
   irPara('screen-login');
 });
@@ -8671,6 +8684,17 @@ function verificarPIN() {
 }
 
 function entrarNaApp() {
+  // Guardar sessao para restaurar no proximo carregamento
+  try {
+    localStorage.setItem('lc_sessao_v1', JSON.stringify({
+      id: _utilizadorAtual.id,
+      nome: _utilizadorAtual.nome,
+      perfil: _utilizadorAtual.perfil,
+      cor: _utilizadorAtual.cor,
+      icon: _utilizadorAtual.icon,
+      areasCustum: _utilizadorAtual.areasCustum || null
+    }));
+  } catch(e) {}
   // Mostrar nome do utilizador no header
   const headerUser = document.getElementById('header-user');
   if (headerUser) {
@@ -8686,7 +8710,7 @@ function entrarNaApp() {
     homeAvatar.style.background = _utilizadorAtual.cor;
     homeAvatar.style.color = 'white';
   }
-  // Aplicar permissões aos botões do home
+  // Aplicar permissoes aos botoes do home
   aplicarPermissoesHome();
   // Disparar sync
   setTimeout(() => { mostrarEstadoSync('syncing'); sincronizarTudo().catch(()=>{}); }, 500);
@@ -8756,6 +8780,7 @@ function sair() {
   _utilizadorAtual = null;
   _utilizadorSelecionado = null;
   _PIN_BUF = '';
+  try { localStorage.removeItem('lc_sessao_v1'); } catch(e) {}
   // Esconder header
   var headerUser = document.getElementById('header-user');
   if (headerUser) headerUser.style.display = 'none';
@@ -9029,7 +9054,7 @@ function adminTab(tab) {
     }
   });
   if (tab==='config') _mostrarGeminiStatus();
-  if (tab==='utilizadores') renderAdminUtilizadores();
+  if (tab==='utilizadores') adminRenderUtilizadores();
 }
 
 function adminRenderUtilizadores() {
