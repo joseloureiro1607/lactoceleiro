@@ -162,13 +162,6 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
 @media (min-width:600px) { .body { padding:24px 28px; } }
 .screen { display:none; }
 .screen.active { display:block; }
-/* Screens outside .container still need background */
-.container ~ .screen.active, .screen.active:not(.container *) {
-  background: var(--branco, #fff);
-  min-height: 50vh;
-  padding: 16px;
-}
-#screen-home.active { display:block !important; }
 
 /* MAIN BUTTONS */
 .main-btns { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
@@ -8235,18 +8228,17 @@ const PERFIS = {
 };
 
 
-try { renderizarEncomendas(); } catch(e) {}
+renderizarEncomendas();
 
 // Inicializar módulos de produção após página carregar completamente
 setTimeout(function() {
-  if (!_utilizadorAtual) return; // só se estiver logado
   try { atualizarResumoHome(); } catch(e) {}
   try { atualizarUltimaProd(); } catch(e) {}
   try { atualizarUltimaProdRequeijao(); } catch(e) {}
   try { inicializarFormPQ(); } catch(e) {}
   try { inicializarFormLeite(); } catch(e) {}
   try { inicializarFormPRQ(); } catch(e) {}
-}, 500);
+}, 100);
 
 window.addEventListener('online', () => {
   mostrarEstadoSync('syncing');
@@ -8720,17 +8712,11 @@ function entrarNaApp() {
   }
   // Aplicar permissoes aos botoes do home
   aplicarPermissoesHome();
-  // Ir para home PRIMEIRO - antes de qualquer sync
+  // Disparar sync
+  setTimeout(() => { mostrarEstadoSync('syncing'); sincronizarTudo().catch(()=>{}); }, 500);
+  setTimeout(puxarDadosServidor, 800);
+  // Ir para home
   irPara('screen-home');
-  // Forçar visibilidade (redundante mas seguro)
-  setTimeout(function() {
-    document.querySelectorAll('.screen').forEach(function(s){ s.classList.remove('active'); });
-    var sh = document.getElementById('screen-home');
-    if (sh) { sh.classList.add('active'); sh.style.display = 'block'; }
-  }, 50);
-  // Disparar sync depois - não bloqueia o UI
-  setTimeout(() => { try { mostrarEstadoSync('syncing'); sincronizarTudo().catch(()=>{}); } catch(e){} }, 1000);
-  setTimeout(() => { try { puxarDadosServidor(); } catch(e){} }, 1200);
 }
 
 function aplicarPermissoesHome() {
@@ -13791,12 +13777,17 @@ function _adminGuardarGeminiKey() {
 }
 </script>
 
+    <!-- ══════════════════════════════ -->
+    <!-- ADMINISTRAÇÃO                  -->
+    <!-- ══════════════════════════════ -->
     <div class="screen" id="screen-admin">
       <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <strong>Administração</strong></div>
       <div style="background:linear-gradient(135deg,#1e3a5f,#2d5282);border-radius:16px;padding:14px 16px;margin-bottom:16px;color:white">
         <div style="font-size:11px;opacity:0.7;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Painel</div>
         <div style="font-size:17px;font-weight:700">⚙️ Administração</div>
       </div>
+
+      <!-- TABS -->
       <div style="display:flex;gap:8px;margin-bottom:16px">
         <button id="tab-utilizadores" onclick="adminTab('utilizadores')"
           style="flex:1;padding:10px;border-radius:10px;border:none;background:#1e3a5f;color:white;font-weight:700;font-size:13px;cursor:pointer">
@@ -13811,24 +13802,41 @@ function _adminGuardarGeminiKey() {
           ⚙️ Config
         </button>
       </div>
+
+      <!-- PAINEL UTILIZADORES -->
       <div id="admin-panel-utilizadores">
         <div id="admin-lista-utilizadores" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px"></div>
-        <button onclick="adminNovoUtilizador()" style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
+        <button onclick="adminNovoUtilizador()"
+          style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">
           + Novo Utilizador
         </button>
       </div>
+
+      <!-- PAINEL DADOS -->
       <div id="admin-panel-dados" style="display:none">
         <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:12px;padding:14px;margin-bottom:12px">
           <div style="font-weight:700;color:#dc2626;margin-bottom:8px">⚠️ Zona de eliminação — ação irreversível</div>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="adminEliminar('producoes-queijo')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">🧀 Eliminar todas as produções de queijo</button>
-            <button onclick="adminEliminar('producoes-requeijao')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">🥛 Eliminar todas as produções de requeijão</button>
-            <button onclick="adminEliminar('camaras')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">🏭 Eliminar todos os lotes das câmaras</button>
-            <button onclick="adminEliminar('encomendas')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">📦 Eliminar todas as encomendas</button>
-            <button onclick="adminEliminar('tudo')" style="padding:12px;background:#fef2f2;border:2px solid #dc2626;border-radius:10px;color:#dc2626;font-weight:800;font-size:13px;cursor:pointer;text-align:left">☠️ ELIMINAR TUDO (reset total)</button>
+            <button onclick="adminEliminar('producoes-queijo')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">
+              🧀 Eliminar todas as produções de queijo
+            </button>
+            <button onclick="adminEliminar('producoes-requeijao')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">
+              🥛 Eliminar todas as produções de requeijão
+            </button>
+            <button onclick="adminEliminar('camaras')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">
+              🏭 Eliminar todos os lotes das câmaras
+            </button>
+            <button onclick="adminEliminar('encomendas')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">
+              📦 Eliminar todas as encomendas
+            </button>
+            <button onclick="adminEliminar('tudo')" style="padding:12px;background:#fef2f2;border:2px solid #dc2626;border-radius:10px;color:#dc2626;font-weight:800;font-size:13px;cursor:pointer;text-align:left">
+              ☠️ ELIMINAR TUDO (reset total)
+            </button>
           </div>
         </div>
       </div>
+
+      <!-- PAINEL CONFIG -->
       <div id="admin-panel-config" style="display:none">
         <div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:14px;padding:16px;margin-bottom:12px">
           <div style="font-size:13px;font-weight:800;color:#1e40af;margin-bottom:4px">🤖 Gemini AI — Leitura de Encomendas</div>
@@ -13837,13 +13845,29 @@ function _adminGuardarGeminiKey() {
           <input type="password" id="admin-gemini-key-inp" placeholder="Cole aqui a chave API (AIzaSy...)"
             style="width:100%;padding:10px;border:2px solid #bfdbfe;border-radius:8px;font-size:13px;font-family:monospace;box-sizing:border-box;margin-bottom:8px">
           <div style="display:flex;gap:8px">
-            <button onclick="_adminGuardarGeminiKey()" style="flex:2;padding:10px;background:#1e40af;color:white;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px">💾 Guardar Chave</button>
-            <button onclick="testarGemini()" style="flex:1;padding:10px;background:#f0fdf4;border:2px solid #86efac;border-radius:8px;font-weight:700;color:#15803d;cursor:pointer;font-size:12px">✓ Testar</button>
+            <button onclick="_adminGuardarGeminiKey()"
+              style="flex:2;padding:10px;background:#1e40af;color:white;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px">
+              💾 Guardar Chave
+            </button>
+            <button onclick="testarGemini()"
+              style="flex:1;padding:10px;background:#f0fdf4;border:2px solid #86efac;border-radius:8px;font-weight:700;color:#15803d;cursor:pointer;font-size:12px">
+              ✓ Testar
+            </button>
           </div>
+        </div>
+      </div>
+
+            <div id="export-enc-section" style="margin-bottom:16px;display:none">
+        <div style="height:1px;background:#e5e7eb;margin-bottom:16px"></div>
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--texto-suave);margin-bottom:12px">📦 Relatório de Encomendas e Saídas</div>
+        <div style="display:flex;gap:8px">
+          <button onclick="exportarEncomendas('print')" style="flex:1;padding:12px 6px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
+          <button onclick="exportarEncomendas('download')" style="flex:1;padding:12px 6px;background:#15803d;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">⬇️ Download</button>
         </div>
       </div>
       <button class="btn-back" onclick="irPara('screen-home')" style="margin-top:8px">← Voltar ao Início</button>
     </div>
+
 
 </body>
 </html>
