@@ -1230,10 +1230,10 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
             <div class="pq-passo-nome">Lavagem em curso</div>
             <div class="pq-passo-hora" id="lavagem-hora-inicio">▶ —</div>
           </div>
-          <button class="pq-passo-btn" style="background:#dc2626" onclick="terminarLavagem()">Fim</button>
         </div>
       </div>
-      <div style="margin-top:12px">
+      <div id="lavagem-pause-area" style="margin-top:12px;display:flex;flex-direction:column;gap:8px"></div>
+      <div style="margin-top:8px">
         <button class="btn-back" onclick="irPara('screen-lote-detalhe')">← Cancelar</button>
       </div>
     </div>
@@ -1252,7 +1252,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
       </div>
       <div class="form-row">
         <div class="form-group"><label>Unidades</label><input type="number" id="lavagem-fim-qtd" class="big" placeholder="0" min="1"></div>
-        <div class="form-group"><label>Peso (kg)</label><input type="number" id="lavagem-fim-kg" class="big" placeholder="0.0" step="0.1" min="0"></div>
+        <div class="form-group"><label>Peso (kg)</label><input type="number" id="lavagem-fim-kg" class="big" placeholder="0.0" step="0.1" inputmode="decimal"></div>
       </div>
       <button class="btn-primary" style="background:#15803d" onclick="confirmarFimLavagem()">✓ Concluir Lavagem</button>
       <button class="btn-back" onclick="irPara('screen-lavagem-em-curso')">← Voltar</button>
@@ -1568,7 +1568,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <div class="sl-stock" id="saida-lote-stock">Stock disponível: —</div>
       </div>
 
-      <div id="saida-validade-box" style="display:none;background:#fef3c7;border:2px solid #fbbf24;border-radius:10px;padding:10px 14px;margin-bottom:10px"><div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:3px">&#128197; Validade do lote</div><div id="saida-validade-val" style="font-size:18px;font-weight:900;color:#92400e;font-family:'DM Mono',monospace">&#8212;</div></div><div class="form-row"><div class="form-group"><label>Quantidade (un)</label><input type="number" id="saida-qtd" class="big" placeholder="0" min="1"></div><div class="form-group"><label>Peso (kg)</label><input type="number" id="saida-kg" class="big" placeholder="0.0" step="0.1" min="0"></div></div>
+      <div id="saida-validade-box" style="display:none;background:#fef3c7;border:2px solid #fbbf24;border-radius:10px;padding:10px 14px;margin-bottom:10px"><div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:3px">&#128197; Validade do lote</div><div id="saida-validade-val" style="font-size:18px;font-weight:900;color:#92400e;font-family:'DM Mono',monospace">&#8212;</div></div><div class="form-row"><div class="form-group"><label>Quantidade (un)</label><input type="number" id="saida-qtd" class="big" placeholder="0" min="1"></div><div class="form-group"><label>Peso (kg)</label><input type="number" id="saida-kg" class="big" placeholder="0.0" step="0.1" inputmode="decimal"></div></div>
 
       <!-- Destino da saída — só visível quando NÃO vem de encomenda do sistema -->
       <div id="saida-destino-campos" style="margin-top:4px">
@@ -2822,6 +2822,26 @@ function confirmarSaida() {
     }
   }
 
+  // Saída manual sem encomenda → criar entry na expedição
+  if (!encAtualId) { // Saída manual → sempre regista em expedição
+    var exps = typeof getExpedicoes==='function' ? getExpedicoes() : JSON.parse(localStorage.getItem('lc_expedicoes_v1')||'[]');
+    var expEntry = {
+      id: 'exp_saida_'+Date.now(),
+      encId: null,
+      nr: encPapel || 'Manual',
+      cliente: clienteManual || encPapel || 'N/D',
+      dataEntrega: '',
+      estado: 'pronta',
+      data: new Date().toISOString(),
+      dataFormatada: dataHoje(),
+      linhas: [{ artigo: lote.referencia||lote.tipo||'Queijo', qtd: qtd, caixas: 0, lote: nomeLote, camara: camaraAtual, kg: kgSaida||0, validade: validade||'' }]
+    };
+    exps.push(expEntry);
+    if (typeof salvarExpedicoes==='function') salvarExpedicoes(exps);
+    else localStorage.setItem('lc_expedicoes_v1', JSON.stringify(exps));
+    enviarParaCloud(Object.assign({}, expEntry, {operacao:'saida_expedicao'}));
+  }
+
   const msg = loteEsgotado
     ? `✓ ${qtd} un abatidas — Lote ${nomeLote} esgotado`
     : `✓ ${qtd} un abatidas do lote ${nomeLote}. Restam ${lote.qtd} un em câmara`;
@@ -3112,7 +3132,7 @@ function abrirEncomenda(id) {
         <div><div style="font-size:11px;color:var(--texto-suave);text-transform:uppercase;font-weight:700">Abatido</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--verde-medio)">${totalAbatido}</div></div>
         <div><div style="font-size:11px;color:var(--texto-suave);text-transform:uppercase;font-weight:700">Restante</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:${restante>0?'var(--laranja)':'var(--verde-medio)'};">${restante}</div></div>
       </div>
-      ${enc.dataEntrega?`<div style="margin-top:8px;font-size:12px;color:#6b7280">📅 Entrega: <strong>${enc.dataEntrega}</strong></div>`:''}
+      ${enc.dataEntrega?`<div style="margin-top:8px;font-size:12px;color:#0369a1;font-weight:700">📅 Entrega: <strong>${enc.dataEntrega}</strong></div>`:''}${enc.dataExpedicao?`<div style="margin-top:4px;font-size:12px;color:#92400e;font-weight:700">🚚 Expedição: <strong>${enc.dataExpedicao}</strong></div>`:''}
       <div style="margin-top:4px;font-size:12px;color:var(--texto-suave)">${enc.caixas} caixas${enc.marca?' · Marca: '+enc.marca:''}${enc.obs?' · '+enc.obs:''}</div>
     </div>
     ${enc.linhas && enc.linhas.length > 1 ? `
@@ -5734,10 +5754,14 @@ function mostrarSelectorCamara(prod) {
       // Coluna G — C3
       +'<div style="border:2px solid #15803d;border-radius:12px;padding:12px">'
         +'<div style="font-size:13px;font-weight:800;color:#15803d;margin-bottom:8px">🏠 Câmara 3 — G</div>'
-        +'<label style="font-size:11px;font-weight:700;color:#6b7280">Nº Queijos</label>'
+        +'<label style="font-size:11px;font-weight:700;color:#6b7280">Nº Queijos G</label>'
         +'<input id="pq-g-qtd" type="number" min="0" value="'+metadeQtd+'" style="width:100%;padding:7px;border:1.5px solid #86efac;border-radius:7px;font-size:15px;font-weight:700;margin-top:2px;box-sizing:border-box">'
-        +'<label style="font-size:11px;font-weight:700;color:#6b7280;margin-top:5px;display:block">Peso (kg)</label>'
-        +'<input id="pq-g-peso" type="number" step="0.1" min="0" value="'+parseFloat((pesoTotal/2).toFixed(1))+'" style="width:100%;padding:7px;border:1.5px solid #86efac;border-radius:7px;font-size:15px;font-weight:700;margin-top:2px;box-sizing:border-box">'
+        +'<label style="font-size:11px;font-weight:700;color:#6b7280;margin-top:5px;display:block">Peso bruto (kg)</label>'
+        +'<input id="pq-g-peso-bruto" type="number" step="0.1" min="0" value="'+parseFloat((pesoTotal/2).toFixed(1))+'" oninput="_calcPesoLiqG()" style="width:100%;padding:7px;border:1.5px solid #86efac;border-radius:7px;font-size:15px;font-weight:700;margin-top:2px;box-sizing:border-box">'
+        +'<label style="font-size:11px;font-weight:700;color:#6b7280;margin-top:5px;display:block">Tara caixas (kg)</label>'
+        +'<input id="pq-g-tara" type="number" step="0.01" min="0" value="0" oninput="_calcPesoLiqG()" style="width:100%;padding:7px;border:1.5px solid #86efac;border-radius:7px;font-size:14px;font-weight:700;margin-top:2px;box-sizing:border-box">'
+        +'<div id="pq-g-peso-liq-label" style="font-size:11px;color:#15803d;font-weight:700;margin-top:4px">Peso líq: '+parseFloat((pesoTotal/2).toFixed(1))+' kg</div>'
+        +'<input id="pq-g-peso" type="hidden" value="'+parseFloat((pesoTotal/2).toFixed(1))+'">'
       +'</div>'
       // Coluna PPP — C5 (sem peso — PPP é venda à unidade)
       +'<div style="border:2px solid #7f1d1d;border-radius:12px;padding:12px">'
@@ -5768,6 +5792,17 @@ function mostrarSelectorCamara(prod) {
 
   div.innerHTML = innerHTML;
   document.body.appendChild(div);
+}
+
+
+function _calcPesoLiqG() {
+  var bruto = parseFloat(document.getElementById('pq-g-peso-bruto')?.value) || 0;
+  var tara  = parseFloat(document.getElementById('pq-g-tara')?.value) || 0;
+  var liq   = Math.max(0, bruto - tara);
+  var lbl   = document.getElementById('pq-g-peso-liq-label');
+  var inp   = document.getElementById('pq-g-peso');
+  if (lbl) lbl.textContent = 'Peso líq: ' + liq.toFixed(1) + ' kg';
+  if (inp) inp.value = liq.toFixed(1);
 }
 
 function _enviarCabraMultiRef(qtdTotalOrig, pesoTotalOrig) {
@@ -10050,10 +10085,10 @@ function abrirDetalhesLote(camaraNum, idx) {
   var emCurso = lavagens.find(function(l){ return l.horaInicio && !l.horaFim; });
   var btn = document.getElementById('btn-iniciar-lavagem');
   if (emCurso) {
-    btn.textContent = '\u25B6 Lavagem em curso — retomar';
-    btn.style.background = '#d97706';
+    btn.textContent = '⏹ Terminar Lavagem em Curso';
+    btn.style.background = '#dc2626';
   } else {
-    btn.textContent = '\uD83E\uDDFC Iniciar Lavagem';
+    btn.textContent = '🧼 Iniciar Lavagem';
     btn.style.background = '#0e7490';
   }
   irPara('screen-lote-detalhe');
@@ -10122,16 +10157,7 @@ function _mostrarLavagemEmCurso(lote) {
     '<div style="font-size:12px;color:#6b7280;margin-top:4px">Câmara ' + lavagemCamaraNum +
     ' · ' + lavagemNumPessoas + ' pessoa(s) · Início: ' + hh + '</div>';
   document.getElementById('lavagem-hora-inicio').textContent = '▶ Início: ' + hh + ' · ' + lavagemNumPessoas + ' p.';
-  var screen = document.getElementById('screen-lavagem-em-curso');
-  var btnArea = document.getElementById('lavagem-pause-area');
-  if (!btnArea) {
-    btnArea = document.createElement('div');
-    btnArea.id = 'lavagem-pause-area';
-    btnArea.style.cssText = 'margin-top:12px;display:flex;flex-direction:column;gap:8px';
-    var cancelBtn = screen ? screen.querySelector('.btn-back') : null;
-    if (cancelBtn) screen.insertBefore(btnArea, cancelBtn);
-    else if (screen) screen.appendChild(btnArea);
-  }
+
   if (window._lavTimer) clearInterval(window._lavTimer);
   window._lavTimer = setInterval(function() {
     if (!lavagemInicioISO || _lavPausadaEm) return;
@@ -10143,6 +10169,7 @@ function _mostrarLavagemEmCurso(lote) {
     var el = document.getElementById('lavagem-hora-inicio');
     if (el) el.textContent = '▶ ' + hh + ' · ' + String(min).padStart(2,'0') + ':' + String(sec).padStart(2,'0') + ' · ' + lavagemNumPessoas + 'p';
   }, 1000);
+
   _atualizarBotaoPausa();
   irPara('screen-lavagem-em-curso');
 }
@@ -10158,14 +10185,24 @@ function _atualizarBotaoPausa() {
   var totalPausaMs = _lavPausas.reduce(function(s,p){ return s+(p.fim?new Date(p.fim)-new Date(p.ini):0); },0);
   var pausaMin = Math.round(totalPausaMs/60000);
   var pausaStr = pausado ? (function(){var d=new Date(_lavPausadaEm);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');}()) : '';
-  area.innerHTML =
-    '<button onclick="' + (pausado ? 'retomarLavagem()' : 'pausarLavagem()') + '" '
-    + 'style="width:100%;padding:14px;background:' + (pausado ? '#15803d' : '#d97706') + ';color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer">'
-    + (pausado ? '▶ Retomar Lavagem' : '⏸️ Pausar Lavagem')
-    + '</button>'
-    + (pausaMin > 0 ? '<div style="text-align:center;font-size:12px;color:#6b7280">⏸️ Pausas: ' + pausaMin + ' min</div>' : '')
-    + (pausado ? '<div style="background:#fef3c7;border-radius:8px;padding:8px;text-align:center;font-size:13px;font-weight:700;color:#92400e">Em PAUSA desde ' + pausaStr + '</div>' : '')
-    + '<button onclick="terminarLavagem()" style="width:100%;padding:14px;background:#dc2626;color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-top:4px">⏹ Terminar Lavagem</button>';
+
+  var html = '';
+
+  if (pausado) {
+    // Em pausa: mostrar indicador + botão RETOMAR + botão TERMINAR
+    html += '<div style="background:#fef3c7;border-radius:10px;padding:10px 14px;text-align:center;font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px">⏸️ Em PAUSA desde ' + pausaStr + '</div>';
+    html += '<button onclick="retomarLavagem()" style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:8px">▶ Retomar Lavagem</button>';
+    html += '<button onclick="terminarLavagem()" style="width:100%;padding:12px;background:#dc2626;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">⏹ Terminar Lavagem</button>';
+  } else {
+    // Em curso: TERMINAR (principal) + PAUSA (secundário)
+    html += '<button onclick="terminarLavagem()" style="width:100%;padding:16px;background:#dc2626;color:white;border:none;border-radius:12px;font-size:16px;font-weight:800;cursor:pointer;margin-bottom:8px">⏹ Terminar Lavagem</button>';
+    html += '<button onclick="pausarLavagem()" style="width:100%;padding:11px;background:#d97706;color:white;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">⏸️ Pausar</button>';
+    if (pausaMin > 0) {
+      html += '<div style="text-align:center;font-size:11px;color:#6b7280;margin-top:4px">⏸️ Pausas: ' + pausaMin + ' min</div>';
+    }
+  }
+
+  area.innerHTML = html;
 }
 
 function pausarLavagem() {
@@ -10892,12 +10929,13 @@ function abrirRelatorioCamaras() {
   var ini  = new Date(new Date().setDate(new Date().getDate()-30)).toISOString().slice(0,10);
   modal.innerHTML = '<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
-      +'<div style="font-size:16px;font-weight:800;color:#1e3a5f">\ud83c\udfe0 Relatório Câmaras</div>'
-      +'<button onclick="document.getElementById(\'modal-rel-cam\').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">\u2715</button>'
+      +'<div style="font-size:16px;font-weight:800;color:#1e3a5f">🏠 Relatório Câmaras</div>'
+      +'<button onclick="document.getElementById(\'modal-rel-cam\').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">✕</button>'
     +'</div>'
-    +'<div style="display:flex;gap:8px;margin-bottom:14px">'
-      +'<button id="rcam-btn-ent" onclick="_rcamTipo(\'entrada\')" style="flex:1;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-weight:800;cursor:pointer">Entradas</button>'
-      +'<button id="rcam-btn-sai" onclick="_rcamTipo(\'saida\')" style="flex:1;padding:10px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer">Saídas</button>'
+    +'<div style="display:flex;gap:6px;margin-bottom:14px">'
+      +'<button id="rcam-btn-ent" onclick="_rcamTipo(\'entrada\')" style="flex:1;padding:9px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-weight:800;cursor:pointer;font-size:12px">📥 Entradas</button>'
+      +'<button id="rcam-btn-sai" onclick="_rcamTipo(\'saida\')" style="flex:1;padding:9px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px">📤 Saídas</button>'
+      +'<button id="rcam-btn-per" onclick="_rcamTipo(\'percurso\')" style="flex:1;padding:9px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:12px">🗺️ Percurso</button>'
     +'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
       +'<div><label style="font-size:11px;font-weight:700;color:#6b7280">Data início</label>'
@@ -10909,11 +10947,26 @@ function abrirRelatorioCamaras() {
       +'<label style="font-size:11px;font-weight:700;color:#6b7280">Lote (opcional)</label>'
       +'<input type="text" id="rcam-lote" placeholder="Ex: 261001" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;font-family:monospace">'
     +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'+'<button onclick="_gerarRelCamaras(\'preview\')" style="padding:12px;background:#15803d;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">🔍 Ver</button>'+'<button onclick="_gerarRelCamaras(\'print\')" style="padding:12px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">🖨️ PDF</button>'+'<button onclick="_gerarRelCamaras(\'xlsx\')" style="padding:12px;background:#059669;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">📊 Excel</button>'+'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
+      +'<button onclick="_gerarRelCamaras(\'preview\')" style="padding:12px;background:#15803d;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">🔍 Ver</button>'
+      +'<button onclick="_gerarRelCamaras(\'print\')" style="padding:12px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">🖨️ PDF</button>'
+      +'<button onclick="_gerarRelCamaras(\'xlsx\')" style="padding:12px;background:#059669;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">📊 Excel</button>'
+    +'</div>'
     +'<div id="rcam-resultado" style="margin-top:14px"></div>'
   +'</div>';
   document.body.appendChild(modal);
   window._rcamTipoAtual = 'entrada';
+}
+
+function _rcamTipo(tipo) {
+  window._rcamTipoAtual = tipo;
+  ['ent','sai','per'].forEach(function(t){
+    var btn = document.getElementById('rcam-btn-'+t);
+    if (!btn) return;
+    var active = (tipo==='entrada'&&t==='ent')||(tipo==='saida'&&t==='sai')||(tipo==='percurso'&&t==='per');
+    btn.style.background = active ? '#1e3a5f' : '#f3f4f6';
+    btn.style.color = active ? 'white' : '#374151';
+  });
 }
 
 function _rcamTipo(tipo) {
@@ -10979,9 +11032,91 @@ function _exportRelCamarasXLSX(registos) {
   } catch(e) { alert('Erro Excel: '+e.message); }
 }
 
+
+function _gerarPercursoLotes(ini, fim, loteF) {
+  // Recolher todos os eventos de câmaras para todos os lotes
+  var hist = getHistorico ? getHistorico() : [];
+  var estado = getEstado();
+  var iniMs = ini ? new Date(ini+'T00:00:00').getTime() : 0;
+  var fimMs = fim ? new Date(fim+'T23:59:59').getTime() : Infinity;
+
+  // Mapear lote → eventos cronológicos
+  var lotesMap = {};
+  function addEvt(lote, evt) {
+    if (!lote) return;
+    if (!lotesMap[lote]) lotesMap[lote] = [];
+    lotesMap[lote].push(evt);
+  }
+
+  // Entradas de produção (câmaras 1-5)
+  [1,2,3,4,5].forEach(function(c) {
+    (estado[c]||[]).forEach(function(l) {
+      if (!l.data) return;
+      var ts = new Date(l.data).getTime();
+      if (ts < iniMs || ts > fimMs) return;
+      addEvt(l.lote, { ts, data: l.data, tipo: '📥 Entrada', camara: 'C'+c, qtd: l.qtdOriginal||l.qtd||0, kg: l.pesoOriginal||l.peso||0, obs: l.origemCamara?'Via C'+l.origemCamara:'' });
+    });
+  });
+
+  // Lavagens (histórico)
+  hist.filter(function(r){ return r.operacao==='lavagem'||r.operacao==='entrada_lavagem'; })
+    .forEach(function(r) {
+      var ts = r.data ? new Date(r.data).getTime() : 0;
+      if (ts < iniMs || ts > fimMs) return;
+      addEvt(r.lote, { ts, data: r.data, tipo: '🧼 Lavagem', camara: r.camara?'C'+r.camara:'', qtd: r.qtd||0, kg: r.kg||0, obs: r.camaraDestino?'→ C'+r.camaraDestino:'' });
+    });
+
+  // Transferências
+  hist.filter(function(r){ return r.operacao==='transferencia'; })
+    .forEach(function(r) {
+      var ts = r.data ? new Date(r.data).getTime() : 0;
+      if (ts < iniMs || ts > fimMs) return;
+      addEvt(r.lote, { ts, data: r.data, tipo: '🔄 Transferência', camara: r.camara?'C'+r.camara:'', qtd: r.qtdSaida||r.qtd||0, kg: r.kg||0, obs: r.camaraDestino?'→ C'+r.camaraDestino:'' });
+    });
+
+  // Saídas
+  hist.filter(function(r){ return r.operacao==='saida'||r.operacao==='congelacao'; })
+    .forEach(function(r) {
+      var ts = r.data ? new Date(r.data).getTime() : 0;
+      if (ts < iniMs || ts > fimMs) return;
+      addEvt(r.lote, { ts, data: r.data, tipo: r.operacao==='congelacao'?'❄️ Congelação':'📤 Saída', camara: r.camara?'C'+r.camara:'', qtd: r.qtdSaida||r.qtd||0, kg: r.kg||0, obs: r.encomendaId?'Enc.#'+(r.encNr||'?'):(r.camaraDestino?'→ C'+r.camaraDestino:'') });
+    });
+
+  // Filtrar por lote
+  var lotes = Object.keys(lotesMap);
+  if (loteF) lotes = lotes.filter(function(l){ return l.toLowerCase().includes(loteF); });
+  lotes.sort();
+
+  var html = '';
+  if (!lotes.length) {
+    html = '<div style="text-align:center;padding:24px;color:#6b7280">Sem registos para este período</div>';
+  } else {
+    lotes.forEach(function(lote) {
+      var evts = (lotesMap[lote]||[]).sort(function(a,b){ return a.ts-b.ts; });
+      html += '<div style="margin-bottom:16px;border:2px solid #e5e7eb;border-radius:12px;overflow:hidden">'
+        +'<div style="background:#1e3a5f;color:white;padding:8px 12px;font-family:monospace;font-weight:800;font-size:14px">'+lote+'</div>';
+      evts.forEach(function(ev, idx) {
+        var d = ev.data ? new Date(ev.data) : null;
+        var dStr = d ? d.toLocaleDateString('pt-PT',{day:'2-digit',month:'2-digit'}) + ' ' + d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}) : '—';
+        html += '<div style="padding:8px 12px;border-top:'+(idx>0?'1px solid #f3f4f6':'none')+';display:flex;gap:10px;align-items:flex-start">'
+          +'<div style="font-size:11px;color:#6b7280;min-width:80px;padding-top:1px">'+dStr+'</div>'
+          +'<div style="flex:1">'
+            +'<div style="font-size:13px;font-weight:700;color:#1e3a5f">'+ev.tipo+' '+(ev.camara||'')+'</div>'
+            +((ev.qtd||ev.kg)?'<div style="font-size:11px;color:#6b7280">'+(ev.qtd?ev.qtd+' un':'')+(ev.kg&&ev.qtd?' · ':'')+(ev.kg?Number(ev.kg).toFixed(1)+' kg':'')+'</div>':'')
+            +(ev.obs?'<div style="font-size:11px;color:#9ca3af">'+ev.obs+'</div>':'')
+          +'</div>'
+        +'</div>';
+      });
+      html += '</div>';
+    });
+  }
+  return html;
+}
+
 function _gerarRelCamaras(modo) {
   modo = modo || 'preview';
   var tipo  = window._rcamTipoAtual||'entrada';
+  if (tipo === 'percurso') { var loteF=((document.getElementById('rcam-lote')||{}).value||'').trim().toLowerCase(); var ini=(document.getElementById('rcam-ini')||{}).value||''; var fim=(document.getElementById('rcam-fim')||{}).value||''; var html=_gerarPercursoLotes(ini,fim,loteF); var res=document.getElementById('rcam-resultado'); if (modo==='preview'&&res) { res.innerHTML=html+'<div style="display:flex;gap:8px;margin-top:12px"><button onclick="_gerarRelCamaras(\'print\')" style="flex:1;padding:11px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer">🖨️ Imprimir</button></div>'; } else if(modo==='print') { var win=window.open('','_blank'); if(win){win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Percurso Lotes</title><style>body{font-family:sans-serif;font-size:12px;padding:20px}</style></head><body><h2>Percurso por Lote</h2>'+html+'</body></html>'); win.document.close(); setTimeout(function(){win.print();},500);} } return; }
   var ini   = (document.getElementById('rcam-ini')||{}).value||'';
   var fim   = (document.getElementById('rcam-fim')||{}).value||'';
   var loteF = ((document.getElementById('rcam-lote')||{}).value||'').trim().toLowerCase();
@@ -11972,7 +12107,20 @@ async function _importFotoProcessar(input) {
     if (confirmar) confirmar.style.display='block';
     if (status) status.textContent = '\u2713 Reveja e confirme';
   } catch(err) {
-    if (status) status.textContent = '\u274c Erro: '+(err.message||String(err));
+    // API inacessível — modo manual
+    if (status) {
+      status.style.color='#d97706';
+      status.textContent = '⚠️ Análise automática indisponível. A imagem está visível acima — preencha a encomenda manualmente.';
+    }
+    if (resultado) {
+      resultado.style.display='block';
+      resultado.innerHTML = '<div style="background:#fef3c7;border-radius:8px;padding:10px;font-size:12px;color:#92400e;font-weight:600">'
+        +'📋 Use a foto como guia e crie a encomenda manualmente.'
+        +'<br><br><button onclick="document.getElementById(\'modal-import-foto\')?.remove();irPara(\'screen-enc-nova\')" '
+          +'style="width:100%;padding:10px;background:#d97706;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer">'
+          +'📝 Nova Encomenda Manual</button>'
+      +'</div>';
+    }
   }
 }
 
@@ -12330,7 +12478,6 @@ function prepararEncomenda(id) {
   if (!enc) return;
   _prepEncId = id;
 
-  // Inicializar linhas de preparação (preservar o que já estava)
   var prev = enc.prepLinhas || [];
   _prepLinhas = (enc.linhas || [{ artigo: enc.artigo||'', qtd: enc.qtd||0, caixas: enc.caixas||0 }]).map(function(l, i) {
     var p = prev[i] || {};
@@ -12339,6 +12486,7 @@ function prepararEncomenda(id) {
       qtd: l.qtd || 0,
       caixas: l.caixas || 0,
       marca: l.marca || '',
+      referencia: l.referencia || '',
       lote: p.lote || '',
       kg: p.kg || '',
       camara: p.camara || null,
@@ -12348,49 +12496,77 @@ function prepararEncomenda(id) {
 
   document.getElementById('bc-enc-prep').textContent = 'Encomenda #' + enc.nr;
   document.getElementById('enc-prep-titulo').textContent = 'Encomenda #' + enc.nr + ' — ' + enc.cliente;
-  document.getElementById('enc-prep-sub').textContent = enc.artigo + (enc.obs ? ' · ' + enc.obs : '');
-  document.getElementById('status-enc-prep').className = 'status';
 
+  var subParts = [];
+  if (enc.dataEntrega) subParts.push('📅 Entrega: ' + enc.dataEntrega);
+  if (enc.dataExpedicao) subParts.push('🚚 Expedição: ' + enc.dataExpedicao);
+  if (enc.obs) subParts.push(enc.obs);
+  document.getElementById('enc-prep-sub').textContent = subParts.join(' · ') || (enc.artigo||'');
+
+  document.getElementById('status-enc-prep').className = 'status';
   _renderPrepLinhas();
   irPara('screen-enc-preparar');
 }
 
 function _renderPrepLinhas() {
   var e = getEstado();
-  var lotesDisp = [];
-  [4,5].forEach(function(c){
-    (e[c]||[]).forEach(function(l){ lotesDisp.push({camara:c,lote:l.lote,qtd:l.qtd,validade:l.validade||''}); });
+
+  // Montar lista de lotes disponíveis (queijo: C3+C4+C5, requeijão: prod_requeijao)
+  var lotesQueijo = {};
+  [3,4,5].forEach(function(c){
+    (e[c]||[]).forEach(function(l){ lotesQueijo[l.lote] = Object.assign({},l,{camara:c}); });
   });
+  var lotesReq = {};
+  var prodsReq = (typeof getProdutosRequeijao==='function') ? getProdutosRequeijao() : [];
+  prodsReq.filter(function(p){ return (p.qtdDisponivel||p.qtd||0)>0; })
+    .forEach(function(p){ lotesReq[p.lote||p.id] = p; });
+
   var html = '';
-  _prepLinhas.forEach(function(l,i){
-    var found = l.lote ? lotesDisp.find(function(d){ return d.lote===l.lote; }) : null;
+  _prepLinhas.forEach(function(l, i) {
+    var artigo = (l.artigo||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    var isReq = artigo.includes('requeijao');
+    var refLinha = (l.referencia||'').toUpperCase().trim();
+
+    var found = null, dispStr = '', refMismatch = false;
+    if (l.lote) {
+      if (isReq) {
+        found = lotesReq[l.lote];
+        dispStr = found ? ('disp. '+(found.qtdDisponivel||found.qtd||0)+' un') : '⚠️ não encontrado';
+      } else {
+        found = lotesQueijo[l.lote];
+        dispStr = found ? ('C'+(found.camara||l.camara||'?')+' · disp. '+(found.qtd||0)+' un') : '⚠️ não encontrado';
+        if (found && refLinha && (found.referencia||'').toUpperCase() !== refLinha) {
+          refMismatch = true;
+        }
+      }
+    }
+
     var infoBlock = '';
     if (l.lote) {
-      var dispStr = found ? ('disp. '+found.qtd+' un') : '\u26a0\ufe0f n\xe3o encontrado';
+      var cam = isReq ? '' : ('C'+(l.camara||found?.camara||'?')+' · ');
       infoBlock = '<div style="background:'+(refMismatch?'#fef2f2':'#eff6ff')+';border:2px solid '+(refMismatch?'#fca5a5':'#bfdbfe')+';border-radius:8px;padding:8px 10px;margin-top:8px">'
-        +'<div style="font-size:12px;font-weight:800;color:#1e40af">C'+(l.camara||'?')+' \xb7 '+l.lote+' \xb7 '+dispStr+'</div>'
-        +(l.validade
-          ? '<div style="font-size:11px;color:#92400e;font-weight:700;margin-top:2px">\ud83d\udcc5 '+l.validade+'</div>'
-          : '<div style="font-size:11px;color:#9ca3af;margin-top:2px">Validade a definir na Expedi\xe7\xe3o</div>')
-        +(refMismatch ? '<div style="font-size:11px;color:#dc2626;font-weight:800;margin-top:4px">⚠️ Ref. incompatível: linha pede '+refLinha+' mas lote tem '+refLote+'</div>' : '')
-        +'</div>';
+        +'<div style="font-size:12px;font-weight:800;color:#1e40af">'+cam+l.lote+' · '+dispStr+'</div>'
+        +(l.validade ? '<div style="font-size:11px;color:#92400e;font-weight:700;margin-top:2px">📅 '+l.validade+'</div>' : '')
+        +(refMismatch ? '<div style="font-size:11px;color:#dc2626;font-weight:800;margin-top:4px">⚠️ Ref. incompatível: linha pede '+refLinha+' mas lote tem '+(found?.referencia||'—')+'</div>' : '')
+      +'</div>';
     }
+
     html += '<div style="background:white;border:2px solid '+(l.lote?'#93c5fd':'#e5e7eb')+';border-radius:14px;padding:14px;margin-bottom:10px">'
       +'<div style="display:flex;justify-content:space-between;align-items:flex-start">'
         +'<div style="flex:1">'
           +'<div style="font-size:11px;font-weight:800;color:#6b7280;text-transform:uppercase">Linha '+(i+1)+'</div>'
           +'<div style="font-size:15px;font-weight:700;color:#1e3a5f;margin-top:2px">'+l.artigo+'</div>'
-          +'<div style="font-size:12px;color:#6b7280">'+l.qtd+' un \xb7 '+l.caixas+' cx'+(l.marca?' \xb7 '+l.marca:'')+'</div>'
+          +'<div style="font-size:12px;color:#6b7280">'+l.qtd+' un · '+l.caixas+' cx'+(l.marca?' · '+l.marca:'')+(refLinha?' · Ref.'+refLinha:'')+'</div>'
         +'</div>'
-        +(l.lote ? '<button type="button" onclick="limparLotePrep('+i+')" style="margin-left:8px;padding:6px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">\u2715</button>' : '')
+        +(l.lote ? '<button type="button" onclick="limparLotePrep('+i+')" style="margin-left:8px;padding:6px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:11px;font-weight:700;cursor:pointer">✕</button>' : '')
       +'</div>'
       +infoBlock
       +'<div style="display:flex;gap:8px;margin-top:10px">'
-        +'<input type="text" id="prep-lote-'+i+'" placeholder="N\xba lote (escrever)" value="'+(l.lote||'')+'" '
+        +'<input type="text" id="prep-lote-'+i+'" placeholder="Nº lote (escrever)" value="'+(l.lote||'')+'" '
           +'style="flex:1;padding:10px 12px;border:2px solid #e5e7eb;border-radius:10px;font-weight:700;font-size:14px;color:#1e3a5f" '
           +'oninput="prepLoteManual('+i+')">'
         +'<button type="button" onclick="abrirLotePicker('+i+')" '
-          +'style="padding:10px 16px;background:#0369a1;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap">\ud83d\udccb Lista</button>'
+          +'style="padding:10px 16px;background:#0369a1;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap">📋 Lista</button>'
       +'</div>'
     +'</div>';
   });
@@ -12725,83 +12901,140 @@ function _gerarRelEnc(modo) {
   }
 }
 function abrirLotePicker(idx) {
+  fecharLotePicker();
   _pickerIdx = idx;
   var e = getEstado();
   var linha = _prepLinhas[idx] || {};
   var artigo = (linha.artigo || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  var refLinha = (linha.referencia || '').toUpperCase().trim();
 
-  // Inferir tipo de artigo para filtrar lotes compatíveis
-  var tipoFiltro = null; // null = sem filtro
+  // Inferir tipo e ref do nome do artigo
   var isRequeijao = artigo.includes('requeijao') || artigo.includes('requeijão');
   var isDOP       = artigo.includes('dop');
   var isCabra     = artigo.includes('cabra');
-  var isOvelha    = !isDOP && !isCabra && !isRequeijao &&
-                    (artigo.includes('ovelha') || artigo.includes('pastor') || artigo.includes('seia') || artigo.includes('amanteigado') || artigo.includes('curado'));
-  if (isDOP)       tipoFiltro = 'dop';
-  else if (isCabra)  tipoFiltro = 'cabra';
-  else if (isOvelha) tipoFiltro = 'ovelha';
-  // Requeijão usa câmaras 1/2; queijo usa câmaras 4/5
-  var camarasParaMostrar = isRequeijao ? [1,2] : [4,5];
+  var isOvelha    = !isDOP && !isCabra && !isRequeijao;
+
+  // Inferir ref do artigo se não especificada no campo Ref
+  var refInferida = refLinha;
+  if (!refInferida && !isRequeijao) {
+    if (artigo.includes('ppp') || artigo.includes('fatia')) refInferida = 'PPP';
+    else if (artigo.includes('pp ') || artigo.includes(' pp') || artigo.endsWith('pp')) refInferida = 'PP';
+    else if (artigo.includes('pequen') || artigo.includes(' p ') || artigo.endsWith(' p')) refInferida = 'P';
+    else if (artigo.includes('grande') || artigo.includes(' g ') || artigo.endsWith(' g')) refInferida = 'G';
+    else if (isDOP) refInferida = 'DOP';
+  }
+
+  var tipoFiltro = isDOP ? 'dop' : (isCabra ? 'cabra' : (isOvelha ? 'ovelha' : null));
+
+  // Câmaras a mostrar por tipo:
+  // ovelha/DOP: C1+C2 (cura normal)
+  // cabra: C3+C5
+  // PP/PPP/fatia: pode estar em C5 também
+  var camarasQueijo;
+  if (isCabra) {
+    camarasQueijo = [3,5];
+  } else if (refInferida === 'PP' || refInferida === 'PPP' || artigo.includes('fatia')) {
+    camarasQueijo = [1,2,5];
+  } else {
+    camarasQueijo = [1,2];
+  }
+
   var cores = {1:'#1e40af',2:'#1e40af',3:'#15803d',4:'#92400e',5:'#7f1d1d'};
   var bgs   = {1:'#dbeafe',2:'#dbeafe',3:'#dcfce7',4:'#fef3c7',5:'#fff1f2'};
   var bds   = {1:'#bfdbfe',2:'#bfdbfe',3:'#86efac',4:'#fbbf24',5:'#fca5a5'};
 
-  var filtroLabel = tipoFiltro ? (' — só ' + (tipoFiltro==='dop'?'DOP':tipoFiltro.charAt(0).toUpperCase()+tipoFiltro.slice(1))) : '';
+  var filtroLabel = '';
+  if (tipoFiltro) filtroLabel += ' — ' + (tipoFiltro==='dop'?'DOP':tipoFiltro.charAt(0).toUpperCase()+tipoFiltro.slice(1));
+  if (refInferida) filtroLabel += ' ref.' + refInferida;
 
-  var html = '<div id="modal-picker" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center">'
-    +'<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto">'
+  var html = '<div id="modal-picker" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)fecharLotePicker()">'
+    +'<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto" onclick="event.stopPropagation()">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
       +'<div style="font-size:16px;font-weight:800;color:#1e3a5f">📋 Selecionar Lote'+filtroLabel+'</div>'
-      +'<button onclick="fecharLotePicker()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">✕</button>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:' + (camarasParaMostrar.length===2?'1fr 1fr':'1fr 1fr 1fr') + ';gap:10px">';
+      +'<button onclick="fecharLotePicker()" style="background:#f3f4f6;border:none;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer;line-height:36px;text-align:center">✕</button>'
+    +'</div>';
 
-  camarasParaMostrar.forEach(function(c) {
-    var lotes = (e[c]||[]).filter(function(l){ return l.qtd>0; });
-    // Filtrar por tipo se possível
-    if (tipoFiltro) {
-      var lotesFiltered = lotes.filter(function(l){ return (l.tipo||'').toLowerCase()===tipoFiltro; });
-      // Se não encontrou com tipo, aceitar lotes sem tipo definido (legacy)
-      if (!lotesFiltered.length) lotesFiltered = lotes.filter(function(l){ return !l.tipo; });
-      lotes = lotesFiltered;
-    }
-    html += '<div>'
-      +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:'+cores[c]+';margin-bottom:6px;text-align:center;'
-        +'background:'+bgs[c]+';border:1px solid '+bds[c]+';border-radius:8px;padding:4px">🏠 Câmara '+c+'</div>';
-    if (!lotes.length) {
-      html += '<div style="text-align:center;color:#9ca3af;font-size:12px;padding:12px">'+(tipoFiltro?'Sem lotes '+tipoFiltro:'Vazia')+'</div>';
+  if (isRequeijao) {
+    var prodsReq = (typeof getProdutosRequeijao==='function') ? getProdutosRequeijao() : [];
+    var lotesReq = prodsReq.filter(function(p){ return (p.qtdDisponivel||p.qtd||0)>0; });
+    html += '<div style="font-size:11px;font-weight:700;color:#15803d;background:#f0fdf4;border-radius:8px;padding:6px 10px;margin-bottom:10px;text-transform:uppercase">🥛 Lotes Requeijão Disponíveis</div>';
+    if (!lotesReq.length) {
+      html += '<div style="text-align:center;color:#9ca3af;font-size:13px;padding:20px">Sem lotes de requeijão disponíveis</div>';
     } else {
-      lotes.forEach(function(l) {
-        var bl = verificarBloqueio30dias(l);
-        var blocked = bl.bloqueado && !temPermissao('admin');
-        html += '<div onclick="' + (blocked?'':'_pickerSelecionar('+c+',\''+l.lote+'\',\''+(l.validade||'')+'\')')
-          +'" style="padding:10px;background:'+(blocked?'#f9fafb':bgs[c])+';border:2px solid '+(blocked?'#e5e7eb':bds[c])
-          +';border-radius:10px;margin-bottom:6px;cursor:'+(blocked?'not-allowed':'pointer')
-          +';opacity:'+(blocked?0.5:1)+'">'
-          +'<div style="font-family:\'DM Mono\',monospace;font-weight:900;font-size:13px;color:'+cores[c]+'">'+l.lote+'</div>'
-          +(l.referencia?'<div style="font-size:10px;font-weight:700;color:#6b7280;margin-top:1px">'+l.tipo+' · '+l.referencia+'</div>':'')
-          +'<div style="font-size:11px;color:#9ca3af;margin-top:2px">'+l.qtd+' un'+(l.peso?' · '+Number(l.peso).toFixed(1)+' kg':'')+' </div>'
-          +(bl.bloqueado?'<div style="font-size:10px;color:#dc2626;font-weight:700">🔒 '+bl.diasPassados+'/31d DOP</div>':'')
-          +(l.validade?'<div style="font-size:10px;color:#92400e;font-weight:700">📅 '+l.validade+'</div>':'')
+      lotesReq.forEach(function(l) {
+        var qtdDisp = l.qtdDisponivel || l.qtd || 0;
+        var loteId = l.lote || l.id;
+        html += '<div onclick="_pickerSelecionarReq(\''+loteId+'\')" '
+          +'style="padding:12px;background:#f0fdf4;border:2px solid #86efac;border-radius:10px;margin-bottom:8px;cursor:pointer">'
+          +'<div style="font-family:\'DM Mono\',monospace;font-weight:900;font-size:14px;color:#15803d">'+loteId+'</div>'
+          +'<div style="font-size:12px;color:#6b7280;margin-top:2px">'+qtdDisp+' un disponíveis</div>'
+          +(l.dataFormatada?'<div style="font-size:11px;color:#9ca3af">'+l.dataFormatada+'</div>':'')
         +'</div>';
       });
     }
+  } else {
+    var nCams = camarasQueijo.length;
+    var gridCols = nCams <= 2 ? '1fr 1fr' : '1fr 1fr 1fr';
+    html += '<div style="display:grid;grid-template-columns:'+gridCols+';gap:10px">';
+    camarasQueijo.forEach(function(c) {
+      var lotesC = (e[c]||[]).filter(function(l){ return (l.qtd||0)>0; });
+      // Filtrar por tipo
+      if (tipoFiltro) {
+        var lf = lotesC.filter(function(l){ return (l.tipo||'').toLowerCase()===tipoFiltro; });
+        if (lf.length) lotesC = lf;
+      }
+      // Filtrar por referência (estrito)
+      if (refInferida) {
+        var lr = lotesC.filter(function(l){ return (l.referencia||'').toUpperCase()===refInferida; });
+        if (lr.length) lotesC = lr;
+      }
+      html += '<div>'
+        +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:'+cores[c]+';margin-bottom:6px;text-align:center;'
+          +'background:'+bgs[c]+';border:1px solid '+bds[c]+';border-radius:8px;padding:4px">🏠 Câmara '+c+'</div>';
+      if (!lotesC.length) {
+        html += '<div style="text-align:center;color:#9ca3af;font-size:12px;padding:12px">Vazia</div>';
+      } else {
+        lotesC.forEach(function(l) {
+          var bl = verificarBloqueio30dias(l);
+          var blocked = bl.bloqueado && !temPermissao('admin');
+          html += '<div onclick="'+(blocked?'':'_pickerSelecionar('+c+',\''+l.lote+'\',\''+(l.validade||'')+'\')')+'" '
+            +'style="padding:10px;background:'+(blocked?'#f9fafb':bgs[c])+';border:2px solid '+(blocked?'#e5e7eb':bds[c])
+            +';border-radius:10px;margin-bottom:6px;cursor:'+(blocked?'not-allowed':'pointer')
+            +';opacity:'+(blocked?0.5:1)+'">'
+            +'<div style="font-family:\'DM Mono\',monospace;font-weight:900;font-size:13px;color:'+cores[c]+'">'+l.lote+'</div>'
+            +(l.referencia?'<div style="font-size:10px;font-weight:700;color:#6b7280;margin-top:1px">'+(l.tipo||'')+' · '+l.referencia+'</div>':'')
+            +'<div style="font-size:11px;color:#9ca3af;margin-top:2px">'+(l.qtd||0)+' un'+(l.peso?' · '+Number(l.peso).toFixed(1)+' kg':'')+' </div>'
+            +(bl.bloqueado?'<div style="font-size:10px;color:#dc2626;font-weight:700">🔒 '+bl.diasPassados+'/31d DOP</div>':'')
+            +(l.validade?'<div style="font-size:10px;color:#92400e;font-weight:700">📅 '+l.validade+'</div>':'')
+          +'</div>';
+        });
+      }
+      html += '</div>';
+    });
     html += '</div>';
-  });
+  }
 
-  html += '</div></div></div>';
-  // Remover picker anterior se existir
-  var old = document.getElementById('modal-picker');
-  if (old) old.remove();
+  html += '</div></div>';
+
   document.body.insertAdjacentHTML('beforeend', html);
+
   _pickerCallback = function(camara, lote, validade) {
     _prepLinhas[_pickerIdx].lote    = lote;
     _prepLinhas[_pickerIdx].camara  = camara;
     _prepLinhas[_pickerIdx].validade = validade;
     _renderPrepLinhas();
-    var el = document.getElementById('prep-lote-'+_pickerIdx);
-    if (el) el.focus();
+    fecharLotePicker();
   };
+}
+
+function _pickerSelecionarReq(loteId) {
+  fecharLotePicker();
+  if (_pickerCallback) _pickerCallback(0, loteId, '');
+  // Override para requeijão — sem câmara física
+  _prepLinhas[_pickerIdx].lote    = loteId;
+  _prepLinhas[_pickerIdx].camara  = 0;
+  _prepLinhas[_pickerIdx].validade = '';
+  _renderPrepLinhas();
 }
 
 function _pickerSelecionar(camara, lote, validade) {
@@ -12826,10 +13059,13 @@ function _pickerSelecionar(camara, lote, validade) {
 }
 
 function fecharLotePicker() {
-  var el = document.getElementById('modal-picker');
-  if (el) el.remove();
-  var el2 = document.getElementById('lote-picker-overlay');
-  if (el2) el2.remove();
+  ['modal-picker','lote-picker-overlay'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.remove();
+  });
+  // Remover qualquer overlay remanescente
+  document.querySelectorAll('[id^="modal-picker"]').forEach(function(el){ el.remove(); });
+  _pickerCallback = null;
 }
 
 // ── Guardar estado de preparação e enviar para expedição ─────
