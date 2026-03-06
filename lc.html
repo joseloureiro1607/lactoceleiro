@@ -562,7 +562,8 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
     </div>
   </div>
 </div>
-<div class="screen" id="screen-home">
+
+    <div class="screen" id="screen-home">
       <!-- Utilizador atual + logout -->
       <div id="home-user-bar" style="display:flex;align-items:center;justify-content:space-between;background:white;border-radius:14px;padding:12px 16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,0.06)">
         <div style="display:flex;align-items:center;gap:10px">
@@ -9103,22 +9104,24 @@ function adminModalUtilizador(u) {
       style="font-size:20px;background:none;border:none;cursor:pointer;padding:4px;${u?.icon===ic?'outline:2px solid #1e3a5f':''}">${ic}</button>`
   ).join('');
 
+  // Áreas disponíveis com descrição
   const AREAS_CONFIG = [
-    { id:'queijo',           label:'Produção de Queijo',       sub:'Iniciar/gerir produções' },
-    { id:'requeijao',        label:'Produção de Requeijão',    sub:'Caldeiras e lotes' },
-    { id:'cura',             label:'Cura e Câmaras',           sub:'Câmaras, lavagem, transferência' },
-    { id:'encomendas',       label:'Encomendas',               sub:'Ver e gerir encomendas' },
-    { id:'criar-enc',        label:'↳ Criar encomendas',       sub:'Criar novas encomendas' },
-    { id:'ver-enc-expedidas',label:'↳ Ver expedidas',          sub:'Ver encomendas concluídas' },
-    { id:'exportar-enc',     label:'↳ Exportar / Email',       sub:'Enviar e exportar encomendas' },
-    { id:'ver-relatorios',   label:'Relatórios',               sub:'Exportar e relatórios gerais' },
-    { id:'admin',            label:'Administração',            sub:'Gerir utilizadores e config' },
-    { id:'eliminar',         label:'↳ Eliminar encomendas',    sub:'Botão eliminar visível' },
-    { id:'eliminar-prod',    label:'↳ Eliminar produções',     sub:'Eliminar lotes/produções' },
+    { id:'queijo',          label:'Produção de Queijo',       sub:'Iniciar/gerir produções' },
+    { id:'requeijao',       label:'Produção de Requeijão',    sub:'Caldeiras e lotes' },
+    { id:'cura',            label:'Cura e Câmaras',           sub:'Câmaras, lavagem, transferência' },
+    { id:'encomendas',      label:'Encomendas',               sub:'Ver e gerir encomendas' },
+    { id:'criar-enc',       label:'↳ Criar encomendas',       sub:'Criar novas encomendas' },
+    { id:'ver-enc-expedidas',label:'↳ Ver expedidas',         sub:'Ver encomendas concluídas' },
+    { id:'exportar-enc',    label:'↳ Exportar / Email',       sub:'Enviar e exportar encomendas' },
+    { id:'ver-relatorios',  label:'Relatórios',               sub:'Exportar e relatórios gerais' },
+    { id:'admin',           label:'Administração',            sub:'Gerir utilizadores e config' },
+    { id:'eliminar',        label:'↳ Eliminar encomendas',    sub:'Botão eliminar visível' },
+    { id:'eliminar-prod',   label:'↳ Eliminar produções',     sub:'Eliminar lotes/produções' },
   ];
 
+  // Permissões actuais: do perfil + customizações
   const perfilAreas = u?.perfil ? (PERFIS[u.perfil]?.areas||[]) : [];
-  const custom = u?.areasCustum || null;
+  const custom = u?.areasCustum || null; // null = usa perfil; array = custom
   const areasActivas = custom || perfilAreas;
 
   const areasHTML = AREAS_CONFIG.map(a => {
@@ -9207,6 +9210,7 @@ function adminGuardarUtilizador(id) {
   if (!nome) { alert('Insere o nome do utilizador.'); return; }
   if (pin.length !== 4 || !/^\d{4}$/.test(pin)) { alert('O PIN deve ter exatamente 4 dígitos.'); return; }
 
+  // Recolher permissões personalizadas
   const TODAS_AREAS = ['queijo','requeijao','cura','encomendas','criar-enc','ver-enc-expedidas',
     'exportar-enc','ver-relatorios','admin','eliminar','eliminar-prod'];
   const perfilAreas = PERFIS[perfil]?.areas || [];
@@ -9214,6 +9218,7 @@ function adminGuardarUtilizador(id) {
     const cb = document.getElementById('perm-'+a);
     return cb && cb.checked;
   });
+  // Só guardar custom se diferente do perfil base
   const igual = perfilAreas.length === customAreas.length
     && perfilAreas.every(a => customAreas.includes(a));
   const areasCustum = igual ? null : customAreas;
@@ -9276,7 +9281,6 @@ function adminEliminar(tipo) {
   alert('✅ Dados eliminados com sucesso.');
   marcarModificado && SYNC_KEYS.forEach(k => marcarModificado(k));
 }
-
 
 
 // ===
@@ -13609,6 +13613,7 @@ function _adminGuardarGeminiKey() {
   mostrarStatus('status-home', 'Chave Gemini guardada com sucesso!', 'success');
 }
 </script>
+
     <div class="screen" id="screen-admin">
       <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <strong>Administração</strong></div>
       <div style="background:linear-gradient(135deg,#1e3a5f,#2d5282);border-radius:16px;padding:14px 16px;margin-bottom:16px;color:white">
@@ -13688,5 +13693,7 @@ function _adminGuardarGeminiKey() {
 
       <button class="btn-back" onclick="irPara('screen-home')" style="margin-top:8px">← Voltar ao Início</button>
     </div>
+  </div>
+</div>
 </body>
 </html>
