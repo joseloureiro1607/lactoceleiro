@@ -9103,24 +9103,22 @@ function adminModalUtilizador(u) {
       style="font-size:20px;background:none;border:none;cursor:pointer;padding:4px;${u?.icon===ic?'outline:2px solid #1e3a5f':''}">${ic}</button>`
   ).join('');
 
-  // Áreas disponíveis com descrição
   const AREAS_CONFIG = [
-    { id:'queijo',          label:'Produção de Queijo',       sub:'Iniciar/gerir produções' },
-    { id:'requeijao',       label:'Produção de Requeijão',    sub:'Caldeiras e lotes' },
-    { id:'cura',            label:'Cura e Câmaras',           sub:'Câmaras, lavagem, transferência' },
-    { id:'encomendas',      label:'Encomendas',               sub:'Ver e gerir encomendas' },
-    { id:'criar-enc',       label:'↳ Criar encomendas',       sub:'Criar novas encomendas' },
-    { id:'ver-enc-expedidas',label:'↳ Ver expedidas',         sub:'Ver encomendas concluídas' },
-    { id:'exportar-enc',    label:'↳ Exportar / Email',       sub:'Enviar e exportar encomendas' },
-    { id:'ver-relatorios',  label:'Relatórios',               sub:'Exportar e relatórios gerais' },
-    { id:'admin',           label:'Administração',            sub:'Gerir utilizadores e config' },
-    { id:'eliminar',        label:'↳ Eliminar encomendas',    sub:'Botão eliminar visível' },
-    { id:'eliminar-prod',   label:'↳ Eliminar produções',     sub:'Eliminar lotes/produções' },
+    { id:'queijo',           label:'Produção de Queijo',       sub:'Iniciar/gerir produções' },
+    { id:'requeijao',        label:'Produção de Requeijão',    sub:'Caldeiras e lotes' },
+    { id:'cura',             label:'Cura e Câmaras',           sub:'Câmaras, lavagem, transferência' },
+    { id:'encomendas',       label:'Encomendas',               sub:'Ver e gerir encomendas' },
+    { id:'criar-enc',        label:'↳ Criar encomendas',       sub:'Criar novas encomendas' },
+    { id:'ver-enc-expedidas',label:'↳ Ver expedidas',          sub:'Ver encomendas concluídas' },
+    { id:'exportar-enc',     label:'↳ Exportar / Email',       sub:'Enviar e exportar encomendas' },
+    { id:'ver-relatorios',   label:'Relatórios',               sub:'Exportar e relatórios gerais' },
+    { id:'admin',            label:'Administração',            sub:'Gerir utilizadores e config' },
+    { id:'eliminar',         label:'↳ Eliminar encomendas',    sub:'Botão eliminar visível' },
+    { id:'eliminar-prod',    label:'↳ Eliminar produções',     sub:'Eliminar lotes/produções' },
   ];
 
-  // Permissões actuais: do perfil + customizações
   const perfilAreas = u?.perfil ? (PERFIS[u.perfil]?.areas||[]) : [];
-  const custom = u?.areasCustum || null; // null = usa perfil; array = custom
+  const custom = u?.areasCustum || null;
   const areasActivas = custom || perfilAreas;
 
   const areasHTML = AREAS_CONFIG.map(a => {
@@ -9209,7 +9207,6 @@ function adminGuardarUtilizador(id) {
   if (!nome) { alert('Insere o nome do utilizador.'); return; }
   if (pin.length !== 4 || !/^\d{4}$/.test(pin)) { alert('O PIN deve ter exatamente 4 dígitos.'); return; }
 
-  // Recolher permissões personalizadas
   const TODAS_AREAS = ['queijo','requeijao','cura','encomendas','criar-enc','ver-enc-expedidas',
     'exportar-enc','ver-relatorios','admin','eliminar','eliminar-prod'];
   const perfilAreas = PERFIS[perfil]?.areas || [];
@@ -9217,7 +9214,6 @@ function adminGuardarUtilizador(id) {
     const cb = document.getElementById('perm-'+a);
     return cb && cb.checked;
   });
-  // Só guardar custom se diferente do perfil base
   const igual = perfilAreas.length === customAreas.length
     && perfilAreas.every(a => customAreas.includes(a));
   const areasCustum = igual ? null : customAreas;
@@ -9280,6 +9276,7 @@ function adminEliminar(tipo) {
   alert('✅ Dados eliminados com sucesso.');
   marcarModificado && SYNC_KEYS.forEach(k => marcarModificado(k));
 }
+
 
 
 // ===
@@ -11930,170 +11927,6 @@ function abrirImportarFotoEnc() {
   var modal = document.createElement('div');
   modal.id = 'modal-import-foto';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
-  modal.innerHTML =
-    '<div style="background:white;border-radius:20px;padding:22px;width:100%;max-width:400px">'
-    +'<div style="font-size:16px;font-weight:800;color:#1e3a5f;margin-bottom:6px">📷 Importar Encomenda por Foto</div>'
-    +'<div style="font-size:12px;color:#6b7280;margin-bottom:16px">Tira foto à encomenda escrita à mão ou em papel. O sistema lê os artigos e quantidades.</div>'
-    +'<div style="margin-bottom:12px">'
-      +'<label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:6px">FOTO / IMAGEM</label>'
-      +'<input type="file" id="foto-enc-input" accept="image/*" capture="environment" '
-        +'style="width:100%;padding:10px;border:2px dashed #d1d5db;border-radius:10px;font-size:13px;box-sizing:border-box">'
-    +'</div>'
-    +'<div id="foto-enc-preview" style="display:none;margin-bottom:12px">'
-      +'<img id="foto-enc-img" style="width:100%;border-radius:10px;max-height:200px;object-fit:contain;background:#f9fafb">'
-    +'</div>'
-    +'<div id="foto-enc-status" style="font-size:12px;color:#6b7280;min-height:18px;margin-bottom:12px"></div>'
-    +'<div id="foto-enc-resultado" style="display:none;margin-bottom:12px;background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px">'
-      +'<div style="font-size:11px;font-weight:800;color:#15803d;margin-bottom:8px">✓ ARTIGOS DETECTADOS</div>'
-      +'<div id="foto-enc-linhas"></div>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'
-      +'<button onclick="document.getElementById(\'modal-import-foto\').remove()" '
-        +'style="padding:12px;background:#f3f4f6;color:#6b7280;border:none;border-radius:10px;font-weight:700;cursor:pointer">Cancelar</button>'
-      +'<button id="btn-foto-processar" onclick="processarFotoEnc()" '
-        +'style="padding:12px;background:#0369a1;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer">🔍 Analisar</button>'
-    +'</div>'
-    +'<div id="btn-foto-criar" style="display:none;margin-top:8px">'
-      +'<button onclick="criarEncDeFoto()" style="width:100%;padding:12px;background:#15803d;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer">✓ Criar Encomenda</button>'
-    +'</div>'
-    +'</div>';
-  document.body.appendChild(modal);
-  // Preview da imagem ao seleccionar
-  document.getElementById('foto-enc-input').addEventListener('change', function(e){
-    var f = e.target.files[0];
-    if (!f) return;
-    var url = URL.createObjectURL(f);
-    document.getElementById('foto-enc-img').src = url;
-    document.getElementById('foto-enc-preview').style.display = 'block';
-    document.getElementById('foto-enc-status').textContent = '📷 Imagem carregada — clique em Analisar';
-  });
-}
-
-var _fotoEncLinhas = [];
-
-async function processarFotoEnc() {
-  var input = document.getElementById('foto-enc-input');
-  var status = document.getElementById('foto-enc-status');
-  if (!input || !input.files.length) {
-    status.textContent = '⚠️ Seleciona uma foto primeiro';
-    return;
-  }
-  status.textContent = '⏳ A analisar imagem com IA...';
-  document.getElementById('btn-foto-processar').disabled = true;
-
-  try {
-    var file = input.files[0];
-    var b64 = await new Promise(function(res, rej) {
-      var r = new FileReader();
-      r.onload = function(e){ res(e.target.result.split(',')[1]); };
-      r.onerror = rej;
-      r.readAsDataURL(file);
-    });
-    var mediaType = file.type || 'image/jpeg';
-
-    var artigosList = (typeof ARTIGOS_LIST !== 'undefined') ? ARTIGOS_LIST.join(', ') : '';
-
-    var response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: mediaType, data: b64 } },
-            { type: 'text', text: 'Esta é uma encomenda de queijo. Extrai todos os artigos e quantidades em JSON.\nFormato: {"cliente":"nome ou vazio","linhas":[{"artigo":"nome do artigo","qtd":número,"caixas":número}]}\nArtigos possíveis: ' + artigosList + '\nSe não reconheces o artigo exacto, usa o nome mais próximo da lista.\nResponde APENAS com JSON válido, sem mais texto.' }
-          ]
-        }]
-      })
-    });
-
-    if (!response.ok) throw new Error('API erro ' + response.status);
-    var data = await response.json();
-    var text = (data.content||[]).map(function(c){ return c.text||''; }).join('');
-    var clean = text.replace(/```json|```/g,'').trim();
-    var result = JSON.parse(clean);
-
-    _fotoEncLinhas = result.linhas || [];
-    if (!_fotoEncLinhas.length) throw new Error('Nenhum artigo detectado');
-
-    // Mostrar resultado
-    var linhasHTML = _fotoEncLinhas.map(function(l,i){
-      return '<div style="display:grid;grid-template-columns:1fr 70px 60px;gap:6px;align-items:center;margin-bottom:6px">'
-        +'<input type="text" value="'+(l.artigo||'')+'" id="foto-art-'+i+'" '
-          +'style="font-size:12px;padding:5px 8px;border:1.5px solid #86efac;border-radius:7px">'
-        +'<input type="number" value="'+(l.qtd||'')+'" id="foto-qtd-'+i+'" placeholder="un" '
-          +'style="font-size:13px;font-weight:700;padding:5px 6px;border:1.5px solid #86efac;border-radius:7px;text-align:center">'
-        +'<input type="number" value="'+(l.caixas||'')+'" id="foto-cx-'+i+'" placeholder="cx" '
-          +'style="font-size:13px;font-weight:700;padding:5px 6px;border:1.5px solid #86efac;border-radius:7px;text-align:center">'
-      +'</div>';
-    }).join('');
-
-    document.getElementById('foto-enc-linhas').innerHTML =
-      '<div style="display:grid;grid-template-columns:1fr 70px 60px;gap:6px;margin-bottom:4px">'
-      +'<span style="font-size:10px;font-weight:700;color:#6b7280">ARTIGO</span>'
-      +'<span style="font-size:10px;font-weight:700;color:#6b7280">UN</span>'
-      +'<span style="font-size:10px;font-weight:700;color:#6b7280">CX</span></div>'
-      + linhasHTML
-      +(result.cliente?'<div style="margin-top:8px;font-size:12px;color:#0369a1;font-weight:700">👤 Cliente: '+result.cliente+'</div>':'');
-
-    document.getElementById('foto-enc-resultado').style.display = 'block';
-    document.getElementById('btn-foto-criar').style.display = 'block';
-    status.textContent = '✅ '+_fotoEncLinhas.length+' artigo(s) detectado(s) — confirma e cria encomenda';
-    window._fotoEncCliente = result.cliente || '';
-
-  } catch(e) {
-    status.textContent = '❌ Erro: ' + e.message;
-    console.error(e);
-  }
-  document.getElementById('btn-foto-processar').disabled = false;
-}
-
-function criarEncDeFoto() {
-  // Ler os campos editados
-  var n = _fotoEncLinhas.length;
-  var linhas = [];
-  for (var i = 0; i < n; i++) {
-    var art = (document.getElementById('foto-art-'+i)||{value:''}).value.trim();
-    var qtd = parseInt((document.getElementById('foto-qtd-'+i)||{value:0}).value)||0;
-    var cx  = parseInt((document.getElementById('foto-cx-'+i)||{value:0}).value)||0;
-    if (!art || !qtd) continue;
-    linhas.push({ artigo: art, qtd: qtd, caixas: cx||Math.ceil(qtd/4), referencia:'', obsLinha:'' });
-  }
-  if (!linhas.length) { alert('Nenhuma linha válida'); return; }
-  var encs = getEncomendas();
-  var nr = encs.length ? Math.max.apply(null, encs.map(function(e){ return e.nr||0; })) + 1 : 1;
-  var totalQtd = linhas.reduce(function(s,l){ return s+l.qtd; },0);
-  var totalCx  = linhas.reduce(function(s,l){ return s+(l.caixas||0); },0);
-  var enc = {
-    id: 'enc_foto_'+Date.now(),
-    nr: nr,
-    cliente: window._fotoEncCliente || 'Cliente foto',
-    artigo: linhas.map(function(l){ return l.artigo; }).join(' + '),
-    qtd: totalQtd, caixas: totalCx,
-    linhas: linhas, lotes: [],
-    estado: 'aberta',
-    data: new Date().toISOString(),
-    dataFormatada: dataHoje(),
-    obs: 'Importado de foto'
-  };
-  encs.push(enc);
-  salvarEncomendas(encs);
-  marcarModificado('lc_encomendas_v1');
-  document.getElementById('modal-import-foto').remove();
-  renderizarEncomendas();
-  irPara('screen-enc-lista');
-  mostrarStatus('status-enc','✅ Encomenda #'+nr+' criada a partir de foto!','success');
-}
-
-
-function abrirImportarFotoEnc() {
-  var old = document.getElementById('modal-import-foto');
-  if (old) old.remove();
-  var modal = document.createElement('div');
-  modal.id = 'modal-import-foto';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
   modal.innerHTML = '<div style="background:white;border-radius:20px;padding:22px;width:100%;max-width:380px">'
     +'<div style="font-size:15px;font-weight:800;color:#1e3a5f;margin-bottom:4px">\ud83d\udcf7 Importar por Foto/PDF</div>'
     +'<div style="font-size:12px;color:#6b7280;margin-bottom:14px">Tira foto ou carrega imagem/PDF da encomenda.</div>'
@@ -13853,14 +13686,6 @@ function _adminGuardarGeminiKey() {
         </div>
       </div>
 
-            <div id="export-enc-section" style="margin-bottom:16px;display:none">
-        <div style="height:1px;background:#e5e7eb;margin-bottom:16px"></div>
-        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--texto-suave);margin-bottom:12px">📦 Relatório de Encomendas e Saídas</div>
-        <div style="display:flex;gap:8px">
-          <button onclick="exportarEncomendas('print')" style="flex:1;padding:12px 6px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>
-          <button onclick="exportarEncomendas('download')" style="flex:1;padding:12px 6px;background:#15803d;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">⬇️ Download</button>
-        </div>
-      </div>
       <button class="btn-back" onclick="irPara('screen-home')" style="margin-top:8px">← Voltar ao Início</button>
     </div>
 </body>
