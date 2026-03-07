@@ -1618,6 +1618,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
       <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <strong>Encomendas</strong></div>
       <div class="step-badge enc">📋 Encomendas</div>
       <button class="btn-primary roxo" style="margin-bottom:16px" onclick="irPara('screen-enc-nova')">+ Nova Encomenda</button>
+      <button style="margin-bottom:12px;width:100%;padding:14px;background:white;color:#1e3a5f;border:2px solid #1e3a5f;border-radius:14px;font-size:15px;font-weight:800;cursor:pointer" onclick="abrirImportarFotoEnc()">📷 Importar Foto / PDF</button>
       <div class="section-title">Encomendas abertas</div>
       <div class="enc-list" id="enc-lista-aberta"></div>
       <div class="divider"></div>
@@ -2076,6 +2077,29 @@ let encAtualId = null;
 let entradaC5Modo = 'normal'; // 'normal' ou 'outro'
 
 // --- STORAGE --
+function _tipoDoLote(lote, tipoAtual) {
+  // Normalise existing tipo
+  var t = (tipoAtual||'').toLowerCase().trim();
+  if (t==='ovelha'||t==='cabra'||t==='dop'||t==='requeijao'||t==='requeijão') return t;
+  // Infer from lote code: 261=ovelha, 262=requeijão, 263=cabra, 265=DOP
+  if (!lote) return tipoAtual||'';
+  var l = String(lote);
+  if (l.startsWith('261')) return 'ovelha';
+  if (l.startsWith('262')) return 'requeijao';
+  if (l.startsWith('263')) return 'cabra';
+  if (l.startsWith('265')) return 'dop';
+  return tipoAtual||'';
+}
+
+function _tipoLabel(tipo) {
+  var t = (tipo||'').toLowerCase();
+  if (t==='ovelha') return 'Ovelha';
+  if (t==='cabra') return 'Cabra';
+  if (t==='dop') return 'DOP';
+  if (t.includes('requeij')) return 'Requeijão';
+  return tipo||'';
+}
+
 function getEstado() {
   const s = localStorage.getItem('lc_camaras_v2');
   if (s) return JSON.parse(s);
@@ -3199,9 +3223,42 @@ function concluirEncomenda(id) {
   const enc = encs.find(e => e.id === id);
   if (!enc) return;
   enc.estado = 'concluida';
+  enc.dataConclusao = new Date().toISOString();
   salvarEncomendas(encs);
-  mostrarStatus('status-enc-det', '✓ Encomenda marcada como concluída', 'success');
-  setTimeout(() => { abrirEncomenda(id); }, 1500);
+  // Envio automático de email para qualidade
+  _enviarEmailQualidade(enc);
+  mostrarStatus('status-enc-det', '✓ Encomenda concluída — email enviado para qualidade@lactoceleiro.pt', 'success');
+  setTimeout(() => { abrirEncomenda(id); }, 2000);
+}
+
+function _enviarEmailQualidade(enc) {
+  if (!enc) return;
+  var linhasTexto = (enc.linhas||[{artigo:enc.artigo,qtd:enc.qtd}]).map(function(l,i){
+    return '  '+(i+1)+'. '+l.artigo+' — '+l.qtd+' un'+(l.caixas?' ('+l.caixas+' cx)':'')+(l.obsLinha?' — '+l.obsLinha:'');
+  }).join('\n');
+  var lotesTexto = (enc.lotes||[]).map(function(l){
+    return '  Lote: '+l.lote+' | '+l.qtd+' un'+(l.peso?' | '+Number(l.peso).toFixed(1)+' kg':'')+(l.validade?' | Val: '+l.validade:'');
+  }).join('\n');
+  var corpo = 'ENCOMENDA CONCLUÍDA — LactoCeleiro'
+    +'\n================================'
+    +'\nEncomenda #'+enc.nr
+    +'\nCliente: '+(enc.cliente||'—')
+    +'\nData: '+(enc.dataFormatada||new Date().toLocaleDateString('pt-PT'))
+    +(enc.dataEntrega ? '\nEntrega: '+enc.dataEntrega : '')
+    +'\n\nARTIGOS:\n'+linhasTexto
+    +(lotesTexto ? '\n\nLOTES SAÍDOS:\n'+lotesTexto : '')
+    +'\n================================'
+    +'\nLactoCeleiro — Gestão de Produção';
+  var assunto = 'Encomenda #'+enc.nr+' concluída — '+(enc.cliente||'')+ ' — LactoCeleiro';
+  var dest = 'qualidade@lactoceleiro.pt';
+  // Try navigator.share first (mobile), fallback to mailto
+  if (navigator.share) {
+    navigator.share({ title: assunto, text: corpo }).catch(function(){
+      window.open('mailto:'+dest+'?subject='+encodeURIComponent(assunto)+'&body='+encodeURIComponent(corpo));
+    });
+  } else {
+    window.open('mailto:'+dest+'?subject='+encodeURIComponent(assunto)+'&body='+encodeURIComponent(corpo));
+  }
 }
 
 function pedirReabrirEncomenda(id) {
@@ -4308,12 +4365,28 @@ function gerarRelatorio(formato) {
     return;
   }
 
-  // Mostrar no ecrã da app (fallback)
+  // Mostrar no ecrã (preview / fallback)
   document.getElementById('rel-data-hora').textContent = dataHoraStr;
   document.getElementById('rel-corpo').innerHTML = lotesHtml;
-  document.getElementById('rel-formato').value = formato;
-  irPara('screen-relatorio');
-  window.scrollTo(0,0);
+
+  // Mostrar modal inline com resultado
+  var existing = document.getElementById('modal-rel-preview');
+  if (existing) existing.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-rel-preview';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  modal.innerHTML = '<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto">'
+    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
+      + '<div style="font-size:15px;font-weight:800;color:#1e3a5f">Relatório de Lotes por Câmara</div>'
+      + '<button id="rel-prev-close" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">×</button>'
+    + '</div>'
+    + '<div style="font-size:11px;color:#9ca3af;margin-bottom:12px">' + dataHoraStr + '</div>'
+    + lotesHtml
+    + '<button onclick="window.print()" style="margin-top:12px;width:100%;padding:12px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-weight:800;cursor:pointer">🖨️ Imprimir</button>'
+  + '</div>';
+  document.body.appendChild(modal);
+  document.getElementById('rel-prev-close').onclick = function() { modal.remove(); };
+  window.scrollTo(0, 0);
 }
 
 // ===
@@ -5981,7 +6054,8 @@ function renderizarHistoricoQueijo() {
   }
 
   el.innerHTML = lista.map(r => {
-    const cfg = PQ_TIPOS[r.tipo] || { icon:'🧀', cor:'#92400e', bg:'#fffbeb', borda:'#fbbf24' };
+    const _tipo = _tipoDoLote(r.lote, r.tipo);
+    const cfg = PQ_TIPOS[_tipo] || PQ_TIPOS[r.tipo] || { icon:'🧀', cor:'#92400e', bg:'#fffbeb', borda:'#fbbf24' };
     const p = r.passos || {};
     const lotesStr = (r.lotesLeite||[]).map(l => l.label + ' ' + (l.litros||0).toFixed(0) + 'L').join(' + ');
     return '<div style="background:' + cfg.bg + ';border:2px solid ' + cfg.borda + ';border-radius:14px;padding:14px 16px">' +
@@ -8200,7 +8274,14 @@ async function testarGemini() {
   }
 }
 
-var PROMPT_IMPORT_ENC = 'Analisa esta imagem/documento. Extrai artigos e quantidades. Responde APENAS em JSON valido sem markdown: {"linhas":[{"artigo":"nome","qtd":numero,"referencia":"G ou P ou PP ou PPP ou vazio"}],"cliente":"nome ou vazio","obs":"obs ou vazio"}';
+var PROMPT_IMPORT_ENC = 'Analisa esta imagem ou documento (encomenda de queijo). '
+  + 'Extrai TODOS os artigos com quantidades. '
+  + 'Regras referencia: "grande" sem apimentado -> ref "G" (4un/cx), "pequeno" -> ref "P" (8un/cx), '
+  + '"apimentado" ou "apimentado grande" -> ref "PPP" (5un/cx), requeijao -> 9un/cx, cabra -> 8un/cx. '
+  + 'Soma artigos do mesmo tamanho se aparecerem em linhas separadas. '
+  + 'Responde APENAS em JSON valido sem markdown sem texto adicional: '
+  + '{"linhas":[{"artigo":"nome completo","qtd":numero,"referencia":"G ou P ou PP ou PPP ou DOP ou vazio","caixas":numero}],'
+  + '"cliente":"nome ou vazio","obs":"vazio ou observacoes","dataEntrega":"DD/MM/AAAA ou vazio"}';
 
 function _fecharModalImportFoto() {
   var m = document.getElementById('modal-import-foto');
@@ -8208,8 +8289,6 @@ function _fecharModalImportFoto() {
 }
 
 function abrirImportarFotoEnc() {
-  var key = localStorage.getItem('lc_gemini_key') || '';
-  if (!key) { alert('Configura a chave Gemini em Admin > Config.'); return; }
   _fecharModalImportFoto();
   var modal = document.createElement('div');
   modal.id = 'modal-import-foto';
@@ -8237,89 +8316,136 @@ async function _importFotoProcessar(input) {
   var preview   = document.getElementById('import-foto-preview');
   var resultado = document.getElementById('import-foto-resultado');
   var confirmar = document.getElementById('import-foto-confirmar');
-  if (status)    { status.textContent = 'A analisar imagem...'; status.style.color='#374151'; }
-  if (resultado) { resultado.style.display='none'; resultado.innerHTML=''; }
-  if (confirmar)   confirmar.style.display='none';
+  if (status)    { status.textContent = '\u23f3 A analisar...'; status.style.color = '#374151'; }
+  if (resultado) { resultado.style.display = 'none'; resultado.innerHTML = ''; }
+  if (confirmar) confirmar.style.display = 'none';
+
   if (file.type.startsWith('image/') && preview) {
-    preview.innerHTML = '<img src="'+URL.createObjectURL(file)+'" style="max-width:100%;max-height:140px;border-radius:8px;border:2px solid #e5e7eb">';
-    preview.style.display='block';
+    preview.innerHTML = '<img src="'+URL.createObjectURL(file)+'" style="max-width:100%;max-height:160px;border-radius:8px;border:2px solid #e5e7eb">';
+    preview.style.display = 'block';
   }
+
   var base64;
   try {
-    base64 = await new Promise(function(res,rej){
-      var r=new FileReader();
-      r.onload=function(e){res(e.target.result.split(',')[1]);};
-      r.onerror=rej; r.readAsDataURL(file);
+    base64 = await new Promise(function(res, rej) {
+      var r = new FileReader();
+      r.onload = function(e) { res(e.target.result.split(',')[1]); };
+      r.onerror = rej;
+      r.readAsDataURL(file);
     });
   } catch(err) {
-    if (status) { status.textContent = 'Erro a ler ficheiro: '+err.message; status.style.color='#dc2626'; }
+    if (status) { status.textContent = '\u274c Erro a ler ficheiro: ' + err.message; status.style.color = '#dc2626'; }
     return;
   }
+
   var mediaType = file.type || 'image/jpeg';
   var isPdf = file.type === 'application/pdf';
-  var key = localStorage.getItem('lc_gemini_key') || '';
+
   try {
-    var parts = isPdf
-      ? [{inline_data:{mime_type:'application/pdf',data:base64}},{text:PROMPT_IMPORT_ENC}]
-      : [{inline_data:{mime_type:mediaType,data:base64}},{text:PROMPT_IMPORT_ENC}];
-    var resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+key, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({contents:[{parts:parts}]})
+    var content = isPdf
+      ? [{type:'document', source:{type:'base64', media_type:'application/pdf', data:base64}},
+         {type:'text', text:PROMPT_IMPORT_ENC}]
+      : [{type:'image', source:{type:'base64', media_type:mediaType, data:base64}},
+         {type:'text', text:PROMPT_IMPORT_ENC}];
+
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: content }]
+      })
     });
     if (!resp.ok) {
-      var errData = await resp.json();
-      throw new Error((errData.error&&errData.error.message)||'HTTP '+resp.status);
+      var errData = await resp.json().catch(function(){ return {}; });
+      throw new Error((errData.error && errData.error.message) || 'HTTP ' + resp.status);
     }
     var data = await resp.json();
-    var text = (data.candidates||[]).map(function(c){
-      return ((c.content&&c.content.parts)||[]).map(function(p){return p.text||'';}).join('');
-    }).join('');
-    var clean = text.replace(/```json|```/g,'').trim();
+    var text = (data.content || []).map(function(b) { return b.text || ''; }).join('');
+    var clean = text.replace(/```json|```/g, '').trim();
     var parsed = JSON.parse(clean);
     window._importEncDados = parsed;
+
     var el = document.getElementById('import-foto-resultado');
     if (el) {
       el.style.display = 'block';
       var h = '<div style="font-size:12px;font-weight:800;color:#1e3a5f;margin-bottom:8px">Artigos detectados:</div>';
-      if (parsed.cliente) h += '<div style="font-size:12px;color:#374151;margin-bottom:6px">Cliente: <b>'+parsed.cliente+'</b></div>';
-      (parsed.linhas||[]).forEach(function(l){
-        h += '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px;margin-bottom:6px">';
-        h += '<div style="font-size:13px;font-weight:700;color:#15803d">'+l.artigo+'</div>';
-        h += '<div style="font-size:12px;color:#374151">Qtd: '+l.qtd+(l.referencia?' - Ref: '+l.referencia:'')+'</div>';
-        h += '</div>';
+      if (parsed.cliente) h += '<div style="font-size:12px;color:#374151;margin-bottom:6px">Cliente: <b>' + parsed.cliente + '</b></div>';
+      if (parsed.dataEntrega) h += '<div style="font-size:12px;color:#374151;margin-bottom:4px">\ud83d\udcc5 Entrega: <b>' + parsed.dataEntrega + '</b></div>';
+      (parsed.linhas || []).forEach(function(l) {
+        var cx = l.caixas ? ' (' + l.caixas + ' cx)' : '';
+        h += '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px;margin-bottom:6px">'
+          + '<div style="font-size:13px;font-weight:700;color:#15803d">' + (l.artigo||'') + '</div>'
+          + '<div style="font-size:12px;color:#374151">Qtd: ' + (l.qtd||0) + (l.referencia ? ' \u2014 Ref: ' + l.referencia : '') + cx + '</div>'
+          + '</div>';
       });
       el.innerHTML = h;
     }
-    if (status) { status.textContent = 'Encomenda lida com sucesso!'; status.style.color='#15803d'; }
-    if (confirmar) confirmar.style.display='block';
+    if (status) { status.textContent = '\u2705 Encomenda lida com sucesso!'; status.style.color = '#15803d'; }
+    if (confirmar) confirmar.style.display = 'block';
   } catch(e) {
-    if (status) { status.textContent = 'Erro: '+e.message; status.style.color='#dc2626'; }
+    if (status) { status.textContent = '\u274c Erro: ' + e.message; status.style.color = '#dc2626'; }
   }
 }
 
 function _confirmarImportEnc() {
   var dados = window._importEncDados;
   if (!dados||!dados.linhas||!dados.linhas.length) { alert('Sem dados para importar.'); return; }
+
+  // Merge same-size queijo types across lines (e.g. multiple "grande" brands → sum)
+  var linhasRaw = dados.linhas||[];
+  var mergedMap = {};
+  linhasRaw.forEach(function(l) {
+    var artigo = (l.artigo||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    var ref = (l.referencia||'').toUpperCase();
+    // Infer ref from artigo name if missing
+    if (!ref) {
+      if (artigo.includes('grande') && artigo.includes('apimentado')) ref = 'PPP';
+      else if (artigo.includes('grande')) ref = 'G';
+      else if (artigo.includes('pequen')) ref = 'P';
+      else if (artigo.includes('unidade') || artigo.endsWith(' un')) ref = 'PP';
+    }
+    var isRequeijao = artigo.includes('requeij');
+    var isCabra = artigo.includes('cabra');
+    // Caixas per unit
+    var cxPorUn = 4; // default grande
+    if (isRequeijao) cxPorUn = 9;
+    else if (ref==='P') cxPorUn = 8;
+    else if (ref==='PPP') cxPorUn = 5;
+    else if (ref==='G') cxPorUn = 4;
+    else if (ref==='DOP') cxPorUn = 4;
+    // Merge key: same ref same type
+    var mergeKey = isRequeijao ? 'requeijao_'+artigo : (isCabra ? 'cabra_'+ref : 'ovelha_'+ref);
+    var qtd = parseInt(l.qtd)||1;
+    if (!mergedMap[mergeKey]) {
+      mergedMap[mergeKey] = { artigo: l.artigo, ref: ref, qtd: 0, cxPorUn: cxPorUn, obsLinha: '' };
+    }
+    mergedMap[mergeKey].qtd += qtd;
+  });
+
+  var linhas = Object.values(mergedMap).map(function(m) {
+    return {
+      artigo: m.artigo, qtd: m.qtd,
+      caixas: Math.ceil(m.qtd / m.cxPorUn),
+      referencia: m.ref, lote:'', camara:null, validade:'', obsLinha:''
+    };
+  });
+
   var enc = {
     id:'enc_'+Date.now(), nr:(getEncomendas().length||0)+1,
-    cliente:dados.cliente||'Importado', obs:dados.obs||'', estado:'aberta',
-    data:new Date().toISOString(),
-    dataFormatada:new Date().toLocaleDateString('pt-PT',{day:'numeric',month:'long'}),
-    dataEntrega:'', dataExpedicao:'',
-    linhas:(dados.linhas||[]).map(function(l){
-      var ref=(l.referencia||'').toUpperCase();
-      var cxPorUn = ref==='G' ? 3 : (ref==='P' ? 6 : 1);
-      var qtd = parseInt(l.qtd)||1;
-      return { artigo:l.artigo, qtd:qtd, caixas:Math.ceil(qtd/cxPorUn), referencia:l.referencia||'', lote:'', camara:null, validade:'', obsLinha:'' };
-    }),
-    lotes:[], importadaFoto:true
+    cliente: dados.cliente||'Importado', obs: dados.obs||'', estado:'aberta',
+    data: new Date().toISOString(),
+    dataFormatada: new Date().toLocaleDateString('pt-PT',{day:'numeric',month:'long'}),
+    dataEntrega: dados.dataEntrega||'', dataExpedicao: dados.dataExpedicao||'',
+    linhas: linhas, lotes:[], importadaFoto:true
   };
   var encs = getEncomendas(); encs.push(enc);
   localStorage.setItem('lc_encomendas_v1', JSON.stringify(encs));
   _fecharModalImportFoto();
   renderizarEncomendas();
   irPara('screen-enc');
-  alert('Encomenda importada com sucesso! Verifica artigos e quantidades.');
+  alert('Encomenda importada!\nVerifica artigos, quantidades e datas.\nQueijos do mesmo tamanho foram somados.');
 }
 
 
@@ -9676,8 +9802,9 @@ function editarProducaoQueijo(id) {
   if (!reg) return;
 
   const TIPOS_Q = ['DOP','Ovelha','Cabra'];
+  var _tipoInfer = _tipoDoLote(reg.lote, reg.tipo);
   const tipoOpts = TIPOS_Q.map(t =>
-    '<option value="'+t+'" '+(( reg.tipo||'')==t?'selected':'')+'>'+t+'</option>'
+    '<option value="'+t+'" '+(_tipoInfer.toLowerCase()===t.toLowerCase()?'selected':'')+'>'+t+'</option>'
   ).join('');
 
   const html = '<div id="modal-edit" style="position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto">'
@@ -9703,7 +9830,7 @@ function editarProducaoQueijo(id) {
       +'<div><label style="font-size:11px;font-weight:700;color:#6b7280">HORA INÍCIO</label>'
         +'<input id="ed-hinicio" type="time" value="'+(reg.horaInicio||'')+'" style="width:100%;padding:9px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box"></div>'
       +'<div><label style="font-size:11px;font-weight:700;color:#6b7280">HORA FIM</label>'
-        +'<input id="ed-hfim" type="time" value="'+(reg.horaFim||'')+'" style="width:100%;padding:9px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box"></div>'
+        +'<input id="ed-hfim" type="time" value="'+((reg.horaConclusao||reg.horaFim||'').slice(11,16))+'" style="width:100%;padding:9px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box"></div>'
     +'</div>'
     // Qtd + Peso + Caixas
     +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">'
@@ -10915,17 +11042,20 @@ function _rlRecolherTodos() {
   var todos = [];
   // Produções concluídas
   (getProdutosQueijo()||[]).forEach(function(p) {
-    todos.push({tipo:'pq', data:p.data||p.horaInicio, lote:p.lote, obj:p});
+    var dt = p.data||p.horaConclusao||p.horaInicio||'';
+    todos.push({tipo:'pq', data:dt, lote:p.lote, obj:p});
   });
   // Produções em curso
   (getProdEmCurso()||[]).forEach(function(p) {
-    todos.push({tipo:'pq', data:p.data||p.horaInicio, lote:p.lote, obj:p});
+    var dt = p.data||p.horaConclusao||p.horaInicio||'';
+    todos.push({tipo:'pq', data:dt, lote:p.lote, obj:p});
   });
   // Câmaras de cura 1-5 (lotes ainda em câmara)
   var e=getEstado();
   [1,2,3,4,5].forEach(function(c) {
     (e[c]||[]).forEach(function(l) {
-      todos.push({tipo:'camara', camara:c, data:l.data, lote:l.lote, obj:l});
+      var dt = l.data || l.dataEntrada || '';
+      todos.push({tipo:'camara', camara:c, data:dt, lote:l.lote, obj:l});
     });
   });
   // Histórico de saídas
@@ -11056,7 +11186,22 @@ function _gerarRelCamaras() {
   var tipo  = window._rcamTipoAtual||'entrada';
   var ini   = (document.getElementById('rcam-ini')||{}).value||'';
   var fim   = (document.getElementById('rcam-fim')||{}).value||'';
-  var loteF = ((document.getElementById('rcam-lote')||{}).value||'').trim().toLowerCase();
+  var loteF    = ((document.getElementById('rcam-lote')||{}).value||'').trim().toLowerCase();
+  var loteDe   = ((document.getElementById('rcam-lote-de')||{}).value||'').trim().toLowerCase();
+  var loteAte  = ((document.getElementById('rcam-lote-ate')||{}).value||'').trim().toLowerCase();
+  var camaraF  = ((document.getElementById('rcam-camara')||{}).value||'').trim();
+
+  function _lotePassaFiltro(lote) {
+    var l = (lote||'').toLowerCase();
+    if (loteF  && l !== loteF)  return false;
+    if (loteDe && l < loteDe)   return false;
+    if (loteAte && l > loteAte) return false;
+    return true;
+  }
+  function _camaraPassaFiltro(cam) {
+    if (!camaraF) return true;
+    return String(cam) === String(camaraF);
+  }
   var hist  = getHistorico();
   var estado= getEstado();
   var registos = [];
@@ -11100,7 +11245,8 @@ function _gerarRelCamaras() {
   registos=registos.filter(function(r){
     var ts=r.data?new Date(r.data).getTime():0;
     if(ts<iniMs||ts>fimMs)return false;
-    if(loteF&&!(r.lote||'').toLowerCase().includes(loteF))return false;
+    if(!_lotePassaFiltro(r.lote))return false;
+    if(camaraF && !_camaraPassaFiltro(r.camara||r.camaraDestino||''))return false;
     return true;
   }).sort(function(a,b){ return (a.camara||0)-(b.camara||0)||(a.data||'')<(b.data||'')?-1:1; });
 
@@ -11608,6 +11754,56 @@ cams.forEach(function(l, ci) {
       }
     }
 
+    // ── RESUMO FINAL: perda total + dias comercialização ──
+    if(pq) {
+      var pesoFabrico = Number(pq.peso||0);
+      var pesoUltimo = 0;
+      if(cams.length>0) {
+        for(var ci2=cams.length-1; ci2>=0; ci2--) {
+          var pp2 = Number(cams[ci2].pesoOriginal||cams[ci2].peso||0);
+          if(pp2>0){ pesoUltimo=pp2; break; }
+        }
+      }
+      var perdaTotal = (pesoFabrico>0 && pesoUltimo>0 && pesoFabrico>pesoUltimo)
+        ? (pesoFabrico-pesoUltimo) : 0;
+      var perdaTotalPct = (perdaTotal>0 && pesoFabrico>0) ? (perdaTotal/pesoFabrico*100) : 0;
+
+      // Dias fabrico → 1ª saída (início comercialização)
+      var dataFabrico = pq.data||pq.horaConclusao||pq.horaInicio||null;
+      var saidas1 = (d.saidas||[]).filter(function(s){ return s.data; }).sort(function(a,b){ return a.data<b.data?-1:1; });
+      var dataInicioVenda = saidas1.length>0 ? saidas1[0].data : null;
+      var dataFimVenda = saidas1.length>0 ? saidas1[saidas1.length-1].data : null;
+      var diasFabricoVenda = (dataFabrico&&dataInicioVenda)
+        ? Math.round((new Date(dataInicioVenda)-new Date(dataFabrico))/864e5) : null;
+      var diasVendaTotal = (dataInicioVenda&&dataFimVenda&&dataInicioVenda!==dataFimVenda)
+        ? Math.round((new Date(dataFimVenda)-new Date(dataInicioVenda))/864e5) : null;
+
+      if(perdaTotal>0 || diasFabricoVenda!==null) {
+        html+='<div style="padding:0 18px 16px">';
+        html+='<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#6b7280;letter-spacing:.05em;margin-bottom:8px">📊 Resumo Final</div>';
+        html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px">';
+        if(perdaTotal>0) {
+          html+='<div style="background:#fef2f2;border:1px solid #fecaca;border-radius:9px;padding:10px 12px;text-align:center">'
+            +'<div style="font-size:10px;color:#6b7280;font-weight:700;text-transform:uppercase">Perda total</div>'
+            +'<div style="font-size:18px;font-weight:900;color:#dc2626">−'+perdaTotal.toFixed(2)+' kg</div>'
+            +'<div style="font-size:11px;color:#991b1b;font-weight:700">'+perdaTotalPct.toFixed(1)+'%</div>'
+          +'</div>';
+        }
+        if(diasFabricoVenda!==null) {
+          html+='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:9px;padding:10px 12px;text-align:center">'
+            +'<div style="font-size:10px;color:#6b7280;font-weight:700;text-transform:uppercase">Fabrico→1ª venda</div>'
+            +'<div style="font-size:18px;font-weight:900;color:#15803d">'+diasFabricoVenda+'d</div>'
+          +'</div>';
+        }
+        if(diasVendaTotal!==null) {
+          html+='<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:9px;padding:10px 12px;text-align:center">'
+            +'<div style="font-size:10px;color:#6b7280;font-weight:700;text-transform:uppercase">Período de venda</div>'
+            +'<div style="font-size:18px;font-weight:900;color:#1e40af">'+diasVendaTotal+'d</div>'
+          +'</div>';
+        }
+        html+='</div></div>';
+      }
+    }
     html+='</div>'; // fim card lote
   });
 
