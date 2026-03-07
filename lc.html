@@ -8398,6 +8398,54 @@ const PERFIS = {
   expedicao:  { label:"Expedição",     areas:["encomendas","criar-enc","exportar-enc","ver-enc-expedidas","ver-relatorios"] },
 };
 
+
+// === GEMINI AI ===
+var GEMINI_API_KEY = localStorage.getItem('lc_gemini_key') || '';
+var GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=';
+
+function _mostrarGeminiStatus() {
+  var el = document.getElementById('gemini-key-status');
+  if (!el) return;
+  var key = localStorage.getItem('lc_gemini_key') || '';
+  if (!key) {
+    el.textContent = 'Sem chave — importar foto nao funciona';
+    el.style.background = '#fef2f2'; el.style.color = '#dc2626';
+  } else {
+    el.textContent = 'Chave activa: ' + key.slice(0,10) + '...' + key.slice(-4);
+    el.style.background = '#f0fdf4'; el.style.color = '#15803d';
+  }
+}
+
+function _adminGuardarGeminiKey() {
+  var inp = document.getElementById('admin-gemini-key-inp');
+  if (!inp) return;
+  var key = inp.value.trim();
+  if (!key || !key.startsWith('AIza')) { alert('Chave invalida — deve comecar por AIza...'); return; }
+  localStorage.setItem('lc_gemini_key', key);
+  GEMINI_API_KEY = key;
+  inp.value = '';
+  _mostrarGeminiStatus();
+  alert('Chave guardada!');
+}
+
+async function testarGemini() {
+  var key = localStorage.getItem('lc_gemini_key') || '';
+  if (!key) { alert('Configura a chave primeiro.'); return; }
+  var el = document.getElementById('gemini-key-status');
+  if (el) { el.textContent = 'A testar...'; el.style.background='#eff6ff'; el.style.color='#1e40af'; }
+  try {
+    var resp = await fetch(GEMINI_URL_BASE + key, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({contents:[{parts:[{text:'Responde apenas: OK'}]}]})
+    });
+    var data = await resp.json();
+    var txt = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'sem resposta';
+    if (el) { el.textContent = 'Gemini OK: ' + txt; el.style.background='#f0fdf4'; el.style.color='#15803d'; }
+  } catch(e) {
+    if (el) { el.textContent = 'Erro: ' + e.message; el.style.background='#fef2f2'; el.style.color='#dc2626'; }
+  }
+}
+
 var _utilizadorAtual = null;
 var _PIN_BUF = ''; // PIN buffer
 
@@ -8899,56 +8947,6 @@ const SCREEN_PERMISSOES = {
 // ADMINISTRAÇÃO
 // ===
 
-
-// === GEMINI AI CONFIG ===
-var GEMINI_API_KEY = localStorage.getItem('lc_gemini_key') || '';
-var GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=';
-
-function _mostrarGeminiStatus() {
-  var el = document.getElementById('gemini-key-status');
-  if (!el) return;
-  var key = localStorage.getItem('lc_gemini_key') || '';
-  if (!key) {
-    el.textContent = '⚠️ Sem chave configurada — importar foto não funciona';
-    el.style.background = '#fef2f2'; el.style.color = '#dc2626';
-  } else {
-    var masked = key.slice(0,10) + '...' + key.slice(-4);
-    el.textContent = '✓ Chave configurada: ' + masked;
-    el.style.background = '#f0fdf4'; el.style.color = '#15803d';
-  }
-}
-
-function _adminGuardarGeminiKey() {
-  var inp = document.getElementById('admin-gemini-key-inp');
-  if (!inp) return;
-  var key = inp.value.trim();
-  if (!key) { alert('Cola a chave antes de guardar.'); return; }
-  if (!key.startsWith('AIza')) { alert('Chave inválida — deve começar por AIza...'); return; }
-  localStorage.setItem('lc_gemini_key', key);
-  GEMINI_API_KEY = key;
-  inp.value = '';
-  _mostrarGeminiStatus();
-  alert('✓ Chave guardada!');
-}
-
-async function testarGemini() {
-  var key = localStorage.getItem('lc_gemini_key') || '';
-  if (!key) { alert('Configura a chave primeiro.'); return; }
-  var el = document.getElementById('gemini-key-status');
-  if (el) { el.textContent = '⏳ A testar...'; el.style.background='#eff6ff'; el.style.color='#1e40af'; }
-  try {
-    var resp = await fetch(GEMINI_URL_BASE + key, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ contents:[{parts:[{text:'Responde apenas: OK'}]}] })
-    });
-    var data = await resp.json();
-    var txt = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'sem resposta';
-    if (el) { el.textContent = '✓ Gemini OK: ' + txt; el.style.background='#f0fdf4'; el.style.color='#15803d'; }
-  } catch(e) {
-    if (el) { el.textContent = '✗ Erro: ' + e.message; el.style.background='#fef2f2'; el.style.color='#dc2626'; }
-  }
-}
-
 function abrirAdmin() {
   if (!temPermissao('admin')) return;
   irPara('screen-admin');
@@ -8959,17 +8957,14 @@ function abrirAdmin() {
 function adminTab(tab) {
   document.getElementById('admin-panel-utilizadores').style.display = tab === 'utilizadores' ? '' : 'none';
   document.getElementById('admin-panel-dados').style.display        = tab === 'dados'        ? '' : 'none';
-  var cfgPanel = document.getElementById('admin-panel-config');
-  if (cfgPanel) cfgPanel.style.display = tab === 'config' ? '' : 'none';
   document.getElementById('tab-utilizadores').style.background = tab === 'utilizadores' ? '#1e3a5f' : '#f3f4f6';
   document.getElementById('tab-utilizadores').style.color      = tab === 'utilizadores' ? 'white'   : '#6b7280';
   document.getElementById('tab-dados').style.background = tab === 'dados' ? '#1e3a5f' : '#f3f4f6';
   document.getElementById('tab-dados').style.color      = tab === 'dados' ? 'white'   : '#6b7280';
+  var cfgPanel = document.getElementById('admin-panel-config');
+  if (cfgPanel) cfgPanel.style.display = tab === 'config' ? '' : 'none';
   var cfgBtn = document.getElementById('tab-config');
-  if (cfgBtn) {
-    cfgBtn.style.background = tab === 'config' ? '#1e3a5f' : '#f3f4f6';
-    cfgBtn.style.color      = tab === 'config' ? 'white'   : '#6b7280';
-  }
+  if (cfgBtn) { cfgBtn.style.background = tab==='config'?'#1e3a5f':'#f3f4f6'; cfgBtn.style.color = tab==='config'?'white':'#6b7280'; }
   if (tab === 'utilizadores') adminRenderUtilizadores();
   if (tab === 'config') _mostrarGeminiStatus();
 }
@@ -12803,20 +12798,20 @@ setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
 
       <!-- PAINEL CONFIG -->
       <div id="admin-panel-config" style="display:none">
-        <div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:14px;padding:16px;margin-bottom:12px">
-          <div style="font-size:14px;font-weight:800;color:#1e40af;margin-bottom:6px">🤖 Gemini AI — Importar Encomendas por Foto</div>
-          <div style="font-size:12px;color:#6b7280;margin-bottom:12px">Necessário para importar encomendas a partir de foto ou PDF.</div>
-          <div id="gemini-key-status" style="font-size:12px;font-weight:700;margin-bottom:12px;padding:10px;border-radius:8px;background:#f8fafc;color:#374151"></div>
-          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:6px">NOVA CHAVE API (começa por AIzaSy...)</label>
-          <input type="password" id="admin-gemini-key-inp" placeholder="Cole aqui a chave Gemini"
-            style="width:100%;padding:10px;border:2px solid #bfdbfe;border-radius:8px;font-size:13px;font-family:monospace;box-sizing:border-box;margin-bottom:10px">
+        <div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:14px;padding:16px">
+          <div style="font-size:15px;font-weight:800;color:#1e40af;margin-bottom:6px">🤖 Gemini AI</div>
+          <div style="font-size:12px;color:#6b7280;margin-bottom:12px">Chave para importar encomendas por foto/PDF.</div>
+          <div id="gemini-key-status" style="font-size:12px;font-weight:700;margin-bottom:12px;padding:10px;border-radius:8px;background:#fef2f2;color:#dc2626">Sem chave configurada</div>
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Chave API Gemini (AIzaSy...)</label>
+          <input type="password" id="admin-gemini-key-inp" placeholder="Cole aqui a chave"
+            style="width:100%;padding:10px;border:2px solid #bfdbfe;border-radius:8px;font-size:13px;font-family:monospace;box-sizing:border-box;margin-bottom:12px">
           <div style="display:flex;gap:8px">
             <button onclick="_adminGuardarGeminiKey()"
-              style="flex:2;padding:12px;background:#1e40af;color:white;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px">
-              💾 Guardar Chave
+              style="flex:2;padding:12px;background:#1e40af;color:white;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-size:14px">
+              💾 Guardar
             </button>
             <button onclick="testarGemini()"
-              style="flex:1;padding:12px;background:#f0fdf4;border:2px solid #86efac;border-radius:8px;font-weight:700;color:#15803d;cursor:pointer;font-size:13px">
+              style="flex:1;padding:12px;background:#f0fdf4;border:2px solid #86efac;border-radius:8px;font-weight:700;color:#15803d;cursor:pointer;font-size:14px">
               ✓ Testar
             </button>
           </div>
