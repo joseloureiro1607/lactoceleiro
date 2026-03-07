@@ -1233,7 +1233,8 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
           <button class="pq-passo-btn" style="background:#dc2626" onclick="terminarLavagem()">Fim</button>
         </div>
       </div>
-      <div style="margin-top:12px">
+      <div id="lavagem-pause-area" style="margin-top:12px;display:flex;flex-direction:column;gap:8px"></div>
+      <div style="margin-top:8px">
         <button class="btn-back" onclick="irPara('screen-lote-detalhe')">← Cancelar</button>
       </div>
     </div>
@@ -2019,13 +2020,13 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
       <div class="rel-data" id="rel-data-hora"></div>
     </div>
     <div id="rel-corpo"></div>
-    <div class="rel-rodape">LactoCeleiro · Gerado automaticamente pela app de gestão de câmaras</div>
+    <div class="rel-rodape">LactoCeleiro · Gerado automaticamente</div>
+    </div>
   </div>
+</div>
 
-  </div><!-- /body -->
-</div><!-- /container -->
-
-<script>// ===
+<script>
+// ===
 // CONSTANTES E ESTADO
 // ===
 const MESES_FULL = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -4328,6 +4329,7 @@ function salvarCongelacoes(lista) {
 var congCamaraAtual = 8;
 var congLoteOrigemCamara = null;  // null = lote manual (outro)
 var congLoteOrigemIdx   = null;
+var congLoteOrigemId    = null;
 
 function irParaCongelacao() {
   renderizarCongelacoes();
@@ -4377,6 +4379,7 @@ function selecionarLoteCongelacao(camara, idx) {
   congLoteOrigemIdx = idx;
   var e = getEstado();
   var l = e[camara][idx];
+  congLoteOrigemId = l ? l.id : null;
   // mostrar info do lote; esconder campo manual
   document.getElementById('cong-lote-info').style.display = 'block';
   document.getElementById('cong-lote-manual-group').style.display = 'none';
@@ -4401,6 +4404,7 @@ function congOutroComAutorizacao() {
       // autorizado — abrir formulário manual
       congLoteOrigemCamara = null;
       congLoteOrigemIdx = null;
+      congLoteOrigemId = null;
       document.getElementById('cong-lote-info').style.display = 'none';
       document.getElementById('cong-lote-manual-group').style.display = 'block';
       document.getElementById('cong-lote').value = '';
@@ -5304,6 +5308,8 @@ function selecionarRefPQ2(ref) {
   } else {
     nota.style.display = 'none';
   }
+
+  if (typeof ajustarCamposPeso === 'function') ajustarCamposPeso(pqTipoAtual, ref);
 }
 
 function aceitarLoteSugerido() {
@@ -5705,10 +5711,8 @@ function mostrarSelectorCamara(prod) {
         +'<div style="font-size:13px;font-weight:800;color:#7f1d1d;margin-bottom:8px">🏠 Câmara 5 — PPP</div>'
         +'<label style="font-size:11px;font-weight:700;color:#6b7280">Qtd (un)</label>'
         +'<input id="pq-ppp-qtd" type="number" min="0" value="'+Math.floor(qtdTotal/2)+'" style="width:100%;padding:7px;border:1.5px solid #fca5a5;border-radius:7px;font-size:15px;font-weight:700;margin-top:2px;box-sizing:border-box">'
-        +'<label style="font-size:11px;font-weight:700;color:#6b7280;margin-top:5px;display:block">Peso (kg)</label>'
-        +'<input id="pq-ppp-peso" type="number" step="0.1" min="0" value="'+parseFloat((pesoTotal/2).toFixed(1))+'" style="width:100%;padding:7px;border:1.5px solid #fca5a5;border-radius:7px;font-size:15px;font-weight:700;margin-top:2px;box-sizing:border-box">'
-      +'</div>'
-    +'</div>';
+        +'<input type="hidden" id="pq-ppp-peso" value="0">'
++'</div>';
     innerHTML += '<button onclick="_enviarCabraMultiRef('+prod._tempQtd+','+prod._tempPeso+')" '
       +'style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:8px">'
       +'✓ Confirmar distribuição</button>';
@@ -5736,16 +5740,48 @@ function _enviarCabraMultiRef(qtdTotalOrig, pesoTotalOrig) {
   var qtdG   = parseInt(document.getElementById('pq-g-qtd')?.value)   || 0;
   var pesoG  = parseFloat(document.getElementById('pq-g-peso')?.value) || 0;
   var qtdPPP = parseInt(document.getElementById('pq-ppp-qtd')?.value)  || 0;
-  var pesoPPP= parseFloat(document.getElementById('pq-ppp-peso')?.value)|| 0;
 
   if (qtdG <= 0 && qtdPPP <= 0) {
     alert('Introduza pelo menos uma quantidade');
     return;
   }
-  // Finalizar com dados multi-ref
+
+  if (qtdG > 0) {
+    var old = document.getElementById('modal-cabra-cam');
+    if (old) old.remove();
+    var modal = document.createElement('div');
+    modal.id = 'modal-cabra-cam';
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+    var inner = document.createElement('div');
+    inner.style.cssText = 'background:white;border-radius:20px 20px 0 0;padding:22px;width:100%;max-width:400px';
+    inner.innerHTML = '<div style="font-size:15px;font-weight:800;color:#15803d;margin-bottom:6px">Queijo G — Para qual camara?</div>'
+      +'<div style="font-size:12px;color:#6b7280;margin-bottom:16px">PPP fica sempre na Camara 5.</div>'
+      +'<div style="display:flex;gap:12px;margin-bottom:12px">'
+        +'<button id="btn-cabra-c3" style="flex:1;padding:20px;background:#15803d;color:white;border:none;border-radius:14px;font-size:24px;font-weight:900;cursor:pointer">3</button>'
+        +'<button id="btn-cabra-c5" style="flex:1;padding:20px;background:#7f1d1d;color:white;border:none;border-radius:14px;font-size:24px;font-weight:900;cursor:pointer">5</button>'
+      +'</div>'
+      +'<button id="btn-cabra-cancel" style="width:100%;padding:11px;background:#f3f4f6;border:none;border-radius:10px;cursor:pointer">Cancelar</button>';
+    modal.appendChild(inner);
+    document.body.appendChild(modal);
+    document.getElementById('btn-cabra-c3').onclick = function(){ _confirmarCabraCam(3, qtdG, pesoG, qtdPPP); };
+    document.getElementById('btn-cabra-c5').onclick = function(){ _confirmarCabraCam(5, qtdG, pesoG, qtdPPP); };
+    document.getElementById('btn-cabra-cancel').onclick = function(){ modal.remove(); };
+  } else {
+    var el = document.getElementById('pq-camara-selector');
+    if (el) el.remove();
+    finalizarProducaoMultiRef({ PPP: {qtd:qtdPPP, peso:0, camara:5} });
+  }
+}
+
+function _confirmarCabraCam(camaraG, qtdG, pesoG, qtdPPP) {
+  var m = document.getElementById('modal-cabra-cam');
+  if (m) m.remove();
   var el = document.getElementById('pq-camara-selector');
   if (el) el.remove();
-  finalizarProducaoMultiRef({ G: {qtd:qtdG, peso:pesoG, camara:3}, PPP: {qtd:qtdPPP, peso:pesoPPP, camara:5} });
+  var distribuicao = {};
+  if (qtdG > 0) distribuicao.G   = {qtd:qtdG,  peso:pesoG, camara:camaraG};
+  if (qtdPPP > 0) distribuicao.PPP = {qtd:qtdPPP, peso:0, camara:5};
+  finalizarProducaoMultiRef(distribuicao);
 }
 
 function fecharSelectorCamara() {
@@ -10254,17 +10290,8 @@ function _mostrarLavagemEmCurso(lote) {
   document.getElementById('lavagem-hora-inicio').textContent = '\u25B6 In\xEDcio: ' + hh + ' \xA0\xB7\xA0 ' + lavagemNumPessoas + ' p.';
 
   // Botão Pausa/Retomar — injectar no ecrã
-  var btnArea = document.getElementById('lavagem-pause-area');
-  if (!btnArea) {
-    var screen = document.getElementById('screen-lavagem-em-curso');
-    if (screen) {
-      var wrapper = document.createElement('div');
-      wrapper.id = 'lavagem-pause-area';
-      wrapper.style.cssText = 'margin-top:12px;display:flex;flex-direction:column;gap:8px';
-      screen.insertBefore(wrapper, screen.querySelector('.btn-back') || screen.lastElementChild);
-    }
-    btnArea = document.getElementById('lavagem-pause-area');
-  }
+    var btnArea = document.getElementById('lavagem-pause-area');
+  if (btnArea) btnArea.innerHTML = '';
   _atualizarBotaoPausa();
   irPara('screen-lavagem-em-curso');
 }
@@ -10279,14 +10306,27 @@ function _atualizarBotaoPausa() {
   var pausado = !!_lavPausadaEm;
   var totalPausaMs = _lavPausas.reduce(function(s,p){ return s+(p.fim?new Date(p.fim)-new Date(p.ini):0); },0);
   var pausaMin = Math.round(totalPausaMs/60000);
-  area.innerHTML = '<button onclick="' + (pausado ? 'retomar' : 'pausar') + 'Lavagem()" '
-    + 'style="width:100%;padding:14px;background:' + (pausado ? '#15803d' : '#d97706') + ';color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer">'
-    + (pausado ? '\u25B6 Retomar Lavagem' : '\u23F8\uFE0F Pausar Lavagem')
-    + '</button>'
-    + (pausaMin > 0 ? '<div style="text-align:center;font-size:12px;color:#6b7280">\u23F8\uFE0F Pausas acumuladas: ' + pausaMin + ' min</div>' : '')
-    + (pausado ? '<div style="background:#fef3c7;border-radius:8px;padding:8px;text-align:center;font-size:13px;font-weight:700;color:#92400e">Em PAUSA desde '
-      + (function(){var d=new Date(_lavPausadaEm);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');})()
-      + '</div>' : '');
+
+  var html = '';
+
+  if (pausado) {
+    // Em pausa: mostrar info de pausa + botão RETOMAR (principal) + TERMINAR (secundário)
+    html += '<div style="background:#fef3c7;border-radius:10px;padding:10px 12px;text-align:center;font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px">'
+      + '⏸️ Em PAUSA desde '
+      + (function(){ var d=new Date(_lavPausadaEm); return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0'); })()
+      + '</div>';
+    html += '<button onclick="retomarLavagem()" style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:8px">▶ Retomar Lavagem</button>';
+    html += '<button onclick="terminarLavagem()" style="width:100%;padding:12px;background:#dc2626;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">⏹ Terminar Lavagem</button>';
+  } else {
+    // Em curso: mostrar PAUSA (secundário) - TERMINAR já está no card de cima
+    html += '<button onclick="pausarLavagem()" style="width:100%;padding:12px;background:#d97706;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">⏸️ Pausar Lavagem</button>';
+  }
+
+  if (pausaMin > 0) {
+    html += '<div style="text-align:center;font-size:12px;color:#6b7280;margin-top:6px">⏸️ Pausas acumuladas: ' + pausaMin + ' min</div>';
+  }
+
+  area.innerHTML = html;
 }
 
 function pausarLavagem() {
@@ -10344,6 +10384,11 @@ function terminarLavagem() {
   document.getElementById('lavagem-fim-qtd').value = lote.qtd || '';
   document.getElementById('lavagem-fim-kg').value  = lote.peso ? Number(lote.peso).toFixed(1) : '';
   _lavPausas = []; _lavPausadaEm = null;
+  // Pre-fill unidades do lote (valor padrão = qtd actual)
+  var qtdInput = document.getElementById('lav-qtd-saida');
+  if (qtdInput && lote && lote.qtd) {
+    if (!qtdInput.value || qtdInput.value === '0') qtdInput.value = lote.qtd;
+  }
   irPara('screen-lavagem-fim');
 }
 
@@ -10442,42 +10487,7 @@ function _transfHTMLOrigem(e, cores, bgs) {
   return html;
 }
 
-function _transfEscolherOrigem(camara) {
-  _transfOrigem = camara;
-  var e = getEstado();
-  var lotes = (e[camara]||[]).filter(function(l){ return l.qtd>0; });
-  var cores = {1:'#1e40af',2:'#1e40af',3:'#15803d',4:'#92400e',5:'#7f1d1d'};
-  var bgs   = {1:'#dbeafe',2:'#dbeafe',3:'#dcfce7',4:'#fef3c7',5:'#fff1f2'};
-  var inner = document.getElementById('modal-transf-inner');
-  if (!inner) return;
 
-  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
-    +'<div>'
-      +'<div style="font-size:17px;font-weight:800;color:'+cores[camara]+'">\ud83d\udd04 Câmara '+camara+'</div>'
-      +'<div style="font-size:12px;color:#6b7280">Escolher lote a transferir</div>'
-    +'</div>'
-    +'<button onclick="document.getElementById(\'modal-transf\').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">\u2715</button>'
-  +'</div>';
-
-  lotes.forEach(function(l, idx) {
-    var dataEntrada = l.dataFormatada || '';
-    var diasCamara = '';
-    if (l.data) {
-      var d = Math.round((Date.now()-new Date(l.data).getTime())/864e5);
-      diasCamara = ' \u00b7 ' + d + ' dias';
-    }
-    html += '<div onclick="_transfEscolherLote('+idx+')" '
-      +'style="background:white;border:2px solid '+cores[camara]+';border-radius:12px;padding:12px 14px;margin-bottom:8px;cursor:pointer">'
-      +'<div style="display:flex;justify-content:space-between;align-items:center">'
-        +'<span style="font-family:monospace;font-weight:900;font-size:16px;color:'+cores[camara]+'">'+l.lote+'</span>'
-        +'<span style="font-size:12px;color:#6b7280">'+l.qtd+' un'+(l.peso?' \u00b7 '+Number(l.peso).toFixed(1)+' kg':'')+'</span>'
-      +'</div>'
-      +(l.referencia?'<div style="font-size:12px;font-weight:700;color:#374151;margin-top:2px">\ud83c\udfff '+l.referencia+'</div>':'')
-      +'<div style="font-size:11px;color:#9ca3af;margin-top:3px">'+dataEntrada+diasCamara+'</div>'
-    +'</div>';
-  });
-  inner.innerHTML = html;
-}
 
 function _transfEscolherOrigem(camNum) {
   _transfOrigem = camNum;
@@ -10608,55 +10618,7 @@ function _transfSelecionarQtd(tipo) {
   pcc.style.display = 'block';
 }
 
-function _transfConfirmar() {
-  var e = getEstado();
-  var lote = (e[_transfOrigem]||[])[_transfLoteIdx];
-  if (!lote) return;
 
-  var qtdTransf;
-  if (window._transfQtdTipo==='total') {
-    qtdTransf = lote.qtd;
-  } else {
-    qtdTransf = parseInt(document.getElementById('transf-qtd-parcial')?.value)||0;
-    if (qtdTransf<=0||qtdTransf>lote.qtd) {
-      document.getElementById('status-transf').textContent='\u26A0\uFE0F Quantidade inválida';
-      document.getElementById('status-transf').className='status error';
-      return;
-    }
-  }
-  var pesoInput = parseFloat(document.getElementById('transf-peso')?.value)||0;
-  var pesoTransf = pesoInput > 0 ? pesoInput : (lote.peso&&lote.qtd>0 ? (lote.peso/lote.qtd*qtdTransf) : 0);
-
-  // Destino
-  if (!e[_transfDestino]) e[_transfDestino]=[];
-  var novoLote = Object.assign({}, lote, {
-    id: Date.now(),
-    qtd: qtdTransf,
-    qtdOriginal: qtdTransf,
-    peso: pesoTransf>0 ? pesoTransf : (lote.peso||0),
-    pesoOriginal: pesoTransf>0 ? pesoTransf : (lote.peso||0),
-    camara: _transfDestino,
-    origemCamara: _transfOrigem,
-    data: new Date().toISOString(),
-    dataFormatada: dataHoje(),
-    lavagens: []
-  });
-  e[_transfDestino].push(novoLote);
-
-  // Abater origem
-  lote.qtd -= qtdTransf;
-  if (pesoTransf>0 && lote.peso>0) lote.peso = Math.max(0, lote.peso - pesoTransf);
-  if (lote.qtd<=0) e[_transfOrigem].splice(_transfLoteIdx,1);
-
-  salvarEstado(e); atualizarResumoCamaras();
-  addHistorico({id:Date.now(),lote:lote.lote,qtdSaida:qtdTransf,kg:pesoTransf||null,
-    data:new Date().toISOString(),dataFormatada:dataHoje(),
-    camara:_transfOrigem,operacao:'transferencia',camaraDestino:_transfDestino});
-  enviarParaCloud({operacao:'transferencia',lote:lote.lote,origem:_transfOrigem,destino:_transfDestino,qtd:qtdTransf});
-
-  document.getElementById('modal-transf')?.remove();
-  mostrarStatus('status-cura','\u2713 '+lote.lote+' transferido C'+_transfOrigem+' \u2192 C'+_transfDestino+' ('+qtdTransf+' un)','success');
-}
 
 function _transfEscolherDestino(destCam) {
   _transfDestino = destCam;
@@ -12030,8 +11992,8 @@ function prepararEncomenda(id) {
 function _renderPrepLinhas() {
   var e = getEstado();
   var lotesDisp = [];
-  [4,5].forEach(function(c){
-    (e[c]||[]).forEach(function(l){ lotesDisp.push({camara:c,lote:l.lote,qtd:l.qtd,validade:l.validade||''}); });
+  [1,2,3,4,5].forEach(function(c){
+    (e[c]||[]).forEach(function(l){ lotesDisp.push({camara:c,lote:l.lote,qtd:l.qtd,validade:l.validade||'',tipo:l.tipo||'',referencia:l.referencia||''}); });
   });
   var html = '';
   _prepLinhas.forEach(function(l,i){
@@ -12039,7 +12001,15 @@ function _renderPrepLinhas() {
     var infoBlock = '';
     if (l.lote) {
       var dispStr = found ? ('disp. '+found.qtd+' un') : '\u26a0\ufe0f n\xe3o encontrado';
-      infoBlock = '<div style="background:'+(refMismatch?'#fef2f2':'#eff6ff')+';border:2px solid '+(refMismatch?'#fca5a5':'#bfdbfe')+';border-radius:8px;padding:8px 10px;margin-top:8px">'
+      // Check reference mismatch
+      var refMismatch = false;
+      if (found && found.referencia && l.artigo) {
+        var artigoN = l.artigo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+        var refLoteUp = (found.referencia||'').toUpperCase();
+        if (artigoN.includes('grande') && refLoteUp !== 'G' && refLoteUp !== 'DOP') refMismatch = true;
+        else if ((artigoN.includes('pequen') || artigoN.endsWith(' p')) && refLoteUp !== 'P') refMismatch = true;
+      }
+      infoBlock = '<div id="prep-info-'+i+'" style="background:'+(refMismatch?'#fef2f2':'#eff6ff')+';border:2px solid '+(refMismatch?'#fca5a5':'#bfdbfe')+';border-radius:8px;padding:8px 10px;margin-top:8px">'
         +'<div style="font-size:12px;font-weight:800;color:#1e40af">C'+(l.camara||'?')+' \xb7 '+l.lote+' \xb7 '+dispStr+'</div>'
         +(l.validade
           ? '<div style="font-size:11px;color:#92400e;font-weight:700;margin-top:2px">\ud83d\udcc5 '+l.validade+'</div>'
@@ -12103,56 +12073,52 @@ function _buscarInfoLote(loteStr) {
 function prepLoteManual(idx) {
   var el = document.getElementById('prep-lote-'+idx);
   var val = (el ? el.value : '').trim();
-  var cursorPos = el ? el.selectionStart : 0;
   _prepLinhas[idx].lote = val;
 
-  if (val) {
-    var info = _buscarInfoLote(val);
-
-    // Bloqueio DOP — só admin pode usar
-    if (info.bloqueado && !temPermissao('admin')) {
-      mostrarStatus('status-enc-prep',
-        '\uD83D\uDD12 Lote '+val+' bloqueado — DOP ('+info.diasPassados+'/31 dias). Necessita autorização do Administrador.',
-        'error');
-      _prepLinhas[idx].lote = '';
-      _prepLinhas[idx].camara = null;
-      _prepLinhas[idx].validade = '';
-      _renderPrepLinhas();
-      return;
-    }
-    if (info.bloqueado && temPermissao('admin')) {
-      mostrarStatus('status-enc-prep',
-        '\u26A0\uFE0F Lote DOP '+val+' ainda em cura ('+info.diasPassados+'/31d) — autorizado como Administrador.',
-        'warning');
-    }
-
-    // Validação de referência: queijo grande ≠ pequeno na mesma encomenda
-    var artigoLinha = _prepLinhas[idx].artigo || '';
-    var refErro = _verificarCompatibilidadeRef(idx, artigoLinha, info.camara);
-    if (refErro) {
-      mostrarStatus('status-enc-prep', '\u26A0\uFE0F ' + refErro, 'error');
-      _prepLinhas[idx].lote = '';
-      _prepLinhas[idx].camara = null;
-      _prepLinhas[idx].validade = '';
-      _renderPrepLinhas();
-      var elN = document.getElementById('prep-lote-'+idx);
-      if (elN) { elN.focus(); try { elN.setSelectionRange(0,0); } catch(e){} }
-      return;
-    }
-
-    _prepLinhas[idx].camara   = info.camara;
-    _prepLinhas[idx].validade = info.validade;
-  } else {
+  if (!val) {
+    // Cleared - update info block without re-rendering
     _prepLinhas[idx].camara = null;
     _prepLinhas[idx].validade = '';
+    var infoEl = document.getElementById('prep-info-'+idx);
+    if (infoEl) infoEl.innerHTML = '';
+    return;
   }
 
-  _renderPrepLinhas();
-  // Restaurar foco e cursor
-  var elNovo = document.getElementById('prep-lote-'+idx);
-  if (elNovo) {
-    elNovo.focus();
-    try { elNovo.setSelectionRange(cursorPos, cursorPos); } catch(e){}
+  // Bloqueio DOP — só admin pode usar
+  var info = _buscarInfoLote(val);
+  if (info.bloqueado && !temPermissao('admin')) {
+    mostrarStatus('status-enc-prep',
+      '\uD83D\uDD12 Lote '+val+' bloqueado — DOP ('+info.diasPassados+'/31 dias). Necessita autorização do Administrador.',
+      'error');
+    _prepLinhas[idx].lote = '';
+    _prepLinhas[idx].camara = null;
+    _prepLinhas[idx].validade = '';
+    if (el) { el.value = ''; el.focus(); }
+    return;
+  }
+
+  if (info.camara) {
+    _prepLinhas[idx].camara  = info.camara;
+    _prepLinhas[idx].validade = info.validade || '';
+  }
+
+  // Update the info block without re-rendering full list (preserves focus)
+  var infoEl = document.getElementById('prep-info-'+idx);
+  if (infoEl) {
+    var dispStr = info.camara ? ('C'+info.camara+' · disp. '+(info.qtd||0)+' un') : '⚠️ lote não encontrado';
+    var refMismatch = false;
+    var linha = _prepLinhas[idx];
+    if (info.referencia && linha.artigo) {
+      var artigoN = linha.artigo.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      var refEsp = info.referencia.toUpperCase();
+      if (artigoN.includes('grande') && refEsp !== 'G') refMismatch = true;
+      else if ((artigoN.includes('pequen') || artigoN.includes(' p ')) && refEsp !== 'P') refMismatch = true;
+    }
+    infoEl.innerHTML = '<div style="background:'+(refMismatch?'#fef2f2':'#eff6ff')+';border:2px solid '+(refMismatch?'#fca5a5':'#bfdbfe')+';border-radius:8px;padding:8px 10px;margin-top:8px">'
+      +'<div style="font-size:12px;font-weight:800;color:'+(refMismatch?'#dc2626':'#1e40af')+'">'+dispStr+'</div>'
+      +(info.validade?'<div style="font-size:11px;color:#92400e;font-weight:700;margin-top:2px">\uD83D\uDCC5 '+info.validade+'</div>':'')
+      +(refMismatch?'<div style="font-size:11px;color:#dc2626;font-weight:700;margin-top:2px">⚠️ Referência não coincide com artigo</div>':'')
+    +'</div>';
   }
 }
 
@@ -12400,18 +12366,20 @@ function abrirLotePicker(idx) {
   fecharLotePicker();
   _pickerIdx = idx;
   var e = getEstado();
-  var linha = _prepLinhas[idx] || {};
+  var linha = (_prepLinhas && _prepLinhas[idx]) || {};
   var artigo = (linha.artigo || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   var refLinha = (linha.referencia || '').toUpperCase().trim();
 
-  var isRequeijao = artigo.includes('requeijao') || artigo.includes('requeij\u00e3o');
+  var isRequeijao = artigo.includes('requeijao') || artigo.includes('soro');
   var isDOP       = artigo.includes('dop');
   var isCabra     = artigo.includes('cabra');
   var isOvelha    = !isDOP && !isCabra && !isRequeijao;
 
   var refInferida = refLinha;
   if (!refInferida && !isRequeijao) {
-    if (artigo.includes('ppp') || artigo.includes('fatia')) refInferida = 'PPP';
+    if (artigo.includes('ppp') || artigo.includes('apimentado')) refInferida = 'PPP';
+    else if (artigo.includes('fatia') || artigo.includes('fati')) refInferida = 'PP';
+    else if (artigo.includes('unidade') || artigo.includes(' un') || artigo.endsWith('un')) refInferida = 'PP';
     else if (artigo.includes(' pp') || artigo.endsWith('pp')) refInferida = 'PP';
     else if (artigo.includes('pequen') || artigo.includes(' p ') || artigo.endsWith(' p')) refInferida = 'P';
     else if (artigo.includes('grande') || artigo.includes(' g ') || artigo.endsWith(' g')) refInferida = 'G';
@@ -12420,7 +12388,6 @@ function abrirLotePicker(idx) {
 
   var tipoFiltro = isDOP ? 'dop' : (isCabra ? 'cabra' : (isOvelha ? 'ovelha' : null));
 
-  // C\u00e2maras correctas: ovelha/DOP=C1+C2, cabra=C3+C5, PP/PPP=C1+C2+C5
   var camarasQueijo;
   if (isCabra) camarasQueijo = [3,5];
   else if (refInferida === 'PP' || refInferida === 'PPP' || artigo.includes('fatia')) camarasQueijo = [1,2,5];
@@ -12431,35 +12398,33 @@ function abrirLotePicker(idx) {
   var bds   = {1:'#bfdbfe',2:'#bfdbfe',3:'#86efac',4:'#fbbf24',5:'#fca5a5'};
 
   var filtroLabel = '';
-  if (tipoFiltro) filtroLabel += ' \u2014 ' + (tipoFiltro==='dop'?'DOP':tipoFiltro.charAt(0).toUpperCase()+tipoFiltro.slice(1));
-  if (refInferida) filtroLabel += ' ref.' + refInferida;
+  if (tipoFiltro) filtroLabel += ' \u2014 '+(tipoFiltro==='dop'?'DOP':tipoFiltro.charAt(0).toUpperCase()+tipoFiltro.slice(1));
+  if (refInferida) filtroLabel += ' ref.'+refInferida;
 
-  var html = '<div id="modal-picker" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)fecharLotePicker()">'
-    +'<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto" onclick="event.stopPropagation()">'
+  var html = '<div id="modal-picker" onclick="if(event.target===this)fecharLotePicker()" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center">'
+    +'<div onclick="event.stopPropagation()" style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
-      +'<div style="font-size:16px;font-weight:800;color:#1e3a5f">\ud83d\udccb Selecionar Lote'+filtroLabel+'</div>'
-      +'<button onclick="fecharLotePicker()" style="background:#f3f4f6;border:none;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer;line-height:36px;text-align:center">\u2715</button>'
+      +'<div style="font-size:16px;font-weight:800;color:#1e3a5f">Selecionar Lote'+filtroLabel+'</div>'
+      +'<button onclick="fecharLotePicker()" style="background:#f3f4f6;border:none;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer">x</button>'
     +'</div>';
 
   if (isRequeijao) {
     var prodsReq = (typeof getProdutosRequeijao==='function') ? getProdutosRequeijao() : [];
     var lotesReq = prodsReq.filter(function(p){ return (p.qtdDisponivel||p.qtd||0)>0; });
-    html += '<div style="font-size:11px;font-weight:700;color:#15803d;background:#f0fdf4;border-radius:8px;padding:6px 10px;margin-bottom:10px">\ud83e\udd5b Lotes Requeij\u00e3o Dispon\u00edveis</div>';
+    html += '<div style="font-size:11px;font-weight:700;color:#15803d;background:#f0fdf4;border-radius:8px;padding:6px 10px;margin-bottom:10px">Lotes Requeijao</div>';
     if (!lotesReq.length) {
-      html += '<div style="text-align:center;color:#9ca3af;font-size:13px;padding:20px">Sem lotes de requeij\u00e3o dispon\u00edveis</div>';
+      html += '<div style="text-align:center;color:#9ca3af;padding:20px">Sem lotes</div>';
     } else {
       lotesReq.forEach(function(l) {
-        var qtdDisp = l.qtdDisponivel || l.qtd || 0;
-        var loteId = l.lote || l.id;
-        html += '<div onclick="_pickerSelecionarReq(\''+loteId+'\')" style="padding:12px;background:#f0fdf4;border:2px solid #86efac;border-radius:10px;margin-bottom:8px;cursor:pointer">'
-          +'<div style="font-family:\'DM Mono\',monospace;font-weight:900;font-size:14px;color:#15803d">'+loteId+'</div>'
-          +'<div style="font-size:12px;color:#6b7280;margin-top:2px">'+qtdDisp+' un dispon\u00edveis</div>'
-          +(l.dataFormatada?'<div style="font-size:11px;color:#9ca3af">'+l.dataFormatada+'</div>':'')
+        var lId = l.lote||l.id;
+        html += '<div onclick="_pickerSelecionarReq(\'' + lId + '\')" style="padding:12px;background:#f0fdf4;border:2px solid #86efac;border-radius:10px;margin-bottom:8px;cursor:pointer">'
+          +'<div style="font-family:monospace;font-weight:900;color:#15803d">'+lId+'</div>'
+          +'<div style="font-size:12px;color:#6b7280">'+(l.qtdDisponivel||l.qtd||0)+' un</div>'
         +'</div>';
       });
     }
   } else {
-    var gridCols = camarasQueijo.length <= 2 ? '1fr 1fr' : '1fr 1fr 1fr';
+    var gridCols = camarasQueijo.length<=2 ? '1fr 1fr' : '1fr 1fr 1fr';
     html += '<div style="display:grid;grid-template-columns:'+gridCols+';gap:10px">';
     camarasQueijo.forEach(function(c) {
       var lotesC = (e[c]||[]).filter(function(l){ return (l.qtd||0)>0; });
@@ -12472,22 +12437,22 @@ function abrirLotePicker(idx) {
         if (lr.length) lotesC = lr;
       }
       html += '<div>'
-        +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:'+cores[c]+';margin-bottom:6px;text-align:center;background:'+bgs[c]+';border:1px solid '+bds[c]+';border-radius:8px;padding:4px">\ud83c\udfe0 C\u00e2mara '+c+'</div>';
+        +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:'+cores[c]+';margin-bottom:6px;text-align:center;background:'+bgs[c]+';border:1px solid '+bds[c]+';border-radius:8px;padding:4px">Camara '+c+'</div>';
       if (!lotesC.length) {
-        html += '<div style="text-align:center;color:#9ca3af;font-size:12px;padding:12px">Vazia</div>';
+        html += '<div style="text-align:center;color:#9ca3af;font-size:12px;padding:10px">Vazia</div>';
       } else {
         lotesC.forEach(function(l) {
           var bl = verificarBloqueio30dias(l);
           var blocked = bl.bloqueado && !temPermissao('admin');
-          html += '<div onclick="'+(blocked?'':'_pickerSelecionar('+c+',\''+l.lote+'\',\''+(l.validade||'')+'\')')+'" '
+          html += '<div onclick="'+(blocked?'':('_pickerSelecionar('+c+',\''+l.lote+'\',\''+(l.validade||'')+'\')'))+'" '
             +'style="padding:10px;background:'+(blocked?'#f9fafb':bgs[c])+';border:2px solid '+(blocked?'#e5e7eb':bds[c])
             +';border-radius:10px;margin-bottom:6px;cursor:'+(blocked?'not-allowed':'pointer')
             +';opacity:'+(blocked?0.5:1)+'">'
-            +'<div style="font-family:\'DM Mono\',monospace;font-weight:900;font-size:13px;color:'+cores[c]+'">'+l.lote+'</div>'
-            +(l.referencia?'<div style="font-size:10px;font-weight:700;color:#6b7280;margin-top:1px">'+(l.tipo||'')+' \u00b7 '+l.referencia+'</div>':'')
-            +'<div style="font-size:11px;color:#9ca3af;margin-top:2px">'+(l.qtd||0)+' un'+(l.peso?' \u00b7 '+Number(l.peso).toFixed(1)+' kg':'')+' </div>'
-            +(bl.bloqueado?'<div style="font-size:10px;color:#dc2626;font-weight:700">\ud83d\udd12 '+bl.diasPassados+'/31d DOP</div>':'')
-            +(l.validade?'<div style="font-size:10px;color:#92400e;font-weight:700">\ud83d\udcc5 '+l.validade+'</div>':'')
+            +'<div style="font-family:monospace;font-weight:900;font-size:13px;color:'+cores[c]+'">'+l.lote+'</div>'
+            +(l.referencia?'<div style="font-size:10px;font-weight:700;color:#6b7280">'+(l.tipo||'')+' ref.'+l.referencia+'</div>':'')
+            +'<div style="font-size:11px;color:#9ca3af">'+(l.qtd||0)+' un'+(l.peso?' - '+Number(l.peso).toFixed(1)+' kg':'')+' </div>'
+            +(bl.bloqueado?'<div style="font-size:10px;color:#dc2626;font-weight:700">DOP bloqueado '+bl.diasPassados+'/31d</div>':'')
+            +(l.validade?'<div style="font-size:10px;color:#92400e;font-weight:700">val: '+l.validade+'</div>':'')
           +'</div>';
         });
       }
@@ -12497,50 +12462,58 @@ function abrirLotePicker(idx) {
   }
 
   html += '</div></div>';
+  var old = document.getElementById('modal-picker');
+  if (old) old.remove();
   document.body.insertAdjacentHTML('beforeend', html);
 
   _pickerCallback = function(camara, lote, validade) {
-    _prepLinhas[_pickerIdx].lote    = lote;
-    _prepLinhas[_pickerIdx].camara  = camara;
-    _prepLinhas[_pickerIdx].validade = validade;
-    _renderPrepLinhas();
+    if (_prepLinhas && _pickerIdx !== undefined && _prepLinhas[_pickerIdx] !== undefined) {
+      _prepLinhas[_pickerIdx].lote     = lote;
+      _prepLinhas[_pickerIdx].camara   = camara;
+      _prepLinhas[_pickerIdx].validade = validade||'';
+      _renderPrepLinhas();
+    }
     fecharLotePicker();
   };
 }
 
 function _pickerSelecionar(camara, lote, validade) {
   fecharLotePicker();
-  // Verificar bloqueio DOP no picker
   var e = getEstado();
-  var loteObj = (e[camara]||[]).find(function(l){ return l.lote===lote; });
+  var loteObj = camara && (e[camara]||[]).find(function(l){ return l.lote===lote; });
   if (loteObj) {
     var bl = verificarBloqueio30dias(loteObj);
     if (bl.bloqueado && !temPermissao('admin')) {
       mostrarStatus('status-enc-prep',
-        '\uD83D\uDD12 Lote '+lote+' bloqueado — DOP ('+bl.diasPassados+'/31 dias). Necessita autoriza\xE7\xE3o do Administrador.',
-        'error');
+        '\uD83D\uDD12 Lote bloqueado DOP ('+bl.diasPassados+'/31 dias). Necessita autoriza\u00E7\u00E3o.','error');
       return;
     }
-    if (bl.bloqueado && temPermissao('admin')) {
-      mostrarStatus('status-enc-prep',
-        '\u26A0\uFE0F Lote DOP '+lote+' ('+bl.diasPassados+'/31d) — autorizado como Administrador.','warning');
-    }
   }
-  if (_pickerCallback) _pickerCallback(camara, lote, validade);
-  if (_pickerCallback) { _pickerCallback(camara, lote, validade); }
-  else {
-    if (_pickerIdx !== undefined) {
-      _prepLinhas[_pickerIdx].lote    = lote;
-      _prepLinhas[_pickerIdx].camara  = camara;
-      _prepLinhas[_pickerIdx].validade = validade;
-      _renderPrepLinhas();
-    }
-    fecharLotePicker();
+  if (_pickerIdx !== undefined && _prepLinhas && _prepLinhas[_pickerIdx] !== undefined) {
+    _prepLinhas[_pickerIdx].lote     = lote;
+    _prepLinhas[_pickerIdx].camara   = camara;
+    _prepLinhas[_pickerIdx].validade = validade || '';
+    _renderPrepLinhas();
+  } else if (_pickerCallback) {
+    _pickerCallback(camara, lote, validade);
+  }
+}
+
+function _pickerSelecionarReq(loteId) {
+  fecharLotePicker();
+  if (_pickerIdx !== undefined && _prepLinhas[_pickerIdx] !== undefined) {
+    _prepLinhas[_pickerIdx].lote    = loteId;
+    _prepLinhas[_pickerIdx].camara  = 0;
+    _prepLinhas[_pickerIdx].validade = '';
+    _renderPrepLinhas();
   }
 }
 
 function fecharLotePicker() {
-  document.getElementById('lote-picker-overlay').style.display = 'none';
+  var m1 = document.getElementById('modal-picker');
+  if (m1) m1.remove();
+  var m2 = document.getElementById('lote-picker-overlay');
+  if (m2) m2.style.display = 'none';
 }
 
 // ── Guardar estado de preparação e enviar para expedição ─────
