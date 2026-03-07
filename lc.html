@@ -8093,6 +8093,200 @@ atualizarDataHora();
 setInterval(atualizarDataHora, 30000);
 atualizarResumoCamaras();
 atualizarBannerOffline();
+
+// ===
+// SISTEMA DE UTILIZADORES
+// ===
+
+const UTILIZADORES_DEFAULT = [
+  { id:'jose',      nome:'José',      pin:'1234', perfil:'admin',      cor:'#1e3a5f', icon:'👑' },
+  { id:'direcao',   nome:'Direção',   pin:'9999', perfil:'direcao',   cor:'#7c3aed', icon:'👁️' },
+  { id:'joao',      nome:'João',      pin:'5678', perfil:'gestor',     cor:'#0369a1', icon:'👤' },
+  { id:'producao',  nome:'Produção',  pin:'1111', perfil:'producao',   cor:'#15803d', icon:'🏭' },
+  { id:'encomendas',nome:'Encomendas',pin:'2222', perfil:'encomendas', cor:'#6d28d9', icon:'📦' },
+  { id:'expedicao', nome:'Expedição', pin:'3333', perfil:'expedicao',  cor:'#d97706', icon:'🚚' },
+];
+
+// Perfis e permissões
+const PERFIS = {
+  admin:      { label:"Administrador", areas:["queijo","requeijao","cura","encomendas","ver-relatorios","exportar-enc","admin","eliminar","eliminar-prod","criar-enc","ver-enc-expedidas"] },
+  direcao:    { label:"Direção",       areas:["queijo","requeijao","cura","encomendas","ver-relatorios","exportar-enc","ver-enc-expedidas"], readonly:true },
+  gestor:     { label:"Gestor",        areas:["queijo","requeijao","cura","encomendas","criar-enc","exportar-enc","ver-enc-expedidas"] },
+  producao:   { label:"Produção",      areas:["cura"] },
+  encomendas: { label:"Encomendas",    areas:["encomendas","criar-enc","exportar-enc","ver-enc-expedidas","ver-relatorios"] },
+  expedicao:  { label:"Expedição",     areas:["encomendas","criar-enc","exportar-enc","ver-enc-expedidas","ver-relatorios"] },
+};
+
+// === GEMINI AI ===
+var GEMINI_API_KEY = localStorage.getItem('lc_gemini_key') || '';
+var GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=';
+
+function _mostrarGeminiStatus() {
+  var el = document.getElementById('gemini-key-status');
+  if (!el) return;
+  var key = localStorage.getItem('lc_gemini_key') || '';
+  if (!key) {
+    el.textContent = 'Sem chave — importar foto nao funciona';
+    el.style.background = '#fef2f2'; el.style.color = '#dc2626';
+  } else {
+    el.textContent = 'Chave activa: ' + key.slice(0,10) + '...' + key.slice(-4);
+    el.style.background = '#f0fdf4'; el.style.color = '#15803d';
+  }
+}
+
+function _adminGuardarGeminiKey() {
+  var inp = document.getElementById('admin-gemini-key-inp');
+  if (!inp) return;
+  var key = inp.value.trim();
+  if (!key || !key.startsWith('AIza')) { alert('Chave invalida — deve comecar por AIza...'); return; }
+  localStorage.setItem('lc_gemini_key', key);
+  GEMINI_API_KEY = key;
+  inp.value = '';
+  _mostrarGeminiStatus();
+  alert('Chave guardada!');
+}
+
+async function testarGemini() {
+  var key = localStorage.getItem('lc_gemini_key') || '';
+  if (!key) { alert('Configura a chave primeiro.'); return; }
+  var el = document.getElementById('gemini-key-status');
+  if (el) { el.textContent = 'A testar...'; el.style.background='#eff6ff'; el.style.color='#1e40af'; }
+  try {
+    var resp = await fetch(GEMINI_URL_BASE + key, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({contents:[{parts:[{text:'Responde apenas: OK'}]}]})
+    });
+    var data = await resp.json();
+    var txt = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'sem resposta';
+    if (el) { el.textContent = 'Gemini OK: ' + txt; el.style.background='#f0fdf4'; el.style.color='#15803d'; }
+  } catch(e) {
+    if (el) { el.textContent = 'Erro: ' + e.message; el.style.background='#fef2f2'; el.style.color='#dc2626'; }
+  }
+}
+
+var PROMPT_IMPORT_ENC = 'Analisa esta imagem/documento. Extrai artigos e quantidades. Responde APENAS em JSON valido sem markdown: {"linhas":[{"artigo":"nome","qtd":numero,"referencia":"G ou P ou PP ou PPP ou vazio"}],"cliente":"nome ou vazio","obs":"obs ou vazio"}';
+
+function _fecharModalImportFoto() {
+  var m = document.getElementById('modal-import-foto');
+  if (m) m.remove();
+}
+
+function abrirImportarFotoEnc() {
+  var key = localStorage.getItem('lc_gemini_key') || '';
+  if (!key) { alert('Configura a chave Gemini em Admin > Config.'); return; }
+  _fecharModalImportFoto();
+  var modal = document.createElement('div');
+  modal.id = 'modal-import-foto';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box';
+  modal.innerHTML = [
+    '<div style="background:white;border-radius:20px;padding:22px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto">',
+      '<div style="font-size:16px;font-weight:800;color:#1e3a5f;margin-bottom:6px">Importar Encomenda por Foto/PDF</div>',
+      '<div style="font-size:12px;color:#6b7280;margin-bottom:16px">Tira foto a encomenda ou seleciona PDF. O sistema extrai artigos e quantidades automaticamente.</div>',
+      '<label style="display:block;font-size:11px;font-weight:700;color:#6b7280;margin-bottom:6px">FOTO / PDF</label>',
+      '<input type="file" id="foto-enc-input" accept="image/*,application/pdf" onchange="_importFotoProcessar(this)" style="width:100%;font-size:13px;padding:8px;border:2px dashed #bfdbfe;border-radius:8px;box-sizing:border-box;margin-bottom:12px">',
+      '<div id="import-foto-preview" style="display:none;margin-bottom:12px"></div>',
+      '<div id="import-foto-status" style="font-size:13px;color:#374151;margin-bottom:12px;min-height:20px"></div>',
+      '<div id="import-foto-resultado" style="display:none;margin-bottom:12px;max-height:200px;overflow-y:auto"></div>',
+      '<button id="import-foto-confirmar" onclick="_confirmarImportEnc()" style="display:none;width:100%;padding:12px;background:#15803d;color:white;border:none;border-radius:10px;font-weight:800;font-size:14px;cursor:pointer;margin-bottom:8px">Criar Encomenda</button>',
+      '<button onclick="_fecharModalImportFoto()" style="width:100%;padding:10px;background:#f3f4f6;border:none;border-radius:10px;font-weight:700;cursor:pointer">Fechar</button>',
+    '</div>'
+  ].join('');
+  document.body.appendChild(modal);
+}
+
+async function _importFotoProcessar(input) {
+  if (!input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var status    = document.getElementById('import-foto-status');
+  var preview   = document.getElementById('import-foto-preview');
+  var resultado = document.getElementById('import-foto-resultado');
+  var confirmar = document.getElementById('import-foto-confirmar');
+  if (status)    { status.textContent = 'A analisar imagem...'; status.style.color='#374151'; }
+  if (resultado) { resultado.style.display='none'; resultado.innerHTML=''; }
+  if (confirmar)   confirmar.style.display='none';
+  if (file.type.startsWith('image/') && preview) {
+    preview.innerHTML = '<img src="'+URL.createObjectURL(file)+'" style="max-width:100%;max-height:140px;border-radius:8px;border:2px solid #e5e7eb">';
+    preview.style.display='block';
+  }
+  var base64;
+  try {
+    base64 = await new Promise(function(res,rej){
+      var r=new FileReader();
+      r.onload=function(e){res(e.target.result.split(',')[1]);};
+      r.onerror=rej; r.readAsDataURL(file);
+    });
+  } catch(err) {
+    if (status) { status.textContent = 'Erro a ler ficheiro: '+err.message; status.style.color='#dc2626'; }
+    return;
+  }
+  var mediaType = file.type || 'image/jpeg';
+  var isPdf = file.type === 'application/pdf';
+  var key = localStorage.getItem('lc_gemini_key') || '';
+  try {
+    var parts = isPdf
+      ? [{inline_data:{mime_type:'application/pdf',data:base64}},{text:PROMPT_IMPORT_ENC}]
+      : [{inline_data:{mime_type:mediaType,data:base64}},{text:PROMPT_IMPORT_ENC}];
+    var resp = await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+key, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:parts}]})
+    });
+    if (!resp.ok) {
+      var errData = await resp.json();
+      throw new Error((errData.error&&errData.error.message)||'HTTP '+resp.status);
+    }
+    var data = await resp.json();
+    var text = (data.candidates||[]).map(function(c){
+      return ((c.content&&c.content.parts)||[]).map(function(p){return p.text||'';}).join('');
+    }).join('');
+    var clean = text.replace(/```json|```/g,'').trim();
+    var parsed = JSON.parse(clean);
+    window._importEncDados = parsed;
+    var el = document.getElementById('import-foto-resultado');
+    if (el) {
+      el.style.display = 'block';
+      var h = '<div style="font-size:12px;font-weight:800;color:#1e3a5f;margin-bottom:8px">Artigos detectados:</div>';
+      if (parsed.cliente) h += '<div style="font-size:12px;color:#374151;margin-bottom:6px">Cliente: <b>'+parsed.cliente+'</b></div>';
+      (parsed.linhas||[]).forEach(function(l){
+        h += '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px;margin-bottom:6px">';
+        h += '<div style="font-size:13px;font-weight:700;color:#15803d">'+l.artigo+'</div>';
+        h += '<div style="font-size:12px;color:#374151">Qtd: '+l.qtd+(l.referencia?' - Ref: '+l.referencia:'')+'</div>';
+        h += '</div>';
+      });
+      el.innerHTML = h;
+    }
+    if (status) { status.textContent = 'Encomenda lida com sucesso!'; status.style.color='#15803d'; }
+    if (confirmar) confirmar.style.display='block';
+  } catch(e) {
+    if (status) { status.textContent = 'Erro: '+e.message; status.style.color='#dc2626'; }
+  }
+}
+
+function _confirmarImportEnc() {
+  var dados = window._importEncDados;
+  if (!dados||!dados.linhas||!dados.linhas.length) { alert('Sem dados para importar.'); return; }
+  var enc = {
+    id:'enc_'+Date.now(), nr:(getEncomendas().length||0)+1,
+    cliente:dados.cliente||'Importado', obs:dados.obs||'', estado:'aberta',
+    data:new Date().toISOString(),
+    dataFormatada:new Date().toLocaleDateString('pt-PT',{day:'numeric',month:'long'}),
+    dataEntrega:'', dataExpedicao:'',
+    linhas:(dados.linhas||[]).map(function(l){
+      var ref=(l.referencia||'').toUpperCase();
+      var cxPorUn = ref==='G' ? 3 : (ref==='P' ? 6 : 1);
+      var qtd = parseInt(l.qtd)||1;
+      return { artigo:l.artigo, qtd:qtd, caixas:Math.ceil(qtd/cxPorUn), referencia:l.referencia||'', lote:'', camara:null, validade:'', obsLinha:'' };
+    }),
+    lotes:[], importadaFoto:true
+  };
+  var encs = getEncomendas(); encs.push(enc);
+  localStorage.setItem('lc_encomendas_v1', JSON.stringify(encs));
+  _fecharModalImportFoto();
+  renderizarEncomendas();
+  irPara('screen-enc');
+  alert('Encomenda importada com sucesso! Verifica artigos e quantidades.');
+}
+
+
 renderizarEncomendas();
 
 // Inicializar módulos de produção após página carregar completamente
@@ -8375,76 +8569,6 @@ function renderizarListaUtilizadores() {
 
 
 
-// ===
-// SISTEMA DE UTILIZADORES
-// ===
-
-const UTILIZADORES_DEFAULT = [
-  { id:'jose',      nome:'José',      pin:'1234', perfil:'admin',      cor:'#1e3a5f', icon:'👑' },
-  { id:'direcao',   nome:'Direção',   pin:'9999', perfil:'direcao',   cor:'#7c3aed', icon:'👁️' },
-  { id:'joao',      nome:'João',      pin:'5678', perfil:'gestor',     cor:'#0369a1', icon:'👤' },
-  { id:'producao',  nome:'Produção',  pin:'1111', perfil:'producao',   cor:'#15803d', icon:'🏭' },
-  { id:'encomendas',nome:'Encomendas',pin:'2222', perfil:'encomendas', cor:'#6d28d9', icon:'📦' },
-  { id:'expedicao', nome:'Expedição', pin:'3333', perfil:'expedicao',  cor:'#d97706', icon:'🚚' },
-];
-
-// Perfis e permissões
-const PERFIS = {
-  admin:      { label:"Administrador", areas:["queijo","requeijao","cura","encomendas","ver-relatorios","exportar-enc","admin","eliminar","eliminar-prod","criar-enc","ver-enc-expedidas"] },
-  direcao:    { label:"Direção",       areas:["queijo","requeijao","cura","encomendas","ver-relatorios","exportar-enc","ver-enc-expedidas"], readonly:true },
-  gestor:     { label:"Gestor",        areas:["queijo","requeijao","cura","encomendas","criar-enc","exportar-enc","ver-enc-expedidas"] },
-  producao:   { label:"Produção",      areas:["cura"] },
-  encomendas: { label:"Encomendas",    areas:["encomendas","criar-enc","exportar-enc","ver-enc-expedidas","ver-relatorios"] },
-  expedicao:  { label:"Expedição",     areas:["encomendas","criar-enc","exportar-enc","ver-enc-expedidas","ver-relatorios"] },
-};
-
-
-// === GEMINI AI ===
-var GEMINI_API_KEY = localStorage.getItem('lc_gemini_key') || '';
-var GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=';
-
-function _mostrarGeminiStatus() {
-  var el = document.getElementById('gemini-key-status');
-  if (!el) return;
-  var key = localStorage.getItem('lc_gemini_key') || '';
-  if (!key) {
-    el.textContent = 'Sem chave — importar foto nao funciona';
-    el.style.background = '#fef2f2'; el.style.color = '#dc2626';
-  } else {
-    el.textContent = 'Chave activa: ' + key.slice(0,10) + '...' + key.slice(-4);
-    el.style.background = '#f0fdf4'; el.style.color = '#15803d';
-  }
-}
-
-function _adminGuardarGeminiKey() {
-  var inp = document.getElementById('admin-gemini-key-inp');
-  if (!inp) return;
-  var key = inp.value.trim();
-  if (!key || !key.startsWith('AIza')) { alert('Chave invalida — deve comecar por AIza...'); return; }
-  localStorage.setItem('lc_gemini_key', key);
-  GEMINI_API_KEY = key;
-  inp.value = '';
-  _mostrarGeminiStatus();
-  alert('Chave guardada!');
-}
-
-async function testarGemini() {
-  var key = localStorage.getItem('lc_gemini_key') || '';
-  if (!key) { alert('Configura a chave primeiro.'); return; }
-  var el = document.getElementById('gemini-key-status');
-  if (el) { el.textContent = 'A testar...'; el.style.background='#eff6ff'; el.style.color='#1e40af'; }
-  try {
-    var resp = await fetch(GEMINI_URL_BASE + key, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({contents:[{parts:[{text:'Responde apenas: OK'}]}]})
-    });
-    var data = await resp.json();
-    var txt = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'sem resposta';
-    if (el) { el.textContent = 'Gemini OK: ' + txt; el.style.background='#f0fdf4'; el.style.color='#15803d'; }
-  } catch(e) {
-    if (el) { el.textContent = 'Erro: ' + e.message; el.style.background='#fef2f2'; el.style.color='#dc2626'; }
-  }
-}
 
 var _utilizadorAtual = null;
 var _PIN_BUF = ''; // PIN buffer
@@ -10895,6 +11019,7 @@ function abrirRelatorioCamaras() {
     +'<div style="display:flex;gap:8px;margin-bottom:14px">'
       +'<button id="rcam-btn-ent" onclick="_rcamTipo(\'entrada\')" style="flex:1;padding:10px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-weight:800;cursor:pointer">Entradas</button>'
       +'<button id="rcam-btn-sai" onclick="_rcamTipo(\'saida\')" style="flex:1;padding:10px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer">Saídas</button>'
+      +'<button id="rcam-btn-percurso" onclick="_rcamTipo(\'percurso\')" style="flex:1;padding:10px;background:#f3f4f6;color:#374151;border:none;border-radius:10px;font-weight:700;cursor:pointer">Percurso</button>'
     +'</div>'
     +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
       +'<div><label style="font-size:11px;font-weight:700;color:#6b7280">Data início</label>'
@@ -10915,18 +11040,57 @@ function abrirRelatorioCamaras() {
 
 function _rcamTipo(tipo) {
   window._rcamTipoAtual = tipo;
-  var names={ent:'entrada',sai:'saida'};
-  ['ent','sai'].forEach(function(t){
+  ['ent','sai','percurso'].forEach(function(t){
     var b=document.getElementById('rcam-btn-'+t);
     if(!b)return;
-    var active=tipo===names[t];
+    var active=(tipo==='entrada'&&t==='ent')||(tipo==='saida'&&t==='sai')||(tipo==='percurso'&&t==='percurso');
     b.style.background=active?'#1e3a5f':'#f3f4f6';
     b.style.color=active?'white':'#374151';
     b.style.fontWeight=active?'800':'700';
   });
+  _gerarRelCamaras();
 }
 
 function _gerarRelCamaras() {
+  if (window._rcamTipoAtual === 'percurso') {
+    var estado = getEstado();
+    var byLote = {};
+    [1,2,3,4,5].forEach(function(nc) {
+      (estado[nc]||[]).forEach(function(l) {
+        if (!byLote[l.lote]) byLote[l.lote] = { lote:l.lote, tipo:l.tipo||'', ref:l.referencia||'', movs:[] };
+        (l.lavagens||[]).forEach(function(lav) {
+          if (lav.horaFim) {
+            byLote[l.lote].movs.push({ origem:nc, destino:lav.camaraDestino||nc, data:lav.horaFim });
+          }
+        });
+      });
+    });
+    var lotes = Object.values(byLote).filter(function(x){ return x.movs.length>0; });
+    var h = '<div style="font-size:13px;font-weight:800;color:#1e3a5f;margin-bottom:12px">Percurso por Lote</div>';
+    if (!lotes.length) {
+      h += '<div style="text-align:center;color:#9ca3af;padding:30px">Sem movimentos com lavagens concluidas</div>';
+    } else {
+      lotes.forEach(function(info) {
+        h += '<div style="background:white;border:2px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:10px">';
+        h += '<div style="font-family:monospace;font-weight:900;font-size:14px;color:#1e3a5f">'+info.lote+'</div>';
+        h += '<div style="font-size:11px;color:#6b7280;margin-bottom:8px">'+info.tipo+' '+info.ref+'</div>';
+        info.movs.sort(function(a,b){ return new Date(a.data)-new Date(b.data); });
+        info.movs.forEach(function(m) {
+          var ds = new Date(m.data).toLocaleDateString('pt-PT',{day:'2-digit',month:'2-digit',year:'numeric'});
+          h += '<div style="display:flex;align-items:center;gap:8px;font-size:12px;padding:5px 0;border-top:1px solid #f3f4f6">';
+          h += '<span style="background:#dbeafe;color:#1e40af;font-weight:800;padding:2px 6px;border-radius:4px">C'+m.origem+'</span>';
+          h += '<span style="color:#9ca3af">-&gt;</span>';
+          h += '<span style="background:#dcfce7;color:#15803d;font-weight:800;padding:2px 6px;border-radius:4px">C'+m.destino+'</span>';
+          h += '<span style="color:#6b7280;margin-left:auto">'+ds+'</span></div>';
+        });
+        h += '</div>';
+      });
+    }
+    h += '<button onclick="window.print()" style="margin-top:12px;width:100%;padding:12px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-weight:800;cursor:pointer">Imprimir</button>';
+    document.getElementById('rcam-resultado').innerHTML = h;
+    return;
+  }
+
   var tipo  = window._rcamTipoAtual||'entrada';
   var ini   = (document.getElementById('rcam-ini')||{}).value||'';
   var fim   = (document.getElementById('rcam-fim')||{}).value||'';
@@ -12233,56 +12397,114 @@ function _gerarRelEnc(modo) {
   }
 }
 function abrirLotePicker(idx) {
+  fecharLotePicker();
   _pickerIdx = idx;
   var e = getEstado();
-  var cores = {4:'#92400e',5:'#7f1d1d'};
-  var bgs   = {4:'#fef3c7',5:'#fff1f2'};
-  var bds   = {4:'#fbbf24',5:'#fca5a5'};
+  var linha = _prepLinhas[idx] || {};
+  var artigo = (linha.artigo || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  var refLinha = (linha.referencia || '').toUpperCase().trim();
 
-  var html = '<div id="modal-picker" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center">'
-    +'<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto">'
+  var isRequeijao = artigo.includes('requeijao') || artigo.includes('requeij\u00e3o');
+  var isDOP       = artigo.includes('dop');
+  var isCabra     = artigo.includes('cabra');
+  var isOvelha    = !isDOP && !isCabra && !isRequeijao;
+
+  var refInferida = refLinha;
+  if (!refInferida && !isRequeijao) {
+    if (artigo.includes('ppp') || artigo.includes('fatia')) refInferida = 'PPP';
+    else if (artigo.includes(' pp') || artigo.endsWith('pp')) refInferida = 'PP';
+    else if (artigo.includes('pequen') || artigo.includes(' p ') || artigo.endsWith(' p')) refInferida = 'P';
+    else if (artigo.includes('grande') || artigo.includes(' g ') || artigo.endsWith(' g')) refInferida = 'G';
+    else if (isDOP) refInferida = 'DOP';
+  }
+
+  var tipoFiltro = isDOP ? 'dop' : (isCabra ? 'cabra' : (isOvelha ? 'ovelha' : null));
+
+  // C\u00e2maras correctas: ovelha/DOP=C1+C2, cabra=C3+C5, PP/PPP=C1+C2+C5
+  var camarasQueijo;
+  if (isCabra) camarasQueijo = [3,5];
+  else if (refInferida === 'PP' || refInferida === 'PPP' || artigo.includes('fatia')) camarasQueijo = [1,2,5];
+  else camarasQueijo = [1,2];
+
+  var cores = {1:'#1e40af',2:'#1e40af',3:'#15803d',4:'#92400e',5:'#7f1d1d'};
+  var bgs   = {1:'#dbeafe',2:'#dbeafe',3:'#dcfce7',4:'#fef3c7',5:'#fff1f2'};
+  var bds   = {1:'#bfdbfe',2:'#bfdbfe',3:'#86efac',4:'#fbbf24',5:'#fca5a5'};
+
+  var filtroLabel = '';
+  if (tipoFiltro) filtroLabel += ' \u2014 ' + (tipoFiltro==='dop'?'DOP':tipoFiltro.charAt(0).toUpperCase()+tipoFiltro.slice(1));
+  if (refInferida) filtroLabel += ' ref.' + refInferida;
+
+  var html = '<div id="modal-picker" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center" onclick="if(event.target===this)fecharLotePicker()">'
+    +'<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto" onclick="event.stopPropagation()">'
     +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">'
-      +'<div style="font-size:16px;font-weight:800;color:#1e3a5f">📋 Selecionar Lote</div>'
-      +'<button onclick="fecharLotePicker()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">✕</button>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">';
+      +'<div style="font-size:16px;font-weight:800;color:#1e3a5f">\ud83d\udccb Selecionar Lote'+filtroLabel+'</div>'
+      +'<button onclick="fecharLotePicker()" style="background:#f3f4f6;border:none;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer;line-height:36px;text-align:center">\u2715</button>'
+    +'</div>';
 
-  [4,5].forEach(function(c) {
-    var lotes = (e[c]||[]).filter(function(l){ return l.qtd>0; });
-    html += '<div>'
-      +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:'+cores[c]+';margin-bottom:6px;text-align:center;'
-        +'background:'+bgs[c]+';border:1px solid '+bds[c]+';border-radius:8px;padding:4px">🏠 Câmara '+c+'</div>';
-
-    if (!lotes.length) {
-      html += '<div style="text-align:center;color:#9ca3af;font-size:12px;padding:12px">Vazia</div>';
+  if (isRequeijao) {
+    var prodsReq = (typeof getProdutosRequeijao==='function') ? getProdutosRequeijao() : [];
+    var lotesReq = prodsReq.filter(function(p){ return (p.qtdDisponivel||p.qtd||0)>0; });
+    html += '<div style="font-size:11px;font-weight:700;color:#15803d;background:#f0fdf4;border-radius:8px;padding:6px 10px;margin-bottom:10px">\ud83e\udd5b Lotes Requeij\u00e3o Dispon\u00edveis</div>';
+    if (!lotesReq.length) {
+      html += '<div style="text-align:center;color:#9ca3af;font-size:13px;padding:20px">Sem lotes de requeij\u00e3o dispon\u00edveis</div>';
     } else {
-      lotes.forEach(function(l) {
-        var bl = verificarBloqueio30dias(l);
-        var blocked = bl.bloqueado && !temPermissao('admin');
-        html += '<div onclick="' + (blocked?'':'_pickerSelecionar('+c+',\''+l.lote+'\',\''+( l.validade||'')+'\')')
-          +'" style="padding:10px;background:'+(blocked?'#f9fafb':bgs[c])+';border:2px solid '+(blocked?'#e5e7eb':bds[c])
-          +';border-radius:10px;margin-bottom:6px;cursor:'+(blocked?'not-allowed':'pointer')
-          +';opacity:'+(blocked?0.5:1)+'">'
-          +'<div style="font-family:\'DM Mono\',monospace;font-weight:900;font-size:13px;color:'+cores[c]+'">'+l.lote+'</div>'
-          +(l.referencia?'<div style="font-size:10px;font-weight:700;color:#6b7280;margin-top:1px">'+l.referencia+'</div>':'')
-          +'<div style="font-size:11px;color:#9ca3af;margin-top:2px">'+l.qtd+' un'+(l.peso?' · '+Number(l.peso).toFixed(1)+' kg':'')+' </div>'
-          +(bl.bloqueado?'<div style="font-size:10px;color:#dc2626;font-weight:700">🔒 '+bl.diasPassados+'/31d DOP</div>':'')
-          +(l.validade?'<div style="font-size:10px;color:#92400e;font-weight:700">📅 '+l.validade+'</div>':'')
+      lotesReq.forEach(function(l) {
+        var qtdDisp = l.qtdDisponivel || l.qtd || 0;
+        var loteId = l.lote || l.id;
+        html += '<div onclick="_pickerSelecionarReq(\''+loteId+'\')" style="padding:12px;background:#f0fdf4;border:2px solid #86efac;border-radius:10px;margin-bottom:8px;cursor:pointer">'
+          +'<div style="font-family:\'DM Mono\',monospace;font-weight:900;font-size:14px;color:#15803d">'+loteId+'</div>'
+          +'<div style="font-size:12px;color:#6b7280;margin-top:2px">'+qtdDisp+' un dispon\u00edveis</div>'
+          +(l.dataFormatada?'<div style="font-size:11px;color:#9ca3af">'+l.dataFormatada+'</div>':'')
         +'</div>';
       });
     }
+  } else {
+    var gridCols = camarasQueijo.length <= 2 ? '1fr 1fr' : '1fr 1fr 1fr';
+    html += '<div style="display:grid;grid-template-columns:'+gridCols+';gap:10px">';
+    camarasQueijo.forEach(function(c) {
+      var lotesC = (e[c]||[]).filter(function(l){ return (l.qtd||0)>0; });
+      if (tipoFiltro) {
+        var lf = lotesC.filter(function(l){ return (l.tipo||'').toLowerCase()===tipoFiltro; });
+        if (lf.length) lotesC = lf;
+      }
+      if (refInferida) {
+        var lr = lotesC.filter(function(l){ return (l.referencia||'').toUpperCase()===refInferida; });
+        if (lr.length) lotesC = lr;
+      }
+      html += '<div>'
+        +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:'+cores[c]+';margin-bottom:6px;text-align:center;background:'+bgs[c]+';border:1px solid '+bds[c]+';border-radius:8px;padding:4px">\ud83c\udfe0 C\u00e2mara '+c+'</div>';
+      if (!lotesC.length) {
+        html += '<div style="text-align:center;color:#9ca3af;font-size:12px;padding:12px">Vazia</div>';
+      } else {
+        lotesC.forEach(function(l) {
+          var bl = verificarBloqueio30dias(l);
+          var blocked = bl.bloqueado && !temPermissao('admin');
+          html += '<div onclick="'+(blocked?'':'_pickerSelecionar('+c+',\''+l.lote+'\',\''+(l.validade||'')+'\')')+'" '
+            +'style="padding:10px;background:'+(blocked?'#f9fafb':bgs[c])+';border:2px solid '+(blocked?'#e5e7eb':bds[c])
+            +';border-radius:10px;margin-bottom:6px;cursor:'+(blocked?'not-allowed':'pointer')
+            +';opacity:'+(blocked?0.5:1)+'">'
+            +'<div style="font-family:\'DM Mono\',monospace;font-weight:900;font-size:13px;color:'+cores[c]+'">'+l.lote+'</div>'
+            +(l.referencia?'<div style="font-size:10px;font-weight:700;color:#6b7280;margin-top:1px">'+(l.tipo||'')+' \u00b7 '+l.referencia+'</div>':'')
+            +'<div style="font-size:11px;color:#9ca3af;margin-top:2px">'+(l.qtd||0)+' un'+(l.peso?' \u00b7 '+Number(l.peso).toFixed(1)+' kg':'')+' </div>'
+            +(bl.bloqueado?'<div style="font-size:10px;color:#dc2626;font-weight:700">\ud83d\udd12 '+bl.diasPassados+'/31d DOP</div>':'')
+            +(l.validade?'<div style="font-size:10px;color:#92400e;font-weight:700">\ud83d\udcc5 '+l.validade+'</div>':'')
+          +'</div>';
+        });
+      }
+      html += '</div>';
+    });
     html += '</div>';
-  });
+  }
 
-  html += '</div></div></div>';
+  html += '</div></div>';
   document.body.insertAdjacentHTML('beforeend', html);
+
   _pickerCallback = function(camara, lote, validade) {
     _prepLinhas[_pickerIdx].lote    = lote;
     _prepLinhas[_pickerIdx].camara  = camara;
     _prepLinhas[_pickerIdx].validade = validade;
     _renderPrepLinhas();
-    var el = document.getElementById('prep-lote-'+_pickerIdx);
-    if (el) el.focus();
+    fecharLotePicker();
   };
 }
 
@@ -12305,6 +12527,16 @@ function _pickerSelecionar(camara, lote, validade) {
     }
   }
   if (_pickerCallback) _pickerCallback(camara, lote, validade);
+  if (_pickerCallback) { _pickerCallback(camara, lote, validade); }
+  else {
+    if (_pickerIdx !== undefined) {
+      _prepLinhas[_pickerIdx].lote    = lote;
+      _prepLinhas[_pickerIdx].camara  = camara;
+      _prepLinhas[_pickerIdx].validade = validade;
+      _renderPrepLinhas();
+    }
+    fecharLotePicker();
+  }
 }
 
 function fecharLotePicker() {
