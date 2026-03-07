@@ -8687,12 +8687,9 @@ function entrarNaApp() {
   // Guardar sessao para restaurar no proximo carregamento
   try {
     localStorage.setItem('lc_sessao_v1', JSON.stringify({
-      id: _utilizadorAtual.id,
-      nome: _utilizadorAtual.nome,
-      perfil: _utilizadorAtual.perfil,
-      cor: _utilizadorAtual.cor,
-      icon: _utilizadorAtual.icon,
-      areasCustum: _utilizadorAtual.areasCustum || null
+      id: _utilizadorAtual.id, nome: _utilizadorAtual.nome,
+      perfil: _utilizadorAtual.perfil, cor: _utilizadorAtual.cor,
+      icon: _utilizadorAtual.icon, areasCustum: _utilizadorAtual.areasCustum || null
     }));
   } catch(e) {}
   // Mostrar nome do utilizador no header
@@ -8710,7 +8707,7 @@ function entrarNaApp() {
     homeAvatar.style.background = _utilizadorAtual.cor;
     homeAvatar.style.color = 'white';
   }
-  // Aplicar permissoes aos botoes do home
+  // Aplicar permissões aos botões do home
   aplicarPermissoesHome();
   // Disparar sync
   setTimeout(() => { mostrarEstadoSync('syncing'); sincronizarTudo().catch(()=>{}); }, 500);
@@ -9044,17 +9041,21 @@ function abrirAdmin() {
 }
 
 function adminTab(tab) {
-  ['utilizadores','dados','config'].forEach(function(t) {
-    var panel = document.getElementById('admin-panel-'+t);
-    var btn   = document.getElementById('tab-'+t);
-    if (panel) panel.style.display = (tab===t) ? '' : 'none';
-    if (btn) {
-      btn.style.background = (tab===t) ? '#1e3a5f' : '#f3f4f6';
-      btn.style.color      = (tab===t) ? 'white'   : '#6b7280';
-    }
-  });
-  if (tab==='config') _mostrarGeminiStatus();
-  if (tab==='utilizadores') adminRenderUtilizadores();
+  document.getElementById('admin-panel-utilizadores').style.display = tab === 'utilizadores' ? '' : 'none';
+  document.getElementById('admin-panel-dados').style.display        = tab === 'dados'        ? '' : 'none';
+  var cfgPanel = document.getElementById('admin-panel-config');
+  if (cfgPanel) cfgPanel.style.display = tab === 'config' ? '' : 'none';
+  document.getElementById('tab-utilizadores').style.background = tab === 'utilizadores' ? '#1e3a5f' : '#f3f4f6';
+  document.getElementById('tab-utilizadores').style.color      = tab === 'utilizadores' ? 'white'   : '#6b7280';
+  document.getElementById('tab-dados').style.background = tab === 'dados' ? '#1e3a5f' : '#f3f4f6';
+  document.getElementById('tab-dados').style.color      = tab === 'dados' ? 'white'   : '#6b7280';
+  var cfgBtn = document.getElementById('tab-config');
+  if (cfgBtn) {
+    cfgBtn.style.background = tab === 'config' ? '#1e3a5f' : '#f3f4f6';
+    cfgBtn.style.color      = tab === 'config' ? 'white'   : '#6b7280';
+  }
+  if (tab === 'utilizadores') adminRenderUtilizadores();
+  if (tab === 'config') _mostrarGeminiStatus();
 }
 
 function adminRenderUtilizadores() {
