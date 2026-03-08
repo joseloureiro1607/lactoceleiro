@@ -1859,6 +1859,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
       <div class="status" id="status-export"></div>
       <div style="margin-bottom:10px">
         <button class="btn-primary" style="background:#0e7490;width:100%" onclick="abrirRelatorioCamaras()">🏠 Entradas / Saídas por Câmara</button>
+        <button onclick="abrirRendimentos()" style="display:block;width:100%;padding:13px;background:linear-gradient(135deg,#7e22ce,#9333ea);color:white;border:none;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;margin-top:4px">📈 Rendimentos (L/un, L/kg por lote)</button>
       </div>
       <div style="display:flex;gap:8px;margin-top:4px"><button class="btn-back" onclick="voltarPagina()" style="flex:1">← Voltar</button><button class="btn-back" onclick="irPara('screen-home')" style="width:48px;flex-shrink:0;font-size:18px;padding:10px">🏠</button></div>
     </div>
@@ -1879,7 +1880,84 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
     <!-- CONGELAÇÃO -->
     <!-- ══════════════════════════════ -->
     <!-- CONGELAÇÃO: ESCOLHA DE CÂMARA -->
-    <div class="screen" id="screen-congelacao">
+    
+    <!-- ══════════════════════════════ -->
+    <!-- RENDIMENTOS                   -->
+    <!-- ══════════════════════════════ -->
+    <div class="screen" id="screen-rendimentos">
+      <div class="breadcrumb">
+        <span class="bc-link" onclick="irPara('screen-home')">In&#237;cio</span> <span>&#8250;</span>
+        <strong>Rendimentos</strong>
+      </div>
+      <div style="background:linear-gradient(135deg,#7e22ce,#9333ea);border-radius:14px;padding:14px 16px;margin-bottom:14px;color:white">
+        <div style="font-size:11px;opacity:0.75;text-transform:uppercase;margin-bottom:2px">An&#225;lise</div>
+        <div style="font-size:17px;font-weight:800">&#128200; Rendimentos por Lote</div>
+      </div>
+
+      <!-- Filtros -->
+      <div style="background:white;border:2px solid #e5e7eb;border-radius:14px;padding:14px;margin-bottom:14px">
+        <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#374151;margin-bottom:10px">&#128269; Filtros</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Modo</label>
+            <select id="rend-filtro-modo" onchange="_renderRendimentos()" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:700">
+              <option value="saida">Sa&#237;da de Produ&#231;&#227;o</option>
+              <option value="final">Rendimento Final (vendas)</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Tipo</label>
+            <select id="rend-filtro-tipo" onchange="_renderRendimentos()" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:700">
+              <option value="">Todos</option>
+              <option value="ovelha">Ovelha</option>
+              <option value="cabra">Cabra</option>
+              <option value="dop">DOP</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Refer&#234;ncia</label>
+            <select id="rend-filtro-ref" onchange="_renderRendimentos()" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:700">
+              <option value="">Todas</option>
+              <option value="G">Grande (G)</option>
+              <option value="P">Pequeno (P)</option>
+              <option value="PPP">Apimentado G (PPP)</option>
+              <option value="DOP">DOP</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Data de</label>
+            <input id="rend-filtro-data-min" type="date" onchange="_renderRendimentos()" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Data at&#233;</label>
+            <input id="rend-filtro-data-max" type="date" onchange="_renderRendimentos()" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box">
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Lote m&#237;n.</label>
+            <input id="rend-filtro-lote-min" type="text" placeholder="ex: 261001" oninput="_renderRendimentos()" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;font-family:monospace">
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Lote m&#225;x.</label>
+            <input id="rend-filtro-lote-max" type="text" placeholder="ex: 261999" oninput="_renderRendimentos()" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;font-family:monospace">
+          </div>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button onclick="document.querySelectorAll('#rend-filtro-tipo,#rend-filtro-ref,#rend-filtro-data-min,#rend-filtro-data-max,#rend-filtro-lote-min,#rend-filtro-lote-max').forEach(function(e){e.value=''});document.getElementById('rend-filtro-modo').value='saida';_renderRendimentos()" style="flex:1;padding:9px;background:#f3f4f6;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Limpar Filtros</button>
+          <button onclick="_exportarRendimentos()" style="flex:1;padding:9px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">&#128438; Exportar PDF</button>
+        </div>
+      </div>
+
+      <!-- Resultado -->
+      <div id="rend-corpo"></div>
+
+      <div style="margin-top:14px">
+        <button class="btn-back" onclick="voltarPagina()">&#8592; Voltar</button>
+      </div>
+    </div>
+
+<div class="screen" id="screen-congelacao">
       <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <strong>Congelação</strong></div>
       <div class="step-badge" style="border:2px solid #bae6fd;background:#e0f2fe;color:#0369a1">🧊 Congelação</div>
       <div class="section-title" style="margin-top:12px">Selecionar Câmara de Congelação</div>
@@ -3241,6 +3319,62 @@ function criarEncomenda() {
   setTimeout(() => { irPara('screen-enc-lista'); renderizarEncomendas(); }, 1800);
 }
 
+
+function _editarDatasEncomenda(encId) {
+  var encs = getEncomendas();
+  var enc = encs.find(function(e){ return e.id===encId; });
+  if (!enc) return;
+  var old = document.getElementById('modal-datas-enc');
+  if (old) old.remove();
+  var fmtDate = function(v) {
+    if (!v) return '';
+    try {
+      var d = new Date(v);
+      if (!isNaN(d)) return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+    } catch(e) {}
+    // Try DD/MM/YYYY
+    var parts = String(v).split('/');
+    if (parts.length===3) return parts[2]+'-'+parts[1].padStart(2,'0')+'-'+parts[0].padStart(2,'0');
+    return '';
+  };
+  var panel = document.createElement('div');
+  panel.id = 'modal-datas-enc';
+  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  panel.innerHTML = [
+    '<div style="background:white;border-radius:18px;padding:24px;width:100%;max-width:360px">',
+      '<div style="font-size:16px;font-weight:900;color:#1e3a5f;margin-bottom:16px">\ud83d\udcc5 Datas da Encomenda</div>',
+      '<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Data de Entrega</label>',
+      '<input id="de-entrega" type="date" value="'+fmtDate(enc.dataEntrega)+'" style="width:100%;padding:11px;border:2px solid #e5e7eb;border-radius:10px;font-size:15px;box-sizing:border-box;margin-bottom:12px">',
+      '<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Data de Expedi\xe7\xe3o</label>',
+      '<input id="de-expedicao" type="date" value="'+fmtDate(enc.dataExpedicao)+'" style="width:100%;padding:11px;border:2px solid #e5e7eb;border-radius:10px;font-size:15px;box-sizing:border-box;margin-bottom:16px">',
+      '<div style="display:flex;gap:8px">',
+        '<button onclick="_guardarDatasEncomenda(\''+encId+'\')" style="flex:1;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">\u2713 Guardar</button>',
+        '<button onclick="document.getElementById(\'modal-datas-enc\').remove()" style="padding:13px 16px;background:#f3f4f6;border:none;border-radius:10px;font-size:14px;cursor:pointer">\u2715</button>',
+      '</div>',
+    '</div>'
+  ].join('');
+  document.body.appendChild(panel);
+}
+
+function _guardarDatasEncomenda(encId) {
+  var encs = getEncomendas();
+  var enc = encs.find(function(e){ return e.id===encId; });
+  if (!enc) return;
+  var entrega = document.getElementById('de-entrega').value;
+  var expedicao = document.getElementById('de-expedicao').value;
+  var fmtPT = function(v) {
+    if (!v) return '';
+    var d = new Date(v);
+    return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
+  };
+  enc.dataEntrega = entrega ? fmtPT(entrega) : '';
+  enc.dataExpedicao = expedicao ? fmtPT(expedicao) : '';
+  salvarEncomendas(encs);
+  document.getElementById('modal-datas-enc').remove();
+  // Refresh view
+  abrirEncomenda(encId);
+}
+
 function abrirEncomenda(id) {
   const encs = getEncomendas();
   const enc = encs.find(e => e.id === id);
@@ -3261,7 +3395,9 @@ function abrirEncomenda(id) {
         <div><div style="font-size:11px;color:var(--texto-suave);text-transform:uppercase;font-weight:700">Abatido</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--verde-medio)">${totalAbatido}</div></div>
         <div><div style="font-size:11px;color:var(--texto-suave);text-transform:uppercase;font-weight:700">Restante</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:${restante>0?'var(--laranja)':'var(--verde-medio)'};">${restante}</div></div>
       </div>
-      ${enc.dataEntrega?`<div style="margin-top:8px;font-size:12px;color:#6b7280">📅 Entrega: <strong>${enc.dataEntrega}</strong></div>`:''}
+      ${enc.dataEntrega
+        ? `<div style="margin-top:8px;font-size:12px;color:#374151;font-weight:600">\u{1F4C5} Entrega: <strong>${enc.dataEntrega}</strong>${enc.dataExpedicao?' &bull; \u{1F69A} Expedi\u00e7\u00e3o: <strong>'+enc.dataExpedicao+'</strong>':''} <button onclick="_editarDatasEncomenda('${enc.id}')" style="font-size:10px;background:#dbeafe;border:1px solid #93c5fd;border-radius:4px;padding:1px 6px;cursor:pointer;color:#1e40af;font-weight:700;margin-left:4px">editar</button></div>`
+        : `<div style="margin-top:8px;background:#fef3c7;border-radius:7px;padding:6px 10px;font-size:12px;color:#92400e;font-weight:700">\u26a0\ufe0f Sem datas — <button onclick="_editarDatasEncomenda('${enc.id}')" style="font-size:11px;background:#fde68a;border:1px solid #fbbf24;border-radius:5px;padding:2px 8px;cursor:pointer;color:#92400e;font-weight:800">Definir datas</button></div>`}
       <div style="margin-top:4px;font-size:12px;color:var(--texto-suave)">${enc.caixas} caixas${enc.marca?' · Marca: '+enc.marca:''}${enc.obs?' · '+enc.obs:''}</div>
     </div>
     ${enc.linhas && enc.linhas.length > 1 ? `
@@ -8503,7 +8639,11 @@ async function _importFotoProcessar(input) {
 
     var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
       body: JSON.stringify({
         model: 'claude-sonnet-4-20250514',
         max_tokens: 1000,
@@ -12209,6 +12349,154 @@ cams.forEach(function(l, ci) {
 
   return html || '<div style="text-align:center;padding:32px;color:#6b7280">Nenhum lote encontrado</div>';
 }
+// =====================================
+// RENDIMENTOS
+// =====================================
+
+
+function _exportarRendimentos() {
+  // Trigger a print of the current results
+  var corpo = document.getElementById('rend-corpo');
+  if (!corpo || !corpo.innerHTML) { alert('Sem dados para exportar.'); return; }
+  var html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Rendimentos LactoCeleiro</title>'
+    +'<style>@media print{@page{margin:12mm}}body{font-family:Arial,sans-serif;color:#1e293b;padding:20px}'
+    +'.header{background:#7e22ce;color:white;padding:16px 20px;border-radius:8px;margin-bottom:16px}'
+    +'h1{margin:0 0 4px;font-size:20px}.sub{font-size:12px;opacity:.85}'
+    +'table{width:100%;border-collapse:collapse;font-size:11px}th{background:#7e22ce;color:white;padding:7px 8px;text-align:left}'
+    +'td{padding:6px 8px;border-bottom:1px solid #f3f4f6}</style></head><body>'
+    +'<div class="header"><h1>Rendimentos LactoCeleiro</h1><div class="sub">Exportado em '+new Date().toLocaleDateString('pt-PT')+'</div></div>'
+    + corpo.innerHTML
+    +'<script>window.onload=function(){window.print();setTimeout(function(){window.close();},1200);}<\/script>'
+    +'</body></html>';
+  var win = window.open('','_blank','width=900,height=700');
+  if (!win) { alert('Activa pop-ups para exportar.'); return; }
+  win.document.write(html);
+  win.document.close();
+}
+
+function abrirRendimentos() {
+  irPara('screen-rendimentos');
+  setTimeout(_renderRendimentos, 50);
+}
+
+function _renderRendimentos() {
+  var prods = getProdutosQueijo ? getProdutosQueijo() : [];
+  var hist = getHistorico ? getHistorico() : [];
+
+  var fTipo    = (document.getElementById('rend-filtro-tipo')||{value:''}).value || '';
+  var fRef     = (document.getElementById('rend-filtro-ref')||{value:''}).value || '';
+  var fModo    = (document.getElementById('rend-filtro-modo')||{value:'saida'}).value || 'saida';
+  var fLoteMin = ((document.getElementById('rend-filtro-lote-min')||{value:''}).value||'').trim();
+  var fLoteMax = ((document.getElementById('rend-filtro-lote-max')||{value:''}).value||'').trim();
+  var fDataMin = (document.getElementById('rend-filtro-data-min')||{value:''}).value || '';
+  var fDataMax = (document.getElementById('rend-filtro-data-max')||{value:''}).value || '';
+
+  var lista = prods.filter(function(p) {
+    if (fTipo && p.tipo !== fTipo) return false;
+    if (fRef  && (p.referencia||'').toUpperCase() !== fRef.toUpperCase()) return false;
+    if (fLoteMin && p.lote < fLoteMin) return false;
+    if (fLoteMax && p.lote > fLoteMax) return false;
+    if (fDataMin) { var pd = p.data ? new Date(p.data) : new Date(p.dataFormatada); if (pd < new Date(fDataMin)) return false; }
+    if (fDataMax) { var pd2 = p.data ? new Date(p.data) : new Date(p.dataFormatada); var dMax = new Date(fDataMax); dMax.setHours(23,59,59); if (pd2 > dMax) return false; }
+    return true;
+  });
+
+  var saidasPorLote = {};
+  if (fModo === 'final') {
+    hist.forEach(function(h) {
+      if (h.operacao === 'saida' && h.lote) {
+        if (!saidasPorLote[h.lote]) saidasPorLote[h.lote] = { qtdVendida: 0, kgVendido: 0 };
+        saidasPorLote[h.lote].qtdVendida += (h.qtdSaida || h.qtd || 0);
+        if (h.kg) saidasPorLote[h.lote].kgVendido += parseFloat(h.kg);
+      }
+    });
+  }
+
+  var totalLeite = 0, totalQtd = 0, totalPeso = 0;
+  lista.forEach(function(p) {
+    totalLeite += parseFloat(p.leiteTotal||0);
+    totalQtd   += parseInt(p.qtd||0);
+    totalPeso  += parseFloat(p.peso||0);
+  });
+  var rendLU = totalQtd  > 0 ? (totalLeite/totalQtd).toFixed(2)  : '—';
+  var rendLK = totalPeso > 0 ? (totalLeite/totalPeso).toFixed(2) : '—';
+
+  var el = document.getElementById('rend-corpo');
+  if (!el) return;
+  var html = '';
+
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:16px">';
+  [
+    ['Lotes', lista.length, '', '#1e3a5f', '#eff6ff'],
+    ['Leite total', totalLeite.toFixed(0), 'L', '#0369a1', '#e0f2fe'],
+    ['Queijos', totalQtd, 'un', '#15803d', '#f0fdf4'],
+    ['Peso', totalPeso.toFixed(1), 'kg', '#92400e', '#fef3c7'],
+    ['L/unidade', rendLU, 'L', '#7e22ce', '#f5f3ff'],
+    ['L/kg', rendLK, 'L', '#be185d', '#fdf2f8']
+  ].forEach(function(c) {
+    html += '<div style="background:'+c[4]+';border-radius:12px;padding:10px;text-align:center">'
+      +'<div style="font-size:9px;font-weight:800;text-transform:uppercase;color:'+c[3]+';opacity:.75;margin-bottom:3px">'+c[0]+'</div>'
+      +'<div style="font-size:20px;font-weight:900;color:'+c[3]+'">'+c[1]+'</div>'
+      +'<div style="font-size:10px;color:'+c[3]+';opacity:.8">'+c[2]+'</div>'
+      +'</div>';
+  });
+  html += '</div>';
+
+  if (!lista.length) {
+    html += '<div style="text-align:center;padding:32px;color:#9ca3af">Sem lotes com os filtros seleccionados</div>';
+    el.innerHTML = html;
+    return;
+  }
+
+  html += '<div style="overflow-x:auto">';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
+  html += '<thead><tr style="background:#1e3a5f;color:white">'
+    +'<th style="padding:7px 8px;text-align:left">Lote</th>'
+    +'<th style="padding:7px 8px;text-align:left">Tipo</th>'
+    +'<th style="padding:7px 8px;text-align:left">Ref</th>'
+    +'<th style="padding:7px 8px;text-align:left">Data</th>'
+    +'<th style="padding:7px 8px;text-align:right">Leite (L)</th>'
+    +'<th style="padding:7px 8px;text-align:right">Qtd</th>'
+    +'<th style="padding:7px 8px;text-align:right">Peso (kg)</th>'
+    +'<th style="padding:7px 8px;text-align:right">L/un</th>'
+    +'<th style="padding:7px 8px;text-align:right">L/kg</th>';
+  if (fModo === 'final') html += '<th style="padding:7px 8px;text-align:right">Vendidos</th><th style="padding:7px 8px;text-align:right">L/un final</th>';
+  html += '</tr></thead><tbody>';
+
+  lista.forEach(function(p, i) {
+    var leite = parseFloat(p.leiteTotal||0);
+    var qtd   = parseInt(p.qtd||0);
+    var peso  = parseFloat(p.peso||0);
+    var lUnid = qtd  > 0 ? (leite/qtd).toFixed(2)  : '—';
+    var lKg   = peso > 0 ? (leite/peso).toFixed(2) : '—';
+    var saida = saidasPorLote[p.lote];
+    var vendidos  = saida ? saida.qtdVendida : '—';
+    var rendFinal = (saida && saida.qtdVendida > 0 && leite > 0) ? (leite/saida.qtdVendida).toFixed(2) : '—';
+    var lUnidN = parseFloat(lUnid);
+    var rCor = isNaN(lUnidN) ? '#374151' : lUnidN < 5 ? '#15803d' : lUnidN < 7 ? '#d97706' : '#dc2626';
+
+    html += '<tr style="background:'+(i%2===0?'#f9fafb':'white')+';border-bottom:1px solid #f3f4f6">'
+      +'<td style="padding:6px 8px;font-family:monospace;font-weight:900;font-size:11px;color:#1e3a5f">'+p.lote+'</td>'
+      +'<td style="padding:6px 8px;font-size:11px;color:#6b7280">'+(p.tipo||'—')+'</td>'
+      +'<td style="padding:6px 8px;font-size:11px;font-weight:700">'+(p.referencia||'—')+'</td>'
+      +'<td style="padding:6px 8px;font-size:11px;color:#6b7280">'+(p.dataFormatada||'')+'</td>'
+      +'<td style="padding:6px 8px;text-align:right;font-weight:700">'+(leite||'—')+'</td>'
+      +'<td style="padding:6px 8px;text-align:right">'+(qtd||'—')+'</td>'
+      +'<td style="padding:6px 8px;text-align:right">'+(peso||'—')+'</td>'
+      +'<td style="padding:6px 8px;text-align:right;font-weight:900;color:'+rCor+'">'+lUnid+'</td>'
+      +'<td style="padding:6px 8px;text-align:right;font-weight:700;color:'+rCor+'">'+lKg+'</td>';
+    if (fModo === 'final') {
+      html += '<td style="padding:6px 8px;text-align:right">'+vendidos+'</td>'
+             +'<td style="padding:6px 8px;text-align:right;font-weight:900;color:#7e22ce">'+rendFinal+'</td>';
+    }
+    html += '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+
 
 // ── Export XLSX ────────────────────────────────────────────
 function _rlXLSX(porLote) {
@@ -12629,8 +12917,8 @@ function _renderPrepLinhas() {
       infoBlock = '<div id="prep-info-'+i+'" style="background:'+(refMismatch?'#fef2f2':'#eff6ff')+';border:2px solid '+(refMismatch?'#fca5a5':'#bfdbfe')+';border-radius:8px;padding:8px 10px;margin-top:8px">'
         +'<div style="font-size:12px;font-weight:800;color:#1e40af">C'+(l.camara||'?')+' \xb7 '+l.lote+' \xb7 '+dispStr+'</div>'
         +(l.validade
-          ? '<div style="font-size:11px;color:#92400e;font-weight:700;margin-top:2px">\ud83d\udcc5 '+l.validade+'</div>'
-          : '<div style="font-size:11px;color:#9ca3af;margin-top:2px">Validade a definir na Expedi\xe7\xe3o</div>')
+          ? '<div style=\"font-size:11px;color:#92400e;font-weight:700;margin-top:2px\">\u2705 '+l.validade+' \u2014 <button type=\"button\" onclick=\"_editarValidadeLinha('+i+')\" style=\"font-size:10px;background:#fef3c7;border:1px solid #fbbf24;border-radius:4px;padding:2px 7px;cursor:pointer;color:#92400e;font-weight:700\">editar</button></div>'
+          : '<div style=\"font-size:12px;color:#dc2626;font-weight:800;margin-top:4px\">\u26a0\ufe0f Sem validade \u2014 <button type=\"button\" onclick=\"_editarValidadeLinha('+i+')\" style=\"font-size:12px;background:#fee2e2;border:2px solid #fca5a5;border-radius:7px;padding:3px 10px;cursor:pointer;color:#dc2626;font-weight:800\">Introduzir validade</button></div>')
         +(refMismatch ? '<div style="font-size:11px;color:#dc2626;font-weight:800;margin-top:4px">⚠️ Ref. incompatível (lote: '+(found&&found.referencia||'?')+')</div>' : '')
         +'</div>';
     }
@@ -13254,10 +13542,74 @@ function enviarParaExpedicao() {
   _confirmarEnvioExpedicao();
 }
 
+
+// ── Editar validade por linha ──────────────────────────────
+function _editarValidadeLinha(idx) {
+  var l = _prepLinhas && _prepLinhas[idx];
+  if (!l) return;
+  var old = document.getElementById('modal-validade-linha');
+  if (old) old.remove();
+  var panel = document.createElement('div');
+  panel.id = 'modal-validade-linha';
+  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  var valAtual = '';
+  if (l.validade) {
+    try {
+      var parts = l.validade.split('/');
+      if (parts.length===3) valAtual = parts[2]+'-'+parts[1].padStart(2,'0')+'-'+parts[0].padStart(2,'0');
+      else { var dd = new Date(l.validade); if(!isNaN(dd)) valAtual = dd.toISOString().slice(0,10); }
+    } catch(e2) {}
+  }
+  panel.innerHTML = [
+    '<div style="background:white;border-radius:18px;padding:24px;width:100%;max-width:340px">',
+      '<div style="font-size:16px;font-weight:900;color:#1e3a5f;margin-bottom:4px">\ud83d\udcc5 Validade</div>',
+      '<div style="font-size:13px;color:#374151;font-weight:700;margin-bottom:2px">'+l.artigo+'</div>',
+      '<div style="font-size:12px;color:#6b7280;margin-bottom:16px">Lote: '+(l.lote||'\u2014')+'</div>',
+      '<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Data de Validade</label>',
+      '<input id="val-linha-input" type="date" value="'+valAtual+'" style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:10px;font-size:16px;box-sizing:border-box;margin-bottom:12px">',
+      '<div style="font-size:11px;color:#92400e;background:#fef3c7;border-radius:8px;padding:8px;margin-bottom:16px">Esta validade ser\xe1 gravada no lote e aplicada nas pr\xf3ximas sa\xeddas.</div>',
+      '<div style="display:flex;gap:8px">',
+        '<button onclick="_guardarValidadeLinha('+idx+')" style="flex:1;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">\u2713 Guardar</button>',
+        '<button onclick="document.getElementById(\'modal-validade-linha\').remove()" style="padding:13px 16px;background:#f3f4f6;border:none;border-radius:10px;font-size:14px;cursor:pointer">\u2715</button>',
+      '</div>',
+    '</div>'
+  ].join('');
+  document.body.appendChild(panel);
+  setTimeout(function(){ var inp=document.getElementById('val-linha-input'); if(inp) inp.focus(); }, 100);
+}
+
+function _guardarValidadeLinha(idx) {
+  var inp = document.getElementById('val-linha-input');
+  if (!inp || !inp.value) { alert('Introduz uma data de validade.'); return; }
+  var d = new Date(inp.value);
+  var valStr = ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
+  _prepLinhas[idx].validade = valStr;
+  if (_prepLinhas[idx].lote && _prepLinhas[idx].camara) {
+    var e = getEstado();
+    var loteObj = (e[_prepLinhas[idx].camara]||[]).find(function(l){ return l.lote===_prepLinhas[idx].lote; });
+    if (loteObj) {
+      loteObj.validade = d.toISOString();
+      loteObj.validadeFormatada = valStr;
+      salvarEstado(e); atualizarResumoCamaras();
+    }
+  }
+  document.getElementById('modal-validade-linha').remove();
+  _renderPrepLinhas();
+}
+
+function _verificarValidadesPrep() {
+  return (_prepLinhas||[]).filter(function(l){ return l.lote && !l.validade; });
+}
+
 function _confirmarEnvioExpedicao(fecharDireto) {
   var encs = getEncomendas();
   var enc = encs.find(function(e){ return e.id === _prepEncId; });
   if (!enc) return;
+  var semVal = _verificarValidadesPrep();
+  if (semVal.length > 0) {
+    var listaSemVal = semVal.map(function(l){ return '\u2022 '+l.artigo+' (lote '+l.lote+')'; }).join('\n');
+    if (!confirm('\u26a0\ufe0f Os seguintes artigos n\xe3o t\xeam validade definida:\n\n'+listaSemVal+'\n\nContinuar mesmo assim?')) return;
+  }
 
   // Guardar linhas de preparação na encomenda
   enc.prepLinhas = _prepLinhas.map(function(l){ return Object.assign({}, l); });
@@ -13285,10 +13637,10 @@ function _confirmarEnvioExpedicao(fecharDireto) {
   exps.push(novaExp);
   salvarExpedicoes(exps);
 
-  // Se fechar direto → dar saídas de câmara e enviar email
+  // Se fechar direto: dar saidas + gerar PDF
   if (fecharDireto) {
     _darSaidasCamaraPrep(_prepLinhas);
-    _enviarEmailQualidade(enc);
+    _gerarGuiaExpedicaoPDF(enc);
   }
 
   // Atualizar badge
@@ -14104,6 +14456,78 @@ function finalizarExpedicao() {
   setTimeout(function(){ _renderExpDet(exp); }, 600);
 }
 
+
+
+// ── Gerar Guia de Expedição como PDF imprimível ──────────────
+function _gerarGuiaExpedicaoPDF(enc) {
+  if (!enc) return;
+  var linhas = enc.prepLinhas || enc.linhas || [];
+  var hoje = new Date();
+  var dStr = ('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
+  var hStr = ('0'+hoje.getHours()).slice(-2)+':'+('0'+hoje.getMinutes()).slice(-2);
+
+  var rowsHTML = '';
+  linhas.forEach(function(l, i) {
+    rowsHTML += '<tr style="background:'+(i%2===0?'#f9fafb':'white')+'">'
+      +'<td style="padding:8px 10px;font-size:13px;color:#374151">'+(i+1)+'</td>'
+      +'<td style="padding:8px 10px;font-size:13px;font-weight:700;color:#1e3a5f">'+(l.artigo||'')+'</td>'
+      +'<td style="padding:8px 10px;text-align:center;font-size:13px">'+(l.qtd||0)+'</td>'
+      +'<td style="padding:8px 10px;text-align:center;font-size:13px">'+(l.caixas||0)+'</td>'
+      +'<td style="padding:8px 10px;font-family:monospace;font-weight:900;font-size:12px;color:#1e3a5f">'+(l.lote||'\u2014')+'</td>'
+      +'<td style="padding:8px 10px;text-align:center;font-size:12px;color:#92400e">'+(l.validade||'\u2014')+'</td>'
+      +'<td style="padding:8px 10px;text-align:center;font-size:12px">'+(l.kg?Number(l.kg).toFixed(1)+' kg':'\u2014')+'</td>'
+      +'</tr>';
+  });
+
+  var htmlContent = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">'
+    +'<title>Guia de Expedi\xe7\xe3o #'+enc.nr+'</title>'
+    +'<style>'
+    +'@media print { @page { margin: 15mm; } body { -webkit-print-color-adjust: exact; } }'
+    +'body { font-family: Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; }'
+    +'.header { background: linear-gradient(135deg, #1e3a5f, #0369a1); color: white; padding: 20px 24px; margin-bottom: 24px; }'
+    +'.header h1 { margin: 0 0 4px; font-size: 22px; }'
+    +'.header .sub { font-size: 13px; opacity: 0.85; }'
+    +'.info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 0 24px 20px; }'
+    +'.info-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; }'
+    +'.info-box .label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #6b7280; margin-bottom: 4px; }'
+    +'.info-box .value { font-size: 14px; font-weight: 800; color: #1e3a5f; }'
+    +'table { width: calc(100% - 48px); margin: 0 24px 20px; border-collapse: collapse; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); }'
+    +'th { background: #1e3a5f; color: white; padding: 9px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; text-align: left; }'
+    +'td { border-bottom: 1px solid #f3f4f6; }'
+    +'.footer { margin: 20px 24px 0; padding: 14px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; font-size: 12px; color: #0369a1; }'
+    +'</style></head><body>'
+    +'<div class="header">'
+    +'<h1>&#128666; Guia de Expedi\xe7\xe3o</h1>'
+    +'<div class="sub">LactoCeleiro &mdash; Emitido em '+dStr+' '+hStr+'</div>'
+    +'</div>'
+    +'<div class="info-grid">'
+    +'<div class="info-box"><div class="label">Encomenda</div><div class="value">#'+enc.nr+'</div></div>'
+    +'<div class="info-box"><div class="label">Cliente</div><div class="value">'+(enc.cliente||'\u2014')+'</div></div>'
+    +'<div class="info-box"><div class="label">Data</div><div class="value">'+dStr+'</div></div>'
+    +(enc.dataEntrega?'<div class="info-box"><div class="label">Data Entrega</div><div class="value">'+enc.dataEntrega+'</div></div>':'')
+    +(enc.dataExpedicao?'<div class="info-box"><div class="label">Data Expedi\xe7\xe3o</div><div class="value">'+enc.dataExpedicao+'</div></div>':'')
+    +(enc.obs?'<div class="info-box" style="grid-column:1/-1"><div class="label">Observa\xe7\xf5es</div><div class="value" style="font-size:13px">'+enc.obs+'</div></div>':'')
+    +'</div>'
+    +'<table>'
+    +'<thead><tr>'
+    +'<th>#</th><th>Artigo</th><th style="text-align:center">Qtd</th><th style="text-align:center">Caixas</th>'
+    +'<th>Lote</th><th style="text-align:center">Validade</th><th style="text-align:center">Peso</th>'
+    +'</tr></thead>'
+    +'<tbody>'+rowsHTML+'</tbody>'
+    +'</table>'
+    +'<div class="footer">\u2713 Guia gerado automaticamente pela app LactoCeleiro. Verificar antes de expedir.</div>'
+    +'<div style="text-align:center;margin:20px 0;font-size:12px;color:#9ca3af">LactoCeleiro &mdash; Expedi\xe7\xe3o #'+enc.nr+' &mdash; '+dStr+'</div>'
+    +'<script>window.onload=function(){window.print(); setTimeout(function(){window.close();},1200);};<\/script>'
+    +'</body></html>';
+
+  var win = window.open('', '_blank', 'width=800,height=700,scrollbars=yes');
+  if (!win) {
+    alert('Activa pop-ups para imprimir o guia. Abre as defini\xe7\xf5es do browser e permite pop-ups para este site.');
+    return;
+  }
+  win.document.write(htmlContent);
+  win.document.close();
+}
 
 function imprimirEncomenda(encId) {
   var encs = getEncomendas();
