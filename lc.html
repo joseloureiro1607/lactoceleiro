@@ -595,6 +595,9 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
           <span class="home-btn-label">ENCOMENDAS</span>
         </button>
       
+        <button class="home-btn" id="btn-home-stock" onclick="abrirStockModal()" style="display:none;background:linear-gradient(135deg,#0f766e,#0d9488);color:white;grid-column:1/-1;padding:14px">
+          <span style="font-size:18px">📊</span>&nbsp; VER STOCK POR TIPO
+        </button>
         <button class="home-btn" id="btn-home-export" onclick="irPara('screen-export')" style="display:none;background:#1e40af;color:white;grid-column:1/-1;padding:16px">EXPORTAR RELATORIOS</button>
         <button class="home-btn" id="btn-home-prod-manual" onclick="irParaProducaoManual()" style="display:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;grid-column:1/-1;padding:16px">
           <span style="font-size:18px">&#128295;</span>&nbsp; PRODU&#199;&#195;O MANUAL
@@ -1424,6 +1427,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
           &#128666; Enviar para Expedi&#231;&#227;o
         </button>
       </div>
+      <div id="enc-prep-extra-btns" style="margin-top:8px"></div>
       <div class="status" id="status-enc-prep"></div>
     </div>
 
@@ -2021,13 +2025,13 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
       <div class="rel-data" id="rel-data-hora"></div>
     </div>
     <div id="rel-corpo"></div>
-    <div class="rel-rodape">LactoCeleiro · Gerado automaticamente</div>
-    </div>
+    <div class="rel-rodape">LactoCeleiro · Gerado automaticamente pela app de gestão de câmaras</div>
   </div>
-</div>
 
-<script>
-// ===
+  </div><!-- /body -->
+</div><!-- /container -->
+
+<script>// ===
 // CONSTANTES E ESTADO
 // ===
 const MESES_FULL = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -2196,17 +2200,38 @@ function atualizarResumoCamaras() {
   var bgs   = {1:'#dbeafe',2:'#dbeafe',3:'#dcfce7',4:'#fef3c7',5:'#fff1f2'};
   var html = '';
 
-  // Câmaras 1-3: compactas (resumo)
+  // Câmaras 1-3: com lista de lotes (igual a 4 e 5)
   html += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">';
   for (var c = 1; c <= 3; c++) {
     var lotes = e[c] || [];
     var total = lotes.reduce(function(s,l){ return s+(l.qtd||0); }, 0);
-    html += '<div onclick="abrirDetalhesCamara('+c+')" style="background:'+bgs[c]+';border:2px solid #e5e7eb;border-radius:12px;padding:12px;cursor:pointer">'
-      +'<div style="font-size:11px;font-weight:800;color:'+cores[c]+';margin-bottom:4px">C'+c+'</div>'
-      +'<div style="font-size:18px;font-weight:900;color:'+cores[c]+'">'+lotes.length+'</div>'
-      +'<div style="font-size:10px;color:#9ca3af">lote'+(lotes.length!==1?'s':'')+'</div>'
-      +(total>0?'<div style="font-size:11px;font-weight:700;color:'+cores[c]+';margin-top:2px">'+total+' un</div>':'')
-    +'</div>';
+    html += '<div onclick="abrirDetalhesCamara('+c+')" style="background:'+bgs[c]+';border:2px solid '+cores[c]+';border-radius:12px;padding:10px;cursor:pointer">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">'
+        +'<span style="font-size:12px;font-weight:900;color:'+cores[c]+'">Câmara '+c+'</span>'
+        +'<span style="font-size:10px;background:white;color:'+cores[c]+';border-radius:5px;padding:1px 6px;font-weight:700">'+total+' un</span>'
+      +'</div>';
+    if (!lotes.length) {
+      html += '<div style="font-size:10px;color:#9ca3af;text-align:center;padding:4px">Vazia</div>';
+    } else {
+      lotes.forEach(function(l){
+        var diasTxt = '';
+        if (l.data) {
+          var dd = Math.round((Date.now()-new Date(l.data).getTime())/864e5);
+          diasTxt = dd===0?'hoje':''+dd+'d';
+        }
+        html += '<div style="background:white;border-radius:6px;padding:4px 6px;margin-bottom:3px;display:flex;justify-content:space-between;align-items:center">'
+          +'<div>'
+            +'<div style="font-family:monospace;font-size:10px;font-weight:800;color:'+cores[c]+'">'+l.lote+'</div>'
+            +(l.referencia?'<div style="font-size:9px;font-weight:700;color:#374151">'+l.referencia+'</div>':'')
+          +'</div>'
+          +'<div style="text-align:right">'
+            +'<div style="font-size:10px;font-weight:700;color:'+cores[c]+'">'+l.qtd+' un</div>'
+            +(diasTxt?'<div style="font-size:8px;color:#9ca3af">\u23f1 '+diasTxt+'</div>':'')
+          +'</div>'
+        +'</div>';
+      });
+    }
+    html += '</div>';
   }
   html += '</div>';
 
@@ -3170,23 +3195,30 @@ function abrirEncomenda(id) {
   const isExp   = temPermissao('exportar-enc');
 
   let botoes = '';
-  if (enc.estado !== 'concluida' && enc.estado !== 'em-expedicao') {
-    if (isAdmin || isEnc)
-      botoes += `<button class="btn-primary" style="background:#0369a1" onclick="prepararEncomenda('${enc.id}')">&#128666; Preparar / Atribuir Lotes</button>`;
+  // Admin pode preparar/editar TUDO (qualquer estado)
+  if (isAdmin || (isEnc && enc.estado !== 'concluida' && enc.estado !== 'em-expedicao')) {
+    botoes += `<button class="btn-primary" style="background:#0369a1" onclick="prepararEncomenda('${enc.id}')">&#128666; Preparar / Atribuir Lotes</button>`;
   }
   if (enc.estado === 'em-expedicao') {
     botoes += `<button class="btn-primary" style="background:#0284c7" onclick="abrirExpDetalhe('${enc.id}')">&#128666; Ver na Expedição</button>`;
   }
   if (isAdmin || isExp)
     botoes += `<button class="btn-primary" style="background:#7c3aed;margin-top:4px" onclick="emailEncomenda('${enc.id}')">&#128231; Enviar por Email</button>`;
-  if (enc.estado !== 'concluida' && isAdmin) {
-    botoes += `<button class="btn-primary" style="background:#15803d" onclick="concluirEncomenda('${enc.id}')">&#10003; Marcar como Concluída</button>`;
-  } else if (enc.estado === 'concluida' && isAdmin) {
-    botoes += `<button class="btn-primary" style="background:#6d28d9" onclick="pedirReabrirEncomenda('${enc.id}')">🔓 Reabrir Encomenda</button>`;
+  if (isAdmin) {
+    // Admin pode imprimir guia
+    botoes += `<button class="btn-primary" style="background:#0891b2;margin-top:4px" onclick="imprimirEncomenda('${enc.id}')">🖨️ Imprimir Guia</button>`;
+    if (enc.estado !== 'concluida') {
+      botoes += `<button class="btn-primary" style="background:#15803d;margin-top:4px" onclick="concluirEncomenda('${enc.id}')">&#10003; Marcar como Concluída</button>`;
+    }
+    if (enc.estado === 'concluida' || enc.estado === 'em-expedicao') {
+      botoes += `<button class="btn-primary" style="background:#6d28d9;margin-top:4px" onclick="pedirReabrirEncomenda('${enc.id}')">🔓 Reabrir Encomenda</button>`;
+    }
+    // Eliminar para admin — qualquer estado
+    botoes += `<button class="btn-primary" style="background:#dc2626;margin-top:6px" onclick="pedirEliminarEncomenda('${enc.id}')">🗑️ Eliminar Encomenda</button>`;
+  } else if (enc.estado !== 'concluida') {
+    if (isAdmin)
+      botoes += `<button class="btn-primary" style="background:#15803d" onclick="concluirEncomenda('${enc.id}')">&#10003; Marcar como Concluída</button>`;
   }
-  // Eliminar só para admin
-  if (isAdmin)
-    botoes += `<button class="btn-primary" style="background:#dc2626;margin-top:4px" onclick="pedirEliminarEncomenda('${enc.id}')">🗑️ Eliminar Encomenda</button>`;
 
   document.getElementById('enc-det-botoes').innerHTML = botoes;
   document.getElementById('status-enc-det').className = 'status';
@@ -3233,32 +3265,37 @@ function concluirEncomenda(id) {
 
 function _enviarEmailQualidade(enc) {
   if (!enc) return;
-  var linhasTexto = (enc.linhas||[{artigo:enc.artigo,qtd:enc.qtd}]).map(function(l,i){
+  var linhasTexto = (enc.linhas||[{artigo:enc.artigo||'',qtd:enc.qtd||0}]).map(function(l,i){
     return '  '+(i+1)+'. '+l.artigo+' — '+l.qtd+' un'+(l.caixas?' ('+l.caixas+' cx)':'')+(l.obsLinha?' — '+l.obsLinha:'');
   }).join('\n');
-  var lotesTexto = (enc.lotes||[]).map(function(l){
-    return '  Lote: '+l.lote+' | '+l.qtd+' un'+(l.peso?' | '+Number(l.peso).toFixed(1)+' kg':'')+(l.validade?' | Val: '+l.validade:'');
+  var lotesTexto = (enc.prepLinhas||enc.lotes||[]).map(function(l){
+    return '  Lote: '+(l.lote||'?')+' | C'+(l.camara||'?')+' | '+(l.qtd||0)+' un'+(l.kg?' | '+Number(l.kg).toFixed(1)+' kg':'')+(l.validade?' | Val: '+l.validade:'');
   }).join('\n');
-  var corpo = 'ENCOMENDA CONCLUÍDA — LactoCeleiro'
-    +'\n================================'
-    +'\nEncomenda #'+enc.nr
-    +'\nCliente: '+(enc.cliente||'—')
-    +'\nData: '+(enc.dataFormatada||new Date().toLocaleDateString('pt-PT'))
-    +(enc.dataEntrega ? '\nEntrega: '+enc.dataEntrega : '')
-    +'\n\nARTIGOS:\n'+linhasTexto
-    +(lotesTexto ? '\n\nLOTES SAÍDOS:\n'+lotesTexto : '')
-    +'\n================================'
-    +'\nLactoCeleiro — Gestão de Produção';
-  var assunto = 'Encomenda #'+enc.nr+' concluída — '+(enc.cliente||'')+ ' — LactoCeleiro';
+  var artigos = (enc.linhas||[]).map(function(l,i){ return (i+1)+'. '+l.artigo+' | '+l.qtd+' un | '+l.caixas+' cx'+(l.obsLinha?' | '+l.obsLinha:''); }).join('\n');
+  var corpo = '══════════════════════════════════\n'
+    +'GUIA DE EXPEDIÇÃO — LactoCeleiro\n'
+    +'══════════════════════════════════\n'
+    +'Encomenda: #'+enc.nr+'\n'
+    +'Cliente: '+(enc.cliente||'—')+'\n'
+    +'Data: '+(enc.dataFormatada||new Date().toLocaleDateString('pt-PT'))+'\n'
+    +(enc.dataEntrega ? 'Data Entrega: '+enc.dataEntrega+'\n' : '')
+    +(enc.dataExpedicao ? 'Data Expedição: '+enc.dataExpedicao+'\n' : '')
+    +'\nARTIGOS ENCOMENDADOS:\n'+artigos+'\n'
+    +(lotesTexto ? '\nLOTES / CÂMARAS:\n'+lotesTexto+'\n' : '')
+    +(enc.obs ? '\nObservações: '+enc.obs+'\n' : '')
+    +'\n══════════════════════════════════\n'
+    +'LactoCeleiro — Gestão de Produção';
+  var assunto = '📦 Encomenda #'+enc.nr+' — '+(enc.cliente||'')+ ' — LactoCeleiro';
   var dest = 'qualidade@lactoceleiro.pt';
-  // Try navigator.share first (mobile), fallback to mailto
-  if (navigator.share) {
-    navigator.share({ title: assunto, text: corpo }).catch(function(){
-      window.open('mailto:'+dest+'?subject='+encodeURIComponent(assunto)+'&body='+encodeURIComponent(corpo));
-    });
-  } else {
-    window.open('mailto:'+dest+'?subject='+encodeURIComponent(assunto)+'&body='+encodeURIComponent(corpo));
-  }
+
+  // Abrir guia de impressão em paralelo
+  try { imprimirEncomenda(enc.id||enc.nr); } catch(e) {}
+
+  // Abrir aplicação de email com conteúdo pré-preenchido
+  var mailLink = 'mailto:'+dest+'?subject='+encodeURIComponent(assunto)+'&body='+encodeURIComponent(corpo);
+  var a = document.createElement('a');
+  a.href = mailLink;
+  a.click();
 }
 
 function pedirReabrirEncomenda(id) {
@@ -5777,8 +5814,11 @@ function mostrarSelectorCamara(prod) {
         +'<div style="font-size:13px;font-weight:800;color:#15803d;margin-bottom:8px">🏠 Câmara 3 — G</div>'
         +'<label style="font-size:11px;font-weight:700;color:#6b7280">Qtd (un)</label>'
         +'<input id="pq-g-qtd" type="number" min="0" value="'+Math.ceil(qtdTotal/2)+'" style="width:100%;padding:7px;border:1.5px solid #86efac;border-radius:7px;font-size:15px;font-weight:700;margin-top:2px;box-sizing:border-box">'
-        +'<label style="font-size:11px;font-weight:700;color:#6b7280;margin-top:5px;display:block">Peso (kg)</label>'
-        +'<input id="pq-g-peso" type="number" step="0.1" min="0" value="'+parseFloat((pesoTotal/2).toFixed(1))+'" style="width:100%;padding:7px;border:1.5px solid #86efac;border-radius:7px;font-size:15px;font-weight:700;margin-top:2px;box-sizing:border-box">'
+        +'<label style="font-size:11px;font-weight:700;color:#6b7280;margin-top:5px;display:block">Peso bruto (kg)</label>'
+        +'<input id="pq-g-peso" type="number" step="0.001" min="0" value="'+parseFloat((pesoTotal/2).toFixed(1))+'" style="width:100%;padding:7px;border:1.5px solid #86efac;border-radius:7px;font-size:15px;font-weight:700;margin-top:2px;box-sizing:border-box" oninput="_atualizarPesoLiqG()">'
+        +'<label style="font-size:11px;font-weight:700;color:#6b7280;margin-top:5px;display:block">Tara cx (kg)</label>'
+        +'<input id="pq-g-tara" type="number" step="0.001" min="0" placeholder="0.000" style="width:100%;padding:7px;border:1.5px solid #86efac;border-radius:7px;font-size:15px;font-weight:700;margin-top:2px;box-sizing:border-box" oninput="_atualizarPesoLiqG()">'
+        +'<div id="pq-g-liq-display" style="font-size:11px;color:#15803d;font-weight:800;margin-top:4px">Líq: —</div>'
       +'</div>'
       +'<div style="border:2px solid #7f1d1d;border-radius:12px;padding:12px">'
         +'<div style="font-size:13px;font-weight:800;color:#7f1d1d;margin-bottom:8px">🏠 Câmara 5 — PPP</div>'
@@ -5809,9 +5849,19 @@ function mostrarSelectorCamara(prod) {
   document.body.appendChild(div);
 }
 
+
+function _atualizarPesoLiqG() {
+  var bruto = parseFloat(document.getElementById('pq-g-peso')?.value) || 0;
+  var tara  = parseFloat(document.getElementById('pq-g-tara')?.value) || 0;
+  var liq   = Math.max(0, bruto - tara);
+  var el = document.getElementById('pq-g-liq-display');
+  if (el) el.textContent = 'Líq: ' + liq.toFixed(3) + ' kg';
+}
 function _enviarCabraMultiRef(qtdTotalOrig, pesoTotalOrig) {
   var qtdG   = parseInt(document.getElementById('pq-g-qtd')?.value)   || 0;
-  var pesoG  = parseFloat(document.getElementById('pq-g-peso')?.value) || 0;
+  var pesoGBruto = parseFloat(document.getElementById('pq-g-peso')?.value) || 0;
+  var taraG  = parseFloat(document.getElementById('pq-g-tara')?.value) || 0;
+  var pesoG  = Math.max(0, pesoGBruto - taraG);
   var qtdPPP = parseInt(document.getElementById('pq-ppp-qtd')?.value)  || 0;
 
   if (qtdG <= 0 && qtdPPP <= 0) {
@@ -8937,6 +8987,8 @@ function aplicarPermissoesHome() {
   // Exportar no home so para admin/direcao
   const btnHomeExp = document.getElementById('btn-home-export');
   if (btnHomeExp) btnHomeExp.style.display = temPermissao('ver-relatorios') ? 'flex' : 'none';
+  const btnHomeStock = document.getElementById('btn-home-stock');
+  if (btnHomeStock) btnHomeStock.style.display = temPermissao('ver-relatorios') || temPermissao('admin') || temPermissao('direcao') || temPermissao('gestor') ? 'flex' : 'none';
   const btnHomePM = document.getElementById('btn-home-prod-manual');
   if (btnHomePM) btnHomePM.style.display = temPermissao('admin') ? 'flex' : 'none';
   // Exportar enc no hub (encomendas/expedicao/admin/gestor)
@@ -11074,13 +11126,14 @@ function _rlFiltrar() {
   if(_rlFiltroTipo==='lote') {
     var ini=(document.getElementById('rl-lote-ini').value||'').trim();
     var fim=(document.getElementById('rl-lote-fim').value||'').trim()||ini;
-    if(!ini) return null;
-    res=todos.filter(function(r){ var l=(r.lote||''); return l>=ini && l<=fim; });
+    if(!ini) { res = todos; } // sem filtro → todos
+    else { res=todos.filter(function(r){ var l=(r.lote||''); return l>=ini && l<=fim; }); }
   } else {
-    var dI=document.getElementById('rl-data-ini').value;
-    var dF=document.getElementById('rl-data-fim').value;
-    if(!dI||!dF) return null;
-    res=todos.filter(function(r){ var d=(r.data||'').slice(0,10); return d>=dI && d<=dF; });
+    var dI=(document.getElementById('rl-data-ini')||{}).value||'';
+    var dF=(document.getElementById('rl-data-fim')||{}).value||'';
+    if(!dI&&!dF) { res = todos; } // sem filtro → todos
+    else if(!dI||!dF) return null;
+    else { res=todos.filter(function(r){ var d=(r.data||'').slice(0,10); return d>=dI && d<=dF; }); }
   }
 
   // Agrupar por número de lote
@@ -11122,6 +11175,20 @@ function abrirRelatorioCamaras() {
     +'<div style="margin-bottom:12px">'
       +'<label style="font-size:11px;font-weight:700;color:#6b7280">Lote (opcional)</label>'
       +'<input type="text" id="rcam-lote" placeholder="Ex: 261001" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box;font-family:monospace">'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
+      +'<div><label style="font-size:11px;font-weight:700;color:#6b7280">Lote de</label>'
+        +'<input type="text" id="rcam-lote-de" placeholder="261001" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;font-family:monospace"></div>'
+      +'<div><label style="font-size:11px;font-weight:700;color:#6b7280">Até</label>'
+        +'<input type="text" id="rcam-lote-ate" placeholder="261099" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;font-family:monospace"></div>'
+    +'</div>'
+    +'<div style="margin-bottom:10px">'
+      +'<label style="font-size:11px;font-weight:700;color:#6b7280">Câmara</label>'
+      +'<select id="rcam-camara" style="width:100%;padding:8px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px">'
+        +'<option value="">Todas</option>'
+        +'<option value="1">Câmara 1</option><option value="2">Câmara 2</option><option value="3">Câmara 3</option>'
+        +'<option value="4">Câmara 4</option><option value="5">Câmara 5</option>'
+      +'</select>'
     +'</div>'
     +'<button onclick="_gerarRelCamaras()" style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer">\ud83d\udc41 Gerar Relatório</button>'
     +'<div id="rcam-resultado" style="margin-top:14px"></div>'
@@ -11804,6 +11871,55 @@ cams.forEach(function(l, ci) {
         html+='</div></div>';
       }
     }
+    // Rendimento produção e final
+    if(pq && parseFloat(pq.litros) > 0) {
+      var litros = parseFloat(pq.litros) || 0;
+      var pesoLiq = parseFloat(pq.peso) || 0;
+      var kgVendidos = (d.saidas||[]).reduce(function(a,s){ return a + (parseFloat(s.kg)||0); }, 0);
+      if(litros>0 && pesoLiq>0) {
+        html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:10px 18px 4px">';
+        html+='<div style="background:#fef9c3;border:1px solid #fde68a;border-radius:9px;padding:10px 12px;text-align:center">'
+          +'<div style="font-size:10px;color:#6b7280;font-weight:700;text-transform:uppercase">Rendimento Produção</div>'
+          +'<div style="font-size:16px;font-weight:900;color:#854d0e">'+(litros/pesoLiq).toFixed(1)+' L/kg</div>'
+          +'<div style="font-size:10px;color:#92400e">'+litros.toFixed(0)+' L → '+pesoLiq.toFixed(2)+' kg</div>'
+          +'</div>';
+        if(kgVendidos>0) {
+          html+='<div style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:9px;padding:10px 12px;text-align:center">'
+            +'<div style="font-size:10px;color:#6b7280;font-weight:700;text-transform:uppercase">Rendimento Final</div>'
+            +'<div style="font-size:16px;font-weight:900;color:#065f46">'+(litros/kgVendidos).toFixed(1)+' L/kg</div>'
+            +'<div style="font-size:10px;color:#064e3b">'+litros.toFixed(0)+' L → '+kgVendidos.toFixed(2)+' kg vendidos</div>'
+            +'</div>';
+        }
+        html+='</div>';
+      }
+    }
+
+    // Pessoas envolvidas
+    var pessoasInfo = [];
+    if(pq) {
+      var pp = pq.operadores||pq.pessoas||pq.nrPessoas||pq.nomes||'';
+      if(pp) pessoasInfo.push('🏭 Produção: '+(Array.isArray(pp)?pp.join(', '):pp));
+    }
+    cams.forEach(function(cam) {
+      var lavs = cam.lavagens||[];
+      if(lavs.length) pessoasInfo.push('🧼 C'+cam.camara+': '+lavs.length+' lavagem(ns)');
+      lavs.forEach(function(lav,li) {
+        var pp2 = lav.operadores||lav.pessoas||lav.nrPessoas||lav.nomes||'';
+        if(pp2) pessoasInfo.push('  Lav.'+(li+1)+': '+(Array.isArray(pp2)?pp2.join(', '):pp2));
+      });
+      var pp3 = cam.operadores||cam.pessoas||cam.nomes||'';
+      if(pp3) pessoasInfo.push('🏠 C'+cam.camara+': '+(Array.isArray(pp3)?pp3.join(', '):pp3));
+    });
+    if(pessoasInfo.length>0) {
+      html+='<div style="padding:8px 18px 14px">'
+        +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#6b7280;letter-spacing:.05em;margin-bottom:6px">👷 Pessoas Envolvidas</div>'
+        +'<div style="display:flex;flex-direction:column;gap:4px">';
+      pessoasInfo.forEach(function(p) {
+        html+='<div style="font-size:12px;color:#374151;background:#f9fafb;border-radius:6px;padding:4px 8px">'+p+'</div>';
+      });
+      html+='</div></div>';
+    }
+
     html+='</div>'; // fim card lote
   });
 
@@ -12182,6 +12298,26 @@ function prepararEncomenda(id) {
   document.getElementById('status-enc-prep').className = 'status';
 
   _renderPrepLinhas();
+
+  // Preencher datas da encomenda
+  var prepDE = document.getElementById('prep-data-entrega');
+  var prepDX = document.getElementById('prep-data-expedicao');
+  if (prepDE) prepDE.value = enc.dataEntrega || '';
+  if (prepDX) prepDX.value = enc.dataExpedicao || '';
+
+  // Botões extra conforme perfil
+  var extraDiv = document.getElementById('enc-prep-extra-btns');
+  if (extraDiv) {
+    var isExpedicaoUser = temPermissao('expedicao') || temPermissao('admin');
+    var btnsHtml = '';
+    if (isExpedicaoUser) {
+      btnsHtml += '<button onclick="expedirAgora()" style="width:100%;padding:13px;background:#15803d;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:6px">🚚 Expedir Agora (dar saída + fechar + email)</button>';
+    } else {
+      btnsHtml += '<button onclick="fecharEncDireto()" style="width:100%;padding:12px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer">✅ Fechar Encomenda</button>';
+    }
+    extraDiv.innerHTML = btnsHtml;
+  }
+
   irPara('screen-enc-preparar');
 }
 
@@ -12210,7 +12346,7 @@ function _renderPrepLinhas() {
         +(l.validade
           ? '<div style="font-size:11px;color:#92400e;font-weight:700;margin-top:2px">\ud83d\udcc5 '+l.validade+'</div>'
           : '<div style="font-size:11px;color:#9ca3af;margin-top:2px">Validade a definir na Expedi\xe7\xe3o</div>')
-        +(refMismatch ? '<div style="font-size:11px;color:#dc2626;font-weight:800;margin-top:4px">⚠️ Ref. incompatível: linha pede '+refLinha+' mas lote tem '+refLote+'</div>' : '')
+        +(refMismatch ? '<div style="font-size:11px;color:#dc2626;font-weight:800;margin-top:4px">⚠️ Ref. incompatível (lote: '+(found&&found.referencia||'?')+')</div>' : '')
         +'</div>';
     }
     html += '<div style="background:white;border:2px solid '+(l.lote?'#93c5fd':'#e5e7eb')+';border-radius:14px;padding:14px;margin-bottom:10px">'
@@ -12372,6 +12508,108 @@ function _getRef(loteStr) {
 // ═══════════════════════════════════════════════════════
 // RELATÓRIO DE ENCOMENDAS
 // ═══════════════════════════════════════════════════════
+
+function abrirStockModal() {
+  var old = document.getElementById('modal-stock');
+  if (old) old.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-stock';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  modal.innerHTML = '<div style="background:#f8fafc;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:600px;max-height:92vh;overflow-y:auto">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">'
+      +'<div style="font-size:16px;font-weight:900;color:#1e3a5f">📊 Stock por Tipo</div>'
+      +'<button onclick="document.getElementById(\'modal-stock\').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">×</button>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:12px">'
+      +'<div>'
+        +'<label style="font-size:10px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">CÂMARA</label>'
+        +'<select id="stk-camara" onchange="_renderStock()" style="width:100%;padding:7px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px">'
+          +'<option value="">Todas</option>'
+          +'<option value="1">C1</option><option value="2">C2</option><option value="3">C3</option>'
+          +'<option value="4">C4</option><option value="5">C5</option>'
+        +'</select>'
+      +'</div>'
+      +'<div>'
+        +'<label style="font-size:10px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">REFERÊNCIA</label>'
+        +'<select id="stk-ref" onchange="_renderStock()" style="width:100%;padding:7px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px">'
+          +'<option value="">Todas</option>'
+          +'<option value="G">G</option><option value="P">P</option><option value="PP">PP</option>'
+          +'<option value="PPP">PPP</option><option value="DOP">DOP</option>'
+        +'</select>'
+      +'</div>'
+      +'<div>'
+        +'<label style="font-size:10px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">DESDE</label>'
+        +'<input type="date" id="stk-desde" onchange="_renderStock()" style="width:100%;padding:7px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;box-sizing:border-box">'
+      +'</div>'
+      +'<div>'
+        +'<label style="font-size:10px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">ATÉ</label>'
+        +'<input type="date" id="stk-ate" onchange="_renderStock()" style="width:100%;padding:7px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:12px;box-sizing:border-box">'
+      +'</div>'
+    +'</div>'
+    +'<div id="stk-corpo"></div>'
+  +'</div>';
+  document.body.appendChild(modal);
+  _renderStock();
+}
+
+function _renderStock() {
+  var e = getEstado();
+  var camaraF = (document.getElementById('stk-camara')||{}).value||'';
+  var refF    = ((document.getElementById('stk-ref')||{}).value||'').toUpperCase();
+  var desde   = (document.getElementById('stk-desde')||{}).value||'';
+  var ate     = (document.getElementById('stk-ate')||{}).value||'';
+
+  var byTipo = { ovelha:[], cabra:[], dop:[], outro:[] };
+  var camaras = camaraF ? [parseInt(camaraF)] : [1,2,3,4,5];
+  camaras.forEach(function(nc) {
+    (e[nc]||[]).forEach(function(l) {
+      // Filter by referencia
+      if (refF && (l.referencia||'').toUpperCase() !== refF) return;
+      // Filter by data
+      var dataL = (l.data||'').slice(0,10);
+      if (desde && dataL && dataL < desde) return;
+      if (ate && dataL && dataL > ate) return;
+      var tp = l.tipo || _tipoDoLote(l.lote);
+      var arr = byTipo[tp] || byTipo.outro;
+      arr.push({ lote:l.lote, qtd:l.qtd||0, peso:l.peso||0, ref:l.referencia||'', camara:nc, data:l.data||'' });
+    });
+  });
+
+  var COR = { ovelha:'#92400e', cabra:'#065f46', dop:'#1e40af', outro:'#374151' };
+  var CBG = { ovelha:'#fef3c7', cabra:'#f0fdf4', dop:'#dbeafe', outro:'#f9fafb' };
+  var CNOME = { ovelha:'🐑 Ovelha', cabra:'🐐 Cabra', dop:'🏅 DOP', outro:'❓ Outro' };
+  var h = '';
+
+  ['dop','ovelha','cabra','outro'].forEach(function(tp) {
+    var lotes = byTipo[tp];
+    if (!lotes.length) return;
+    var totalUn = lotes.reduce(function(a,l){return a+(l.qtd||0);},0);
+    var totalPeso = lotes.reduce(function(a,l){return a+(parseFloat(l.peso)||0);},0);
+    h += '<div style="background:'+CBG[tp]+';border:2px solid '+COR[tp].replace('#','#')+'20;border-radius:14px;padding:12px;margin-bottom:10px">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">';
+    h += '<span style="font-size:14px;font-weight:900;color:'+COR[tp]+'">'+CNOME[tp]+'</span>';
+    h += '<div style="text-align:right"><div style="font-size:16px;font-weight:900;color:'+COR[tp]+'">'+totalUn+' un</div>'
+      +(totalPeso>0?'<div style="font-size:11px;color:#6b7280">'+totalPeso.toFixed(1)+' kg</div>':'')
+      +'</div>';
+    h += '</div>';
+    lotes.sort(function(a,b){return a.lote.localeCompare(b.lote);});
+    lotes.forEach(function(l) {
+      h += '<div style="background:white;border-radius:8px;padding:7px 10px;margin-bottom:4px;display:flex;justify-content:space-between;align-items:center">';
+      h += '<div><div style="font-family:monospace;font-size:12px;font-weight:800;color:'+COR[tp]+'">'+l.lote+'</div>';
+      if(l.ref) h += '<div style="font-size:10px;color:#6b7280;font-weight:700">Ref: '+l.ref+' · C'+l.camara+'</div>';
+      else h += '<div style="font-size:10px;color:#9ca3af">C'+l.camara+'</div>';
+      h += '</div><div style="text-align:right">';
+      h += '<div style="font-size:13px;font-weight:800;color:'+COR[tp]+'">'+l.qtd+' un</div>';
+      if(l.peso>0) h += '<div style="font-size:10px;color:#6b7280">'+parseFloat(l.peso).toFixed(1)+' kg</div>';
+      h += '</div></div>';
+    });
+    h += '</div>';
+  });
+
+  if (!h) h = '<div style="text-align:center;padding:30px;color:#9ca3af">Sem lotes com esses filtros</div>';
+  var el = document.getElementById('stk-corpo');
+  if (el) el.innerHTML = h;
+}
 function abrirRelatorioEncomendas() {
   var hoje = new Date().toISOString().slice(0,10);
   var ini3m = new Date(new Date().setMonth(new Date().getMonth()-3)).toISOString().slice(0,10);
@@ -12731,20 +12969,21 @@ function enviarParaExpedicao() {
   _confirmarEnvioExpedicao();
 }
 
-function _confirmarEnvioExpedicao() {
+function _confirmarEnvioExpedicao(fecharDireto) {
   var encs = getEncomendas();
   var enc = encs.find(function(e){ return e.id === _prepEncId; });
   if (!enc) return;
 
   // Guardar linhas de preparação na encomenda
   enc.prepLinhas = _prepLinhas.map(function(l){ return Object.assign({}, l); });
-  enc.estado = 'em-expedicao';
+  enc.estado = fecharDireto ? 'concluida' : 'em-expedicao';
+  if (fecharDireto) enc.dataConclusao = new Date().toISOString();
   salvarEncomendas(encs);
 
   // Criar registo de expedição
   var exps = getExpedicoes();
   var expId = 'exp_' + Date.now();
-  exps.push({
+  var novaExp = {
     id: expId,
     encId: _prepEncId,
     nr: enc.nr,
@@ -12752,20 +12991,78 @@ function _confirmarEnvioExpedicao() {
     artigo: enc.artigo,
     obs: enc.obs || '',
     linhas: _prepLinhas.map(function(l){ return Object.assign({}, l); }),
-    estado: 'pronta',
+    estado: fecharDireto ? 'expedida' : 'pronta',
     dataCriacao: new Date().toISOString(),
-    dataFormatada: dataHoje()
-  });
+    dataFormatada: dataHoje(),
+    dataEntrega: enc.dataEntrega || '',
+    dataExpedicao: enc.dataExpedicao || ''
+  };
+  exps.push(novaExp);
   salvarExpedicoes(exps);
+
+  // Se fechar direto → dar saídas de câmara e enviar email
+  if (fecharDireto) {
+    _darSaidasCamaraPrep(_prepLinhas);
+    _enviarEmailQualidade(enc);
+  }
 
   // Atualizar badge
   _atualizarBadgeExp();
 
-  mostrarStatus('status-enc-prep', '✓ Encomenda #' + enc.nr + ' enviada para Expedição!', 'success');
+  var msg = fecharDireto
+    ? '✓ Encomenda #' + enc.nr + ' expedida! Email enviado para qualidade@lactoceleiro.pt'
+    : '✓ Encomenda #' + enc.nr + ' enviada para Expedição!';
+  mostrarStatus('status-enc-prep', msg, 'success');
   setTimeout(function(){
     renderizarEncomendas();
     irPara('screen-enc-lista');
-  }, 1600);
+  }, 1800);
+}
+
+// Dar saídas de câmara para todas as linhas de preparação
+function _darSaidasCamaraPrep(linhas) {
+  var e = getEstado();
+  (linhas || []).forEach(function(l) {
+    if (!l.lote || !l.camara) return;
+    var cam = e[l.camara] || [];
+    var idx = cam.findIndex(function(x){ return x.lote === l.lote; });
+    if (idx < 0) return;
+    var loteObj = cam[idx];
+    var qtdSair = Math.min(l.qtd || 0, loteObj.qtd || 0);
+    if (qtdSair <= 0) return;
+    if (qtdSair >= loteObj.qtd) {
+      cam.splice(idx, 1);
+    } else {
+      loteObj.qtd -= qtdSair;
+    }
+    e[l.camara] = cam;
+    addHistorico({
+      operacao: 'saida',
+      data: new Date().toISOString(),
+      dataFormatada: dataHoje(),
+      lote: l.lote,
+      camara: l.camara,
+      qtd: l.qtd,
+      qtdSaida: qtdSair,
+      kg: l.kg ? parseFloat(l.kg) : null,
+      validade: l.validade || '',
+      destino: 'expedicao'
+    });
+  });
+  salvarEstado(e);
+  atualizarResumoCamaras();
+}
+
+// Botão "Fechar Encomenda" para utilizador encomendas
+function fecharEncDireto() {
+  if (!confirm('Confirmar fecho direto da encomenda? Será enviado email para qualidade@lactoceleiro.pt')) return;
+  _confirmarEnvioExpedicao(false);
+}
+
+// Botão "Expedir Agora" para utilizador expedição
+function expedirAgora() {
+  if (!confirm('Expedir agora e fechar encomenda? Será dado saída de câmara e enviado email.')) return;
+  _confirmarEnvioExpedicao(true);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -12855,6 +13152,57 @@ function _vaInfo(val) {
   return {color:'#15803d',badge:''};
 }
 
+
+function eliminarExpedicaoAdmin(expId) {
+  if (!temPermissao('admin')) return;
+  if (!confirm('⚠️ Eliminar esta expedição definitivamente? Esta ação não pode ser desfeita.')) return;
+  var exps = getExpedicoes();
+  var idx  = exps.findIndex(function(e){ return e.id===expId; });
+  if (idx<0) return;
+  var exp  = exps[idx];
+  // Repor encomenda como aberta
+  var encs = getEncomendas();
+  var enc  = encs.find(function(x){ return x.id===exp.encId; });
+  if (enc) {
+    enc.estado = 'parcial';
+    salvarEncomendas(encs);
+  }
+  exps.splice(idx, 1);
+  salvarExpedicoes(exps);
+  _atualizarBadgeExp();
+  mostrarStatus('status-exp-det', '✓ Expedição eliminada.', 'success');
+  setTimeout(function(){ _renderExpedicao(); irPara('screen-expedicao'); }, 1200);
+}
+
+function eliminarEncomendaAdmin(encId) {
+  if (!temPermissao('admin')) return;
+  if (!confirm('⚠️ Eliminar esta encomenda definitivamente?')) return;
+  var encs = getEncomendas();
+  var idx  = encs.findIndex(function(e){ return e.id===encId; });
+  if (idx<0) return;
+  encs.splice(idx, 1);
+  salvarEncomendas(encs);
+  renderizarEncomendas();
+  irPara('screen-enc-lista');
+}
+
+function reabrirExpedicaoAdmin(expId) {
+  if (!temPermissao('admin')) return;
+  if (!confirm('Reabrir esta expedição? Será marcada como "pronta" para ser finalizada novamente.')) return;
+  var exps = getExpedicoes();
+  var exp  = exps.find(function(e){ return e.id===expId; });
+  if (!exp) return;
+  exp.estado = 'pronta';
+  delete exp.dataExpedicao;
+  delete exp.dataExpFormatada;
+  salvarExpedicoes(exps);
+  var encs = getEncomendas();
+  var enc  = encs.find(function(x){ return x.id===exp.encId; });
+  if (enc) { enc.estado = 'em-expedicao'; salvarEncomendas(encs); }
+  _atualizarBadgeExp();
+  _renderExpDet(exp);
+  mostrarStatus('status-exp-det', '↩️ Expedição reaberta.', 'success');
+}
 function abrirExpDetalhe(id) {
   var exps=getExpedicoes();
   var exp=exps.find(function(e){ return e.id===id; });
@@ -12973,6 +13321,13 @@ function _renderExpDet(exp) {
     btns = '<button class="btn-primary" style="background:#0369a1" onclick="emailEncomenda(\''+eId+'\')">📧 Enviar por Email</button>'
           +'<button class="btn-primary" style="background:#7c3aed;margin-top:6px" onclick="imprimirExpedicao(\''+xId+'\')">🖨️ Imprimir / PDF</button>'
           +'<button class="btn-primary" style="background:#15803d;margin-top:6px" onclick="expXLSX(\''+xId+'\')">📊 Exportar Excel</button>';
+  }
+  // Admin: botão eliminar expedição
+  if (temPermissao('admin')) {
+    btns += '<button onclick="eliminarExpedicaoAdmin(\''+exp.id+'\')" style="width:100%;padding:11px;background:#fef2f2;color:#dc2626;border:2px solid #fecaca;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-top:8px">🗑️ Eliminar Expedição (Admin)</button>';
+    if (exp.estado === 'expedida') {
+      btns += '<button onclick="reabrirExpedicaoAdmin(\''+exp.id+'\')" style="width:100%;padding:11px;background:#fef9c3;color:#854d0e;border:2px solid #fde68a;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-top:6px">↩️ Reabrir Expedição (Admin)</button>';
+    }
   }
   document.getElementById('exp-det-botoes').innerHTML = btns;
 }
@@ -13099,6 +13454,43 @@ function finalizarExpedicao() {
   setTimeout(function(){ _renderExpDet(exp); }, 600);
 }
 
+
+function imprimirEncomenda(encId) {
+  var encs = getEncomendas();
+  var enc = encs.find(function(e){ return e.id===encId; });
+  if (!enc) return;
+  var hoje = new Date();
+  var dStr = ('0'+hoje.getDate()).slice(-2)+'/'
+            +('0'+(hoje.getMonth()+1)).slice(-2)+'/'
+            +hoje.getFullYear();
+  var linhas = enc.linhas||[{artigo:enc.artigo,qtd:enc.qtd,caixas:enc.caixas||0}];
+  var lotes  = enc.prepLinhas||enc.lotes||[];
+  var rows = linhas.map(function(l,i){
+    var lot = lotes[i] || {};
+    return '<tr><td>'+(i+1)+'</td>'
+      +'<td style="font-weight:700">'+(l.artigo||'')+'</td>'
+      +'<td style="text-align:center">'+(l.qtd||0)+'</td>'
+      +'<td style="text-align:center">'+(l.caixas||0)+'</td>'
+      +'<td style="font-family:monospace;font-weight:900">'+(lot.lote||'—')+'</td>'
+      +'<td style="text-align:center">'+(lot.camara?'C'+lot.camara:'—')+'</td>'
+      +'<td style="text-align:right">'+(lot.kg?parseFloat(lot.kg).toFixed(1)+' kg':'—')+'</td>'
+      +'<td style="font-weight:700">'+(lot.validade||'—')+'</td></tr>';
+  }).join('');
+  var totalUn = linhas.reduce(function(a,l){return a+(l.qtd||0);},0);
+  var inner = '<div class="rel-header"><h1>🏡 LactoCeleiro</h1>'
+    +'<div class="rel-sub">Guia de Encomenda</div><div class="rel-data">'+dStr+'</div></div>'
+    +'<div class="enc-card-print">'
+    +'<h3 style="font-size:16px;margin:0 0 4px">Encomenda #'+enc.nr+' — '+enc.cliente+'</h3>'
+    +'<div style="font-size:12px;color:#6b7280;margin-bottom:6px">'+enc.artigo+(enc.obs?' · '+enc.obs:'')+'</div>'
+    +(enc.dataEntrega?'<div style="font-size:12px;margin-bottom:4px">📅 Entrega: <strong>'+enc.dataEntrega+'</strong></div>':'')
+    +(enc.dataExpedicao?'<div style="font-size:12px;margin-bottom:10px">🚚 Expedição: <strong>'+enc.dataExpedicao+'</strong></div>':'')
+    +'<table class="dados-table"><thead><tr><th>#</th><th>Artigo</th><th>Qtd</th><th>Cx</th><th>Lote</th><th>C.</th><th>Peso</th><th>Validade</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table>'
+    +'<div style="margin-top:10px;font-size:13px"><strong>Total: '+totalUn+' un</strong></div>'
+    +'</div>'
+    +'<div class="rel-rodape">LactoCeleiro · Guia de Encomenda · '+dStr+'</div>';
+  gerarHTMLParaImpressao(inner, 'guia_enc_'+enc.nr);
+}
 function imprimirExpedicao(expId) {
   var exps=getExpedicoes(); var exp=exps.find(function(e){ return e.id===expId; }); if (!exp) return;
   var hoje=new Date();
