@@ -598,12 +598,17 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <button class="home-btn" id="btn-home-stock" onclick="abrirStockModal()" style="display:none;background:linear-gradient(135deg,#0f766e,#0d9488);color:white;grid-column:1/-1;padding:14px">
           <span style="font-size:18px">📊</span>&nbsp; VER STOCK POR TIPO
         </button>
-        <button class="home-btn" id="btn-home-export" onclick="irPara('screen-export')" style="display:none;background:#1e40af;color:white;grid-column:1/-1;padding:16px">EXPORTAR RELATORIOS</button>
-        <button class="home-btn" id="btn-home-rendimentos" onclick="abrirRendimentos()" style="display:none;background:linear-gradient(135deg,#7e22ce,#9333ea);color:white;grid-column:1/-1;padding:14px">
-          <span style="font-size:18px">&#128200;</span>&nbsp; RENDIMENTOS
+        <button class="home-btn" id="btn-home-export" onclick="irPara('screen-export')" style="display:none;background:linear-gradient(135deg,#1e40af,#1d4ed8);color:white;grid-column:1/-1">
+          <span class="home-btn-icon">&#128202;</span>
+          <span class="home-btn-label">EXPORTAR<br>RELAT&#211;RIOS</span>
         </button>
-        <button class="home-btn" id="btn-home-prod-manual" onclick="irParaProducaoManual()" style="display:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;grid-column:1/-1;padding:16px">
-          <span style="font-size:18px">&#128295;</span>&nbsp; PRODU&#199;&#195;O MANUAL
+        <button class="home-btn" id="btn-home-rendimentos" onclick="abrirRendimentos()" style="display:none;background:linear-gradient(135deg,#7e22ce,#9333ea);color:white;grid-column:1/-1">
+          <span class="home-btn-icon">&#128200;</span>
+          <span class="home-btn-label">RENDIMENTOS</span>
+        </button>
+        <button class="home-btn" id="btn-home-prod-manual" onclick="irParaProducaoManual()" style="display:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;grid-column:1/-1">
+          <span class="home-btn-icon">&#128295;</span>
+          <span class="home-btn-label">PRODU&#199;&#195;O<br>MANUAL</span>
         </button></div>
       <div id="home-resumo-section" style="margin-top:20px">
         <div class="section-title">Resumo de Hoje</div>
@@ -1573,7 +1578,17 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <div class="sl-stock" id="saida-lote-stock">Stock disponível: —</div>
       </div>
 
-      <div id="saida-validade-box" style="display:none;background:#fef3c7;border:2px solid #fbbf24;border-radius:10px;padding:10px 14px;margin-bottom:10px"><div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:3px">&#128197; Validade do lote</div><div id="saida-validade-val" style="font-size:18px;font-weight:900;color:#92400e;font-family:'DM Mono',monospace">&#8212;</div></div><div class="form-row"><div class="form-group"><label>Quantidade (un)</label><input type="number" id="saida-qtd" class="big" placeholder="0" min="1"></div><div class="form-group"><label>Peso (kg)</label><input type="number" id="saida-kg" class="big" placeholder="0.0" step="0.1" min="0"></div></div>
+      <div id="saida-validade-box" style="display:none;background:#fef3c7;border:2px solid #fbbf24;border-radius:10px;padding:10px 14px;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:3px">&#128197; Validade do lote</div>
+        <div id="saida-validade-val" style="font-size:18px;font-weight:900;color:#92400e;font-family:'DM Mono',monospace">&#8212;</div>
+      </div>
+      <!-- Introduzir validade quando lote não tem (fica guardada permanentemente) -->
+      <div id="saida-validade-input-box" style="display:none;background:#fef3c7;border:2px solid #fbbf24;border-radius:10px;padding:12px 14px;margin-bottom:10px">
+        <div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:6px">&#128197; Introduzir Validade (obrig. para fechar)</div>
+        <input type="date" id="saida-validade-inp"
+          style="width:100%;padding:10px;border:2px solid #fbbf24;border-radius:8px;font-size:15px;font-weight:700;font-family:'DM Mono',monospace;color:#92400e;background:white;box-sizing:border-box">
+        <div style="font-size:10px;color:#92400e;margin-top:4px">&#9432; Esta validade fica guardada para todas as sa&#237;das futuras deste lote</div>
+      </div><div class="form-row"><div class="form-group"><label>Quantidade (un)</label><input type="number" id="saida-qtd" class="big" placeholder="0" min="1"></div><div class="form-group"><label>Peso (kg)</label><input type="number" id="saida-kg" class="big" placeholder="0.0" step="0.1" min="0"></div></div>
 
       <!-- Destino da saída — só visível quando NÃO vem de encomenda do sistema -->
       <div id="saida-destino-campos" style="margin-top:4px">
@@ -2770,7 +2785,7 @@ function _fecharEncExpedicaoEmail() {
   enc.estado = 'concluida';
   enc.dataConclusao = new Date().toISOString();
   salvarEncomendas(encs);
-  _enviarEmailQualidade(enc);
+  _mostrarOpcoesSaida(enc);
   mostrarStatus('status-saida','✅ Encomenda #'+enc.nr+' concluída! Email enviado.','success');
   var id = encAtualId; encAtualId = null;
   var posDiv = document.getElementById('saida-pos-opcoes');
@@ -2781,6 +2796,70 @@ function _fecharEncExpedicaoEmail() {
 }
 
 // ── Fechar encomenda + email (utilizador encomendas) ──
+
+function _verSaidasEncomenda(encId) {
+  var encs = getEncomendas();
+  var enc = encs.find(function(e){ return e.id===encId; });
+  if (!enc) return;
+
+  // Saídas do histórico associadas a esta encomenda
+  var hist = getHistorico().filter(function(h){
+    return h.encomendaId === encId || h.encId === encId;
+  });
+  // Também usar enc.lotes se existirem
+  var lotes = enc.lotes || [];
+
+  var linhas = hist.length ? hist : lotes;
+
+  if (!linhas.length) {
+    alert('Sem saídas de câmara registadas para esta encomenda.');
+    return;
+  }
+
+  // Gerar janela de impressão
+  var rowsHtml = linhas.map(function(l, i) {
+    var loteStr = l.lote || l.nomeLote || '--';
+    var qtd = l.qtdSaida || l.qtd || 0;
+    var kg = l.kg ? Number(l.kg).toFixed(1)+' kg' : '--';
+    var val = l.validade || '--';
+    var data = l.dataFormatada || '--';
+    var camara = l.camara ? 'C'+l.camara : '--';
+    return '<tr style="background:'+(i%2===0?'#f9fafb':'white')+'">'
+      +'<td style="padding:7px 10px;font-size:12px">'+(i+1)+'</td>'
+      +'<td style="padding:7px 10px;font-weight:700;font-family:monospace;font-size:12px">'+loteStr+'</td>'
+      +'<td style="padding:7px 10px;text-align:center">'+qtd+' un</td>'
+      +'<td style="padding:7px 10px;text-align:center">'+kg+'</td>'
+      +'<td style="padding:7px 10px;text-align:center;color:'+(val==='--'?'#dc2626':'#92400e')+';font-weight:700">'+val+'</td>'
+      +'<td style="padding:7px 10px;text-align:center">'+camara+'</td>'
+      +'<td style="padding:7px 10px;text-align:center;font-size:11px;color:#6b7280">'+data+'</td>'
+      +'</tr>';
+  }).join('');
+
+  var html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">'
+    +'<title>Sa\xeddas Encomenda #'+enc.nr+'</title>'
+    +'<style>@media print{.no-print{display:none}@page{margin:12mm}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}'
+    +'.hdr{background:#1e3a5f;color:white;padding:16px 24px}.hdr h1{margin:0 0 4px;font-size:18px}.hdr .sub{font-size:12px;opacity:.8}'
+    +'table{width:100%;border-collapse:collapse}.tbl-wrap{padding:16px 24px}'
+    +'th{background:#1e3a5f;color:white;padding:7px 10px;font-size:11px;text-align:left}'
+    +'</style></head><body>'
+    +'<div class="hdr"><h1>&#128230; Sa\xeddas de C\xe2mara</h1>'
+    +'<div class="sub">Encomenda #'+enc.nr+' \u2014 '+enc.cliente+'</div>'
+    +'</div>'
+    +'<div class="tbl-wrap"><table><thead><tr>'
+    +'<th>#</th><th>Lote</th><th style="text-align:center">Qtd</th><th style="text-align:center">Peso</th>'
+    +'<th style="text-align:center">Validade</th><th style="text-align:center">C\xe2mara</th><th style="text-align:center">Data</th>'
+    +'</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'
+    +'<div class="no-print" style="text-align:center;padding:12px;background:#eff6ff">'
+    +'<button onclick="window.print()" style="padding:10px 20px;background:#1e3a5f;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;margin-right:8px">&#128438; Imprimir</button>'
+    +'<button onclick="window.close()" style="padding:10px 16px;background:#f3f4f6;border:none;border-radius:8px;cursor:pointer">Fechar</button>'
+    +'</div></body></html>';
+
+  var win = window.open('','_blank','width=800,height=600,scrollbars=yes');
+  if (!win) { alert('Activa os pop-ups para imprimir.'); return; }
+  win.document.write(html);
+  win.document.close();
+}
+
 function _fecharEncSemExpedicao() {
   if (!encAtualId) return;
   var encs = getEncomendas();
@@ -2789,7 +2868,7 @@ function _fecharEncSemExpedicao() {
   enc.estado = 'concluida';
   enc.dataConclusao = new Date().toISOString();
   salvarEncomendas(encs);
-  _enviarEmailQualidade(enc);
+  _mostrarOpcoesSaida(enc);
   mostrarStatus('status-saida','✅ Encomenda #'+enc.nr+' fechada! Email enviado.','success');
   var id = encAtualId; encAtualId = null;
   var posDiv = document.getElementById('saida-pos-opcoes');
@@ -2901,8 +2980,22 @@ function abrirFormSaida(idx, l) {
   document.getElementById('status-saida').className = 'status';
   document.getElementById('saida-enc-info').style.display = 'none';
   document.getElementById('saida-destino-campos').style.display = 'block';
+  // Validade: mostrar existente ou pedir para introduzir
   var _vb = document.getElementById('saida-validade-box');
-  if (_vb) { if (l.validade) { document.getElementById('saida-validade-val').textContent = l.validade; _vb.style.display = 'block'; } else { _vb.style.display = 'none'; } }
+  var _vi = document.getElementById('saida-validade-input-box');
+  var _vval = document.getElementById('saida-validade-val');
+  var _vinput = document.getElementById('saida-validade-inp');
+  if (l.validade) {
+    // Tem validade — mostrar
+    if (_vval) _vval.textContent = l.validade;
+    if (_vb) _vb.style.display = 'block';
+    if (_vi) _vi.style.display = 'none';
+  } else {
+    // Sem validade — mostrar input para introduzir
+    if (_vb) _vb.style.display = 'none';
+    if (_vi) _vi.style.display = 'block';
+    if (_vinput) _vinput.value = '';
+  }
 
   // Popular select de encomendas do sistema (abertas/parciais)
   const encs = getEncomendas().filter(e => e.estado !== 'concluida');
@@ -2958,6 +3051,105 @@ function voltarSaidaLotes() {
   irPara('screen-saida-lotes');
 }
 
+
+// ── Saída avulsa: guia de saída ──────────────────────────────
+function _imprimirGuiaSaidaAvulsa() {
+  var d = window._ultimaSaidaAvulsa;
+  if (!d) return;
+  var hoje = new Date();
+  var dStr = ('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
+  var hStr = ('0'+hoje.getHours()).slice(-2)+':'+('0'+hoje.getMinutes()).slice(-2);
+
+  var html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">'
+    + '<title>Guia Sa\xedda C'+d.camara+'</title>'
+    + '<style>@media print{.no-print{display:none}@page{margin:12mm;size:A4}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
+    + 'body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}'
+    + '.hdr{background:#1e3a5f;color:white;padding:18px 24px}.hdr h1{margin:0 0 4px;font-size:20px}.hdr .sub{font-size:12px;opacity:.8}'
+    + '.info{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:16px 24px;background:#f8fafc;border-bottom:2px solid #e5e7eb}'
+    + '.box{background:white;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px}'
+    + '.box .l{font-size:9px;font-weight:800;text-transform:uppercase;color:#6b7280;margin-bottom:3px}'
+    + '.box .v{font-size:16px;font-weight:800;color:#1e3a5f}'
+    + '.ftr{margin:12px 24px;padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;color:#15803d}'
+    + '</style></head><body>'
+    + '<div class="hdr"><h1>\ud83d\udce4 Guia de Sa\xedda de C\xe2mara</h1>'
+    + '<div class="sub">LactoCeleiro \u2014 Emitido: '+dStr+' '+hStr+'</div></div>'
+    + '<div class="info">'
+    + '<div class="box"><div class="l">Lote</div><div class="v" style="font-family:monospace">'+d.lote+'</div></div>'
+    + '<div class="box"><div class="l">C\xe2mara</div><div class="v">C'+d.camara+'</div></div>'
+    + '<div class="box"><div class="l">Data</div><div class="v">'+dStr+'</div></div>'
+    + '<div class="box"><div class="l">Quantidade</div><div class="v">'+d.qtd+' un</div></div>'
+    + (d.kg ? '<div class="box"><div class="l">Peso</div><div class="v">'+Number(d.kg).toFixed(1)+' kg</div></div>' : '')
+    + '<div class="box"><div class="l">Validade</div><div class="v" style="color:'+(d.validade?'#92400e':'#dc2626')+'">'+(d.validade||'N\xe3o definida')+'</div></div>'
+    + (d.cliente ? '<div class="box" style="grid-column:1/-1"><div class="l">Cliente / Destino</div><div class="v">'+d.cliente+'</div></div>' : '')
+    + '</div>'
+    + '<div class="ftr">\u2713 Registo autom\xe1tico LactoCeleiro</div>'
+    + '<div class="no-print" style="text-align:center;padding:12px;background:#eff6ff">'
+    + '<button onclick="window.print()" style="padding:12px 24px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;margin-right:8px">\ud83d\udda8\ufe0f Imprimir / PDF</button>'
+    + '<button onclick="window.close()" style="padding:10px 16px;background:#f3f4f6;border:none;border-radius:8px;cursor:pointer">Fechar</button>'
+    + '</div></body></html>';
+
+  var win = window.open('', '_blank', 'width=820,height=650,scrollbars=yes');
+  if (!win) { alert('Activa pop-ups para imprimir.'); return; }
+  win.document.write(html);
+  win.document.close();
+}
+
+function _emailGuiaSaidaAvulsa() {
+  var d = window._ultimaSaidaAvulsa;
+  if (!d) return;
+  _imprimirGuiaSaidaAvulsa(); // Abre janela impressão primeiro
+  setTimeout(function() {
+    var assunto = encodeURIComponent('Sa\xedda C\xe2mara C'+d.camara+' \u2014 Lote '+d.lote+' \u2014 LactoCeleiro');
+    var corpo = encodeURIComponent(
+      'Sa\xedda de C\xe2mara \u2014 LactoCeleiro\n'
+      + 'Lote: '+d.lote+'\n'
+      + 'C\xe2mara: C'+d.camara+'\n'
+      + 'Data: '+d.data+'\n'
+      + 'Quantidade: '+d.qtd+' un\n'
+      + (d.kg ? 'Peso: '+Number(d.kg).toFixed(1)+' kg\n' : '')
+      + 'Validade: '+(d.validade||'N\xe3o definida')+'\n'
+      + (d.cliente ? 'Cliente/Destino: '+d.cliente+'\n' : '')
+      + '\n(Imprime o PDF e anexa)'
+    );
+    var a = document.createElement('a');
+    a.href = 'mailto:qualidade@lactoceleiro.pt?subject='+assunto+'&body='+corpo;
+    a.click();
+  }, 800);
+}
+
+function _enviarSaidaAvulsaParaExpedicao() {
+  var d = window._ultimaSaidaAvulsa;
+  if (!d) return;
+  // Criar encomenda de expedição avulsa com os dados desta saída
+  var exps = getExpedicoes();
+  var novaExp = {
+    id: 'exp_'+Date.now(),
+    encId: null,
+    nr: 'AVULSO',
+    cliente: d.cliente || 'Sem cliente',
+    artigo: d.lote,
+    linhas: [{
+      artigo: d.lote,
+      qtd: d.qtd,
+      caixas: 0,
+      lote: d.lote,
+      camara: d.camara,
+      validade: d.validade || '',
+      kg: d.kg || ''
+    }],
+    estado: 'pronta',
+    dataCriacao: new Date().toISOString(),
+    dataFormatada: dataHoje()
+  };
+  exps.push(novaExp);
+  salvarExpedicoes(exps);
+  _atualizarBadgeExp();
+  var _posDiv = document.getElementById('saida-pos-opcoes');
+  if (_posDiv) {
+    _posDiv.innerHTML += '<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:10px;margin-top:6px;font-size:13px;color:#1e40af;font-weight:700">\u2713 Sa\xedda enviada para Expedi\xe7\xe3o!</div>';
+  }
+}
+
 function confirmarSaida() {
   const qtd = parseInt(document.getElementById('saida-qtd').value);
   if (!qtd || qtd <= 0) { mostrarStatus('status-saida','⚠️ Introduza a quantidade','error'); return; }
@@ -2986,7 +3178,17 @@ function confirmarSaida() {
 
   const nomeLote = lote.lote;
   const kgSaida = parseFloat((document.getElementById('saida-kg')||{value:''}).value) || null;
-  const validade = lote.validade || null;
+  // Validade: usar existente ou ler do input e guardar permanentemente no lote
+  var validadeExistente = lote.validade || '';
+  var validadeInput = '';
+  var _vinpEl = document.getElementById('saida-validade-inp');
+  if (_vinpEl && _vinpEl.value.trim()) validadeInput = _vinpEl.value.trim();
+  var validade = validadeExistente || validadeInput || null;
+  // Guardar validade introduzida de volta no lote (persistente para futuras saídas)
+  if (!validadeExistente && validade) {
+    lote.validade = validade;
+    salvarEstado(e);
+  }
   const clienteManual = document.getElementById('saida-cliente-manual') ? document.getElementById('saida-cliente-manual').value.trim() : '';
   const encPapel = document.getElementById('saida-enc-papel') ? document.getElementById('saida-enc-papel').value.trim() : '';
   const reg = {
@@ -3061,7 +3263,42 @@ function confirmarSaida() {
       setTimeout(() => { abrirEncomenda(encAtualId); }, 2200);
     }
   } else {
-    setTimeout(() => { voltarSaidaLotes(); }, 2200);
+    // Saída avulsa (sem encomenda do sistema) — mostrar opções pós-saída por perfil
+    var _posDiv = document.getElementById('saida-pos-opcoes');
+    var _btnConf = document.getElementById('btn-confirmar-saida');
+    if (_btnConf) _btnConf.style.display = 'none';
+    if (_posDiv) {
+      var isEncUser = temPermissao('encomendas') || temPermissao('admin');
+      var isExpUser = temPermissao('expedicao') || temPermissao('admin');
+
+      // Construir dados desta saída para o guia
+      var _saidaData = {
+        lote: nomeLote,
+        camara: camaraAtual,
+        qtd: qtd,
+        kg: kgSaida,
+        validade: validade,
+        cliente: clienteManual || encPapel || '',
+        data: dataHoje()
+      };
+      window._ultimaSaidaAvulsa = _saidaData;
+
+      var btns = '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px;margin-bottom:6px">'
+        + '<div style="font-size:12px;font-weight:800;color:#15803d;margin-bottom:10px">\u2705 Sa\xedda registada! O que fazer?</div>'
+        + '<button onclick="_imprimirGuiaSaidaAvulsa()" style="display:block;width:100%;padding:12px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\udda8\ufe0f Imprimir / Guardar PDF</button>'
+        + '<button onclick="_emailGuiaSaidaAvulsa()" style="display:block;width:100%;padding:12px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\udce7 Enviar por Email (qualidade@lactoceleiro.pt)</button>';
+
+      if (isEncUser && !isExpUser) {
+        // Utilizador encomendas: pode enviar para expedição
+        btns += '<button onclick="_enviarSaidaAvulsaParaExpedicao()" style="display:block;width:100%;padding:12px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\ude9a Enviar para Expedi\xe7\xe3o</button>';
+      }
+
+      btns += '<button onclick="voltarSaidaLotes()" style="display:block;width:100%;padding:10px;background:#f3f4f6;border:none;border-radius:10px;font-size:13px;cursor:pointer;color:#374151">Nova Sa\xedda</button>'
+        + '</div>';
+
+      _posDiv.innerHTML = btns;
+      _posDiv.style.display = 'block';
+    }
   }
 }
 
@@ -3457,6 +3694,15 @@ function abrirEncomenda(id) {
       botoes += `<button class="btn-primary" style="background:#15803d" onclick="concluirEncomenda('${enc.id}')">&#10003; Marcar como Concluída</button>`;
   }
 
+  // Botão Ver Saídas de Câmara (se tiver saídas registadas)
+  var temSaidas = (enc.lotes && enc.lotes.length > 0) ||
+    getHistorico().some(function(h){ return h.encomendaId===enc.id || h.encId===enc.id; });
+  if (temSaidas) {
+    botoes += '<button onclick="_verSaidasEncomenda(\'' + enc.id + '\')" '
+      + 'style="width:100%;padding:12px;background:#f0fdf4;border:2px solid #86efac;border-radius:10px;'
+      + 'font-size:13px;font-weight:800;color:#15803d;cursor:pointer;margin-top:8px">'
+      + '\ud83d\udcca Ver Sa\xeddas de C\xe2mara ('+((enc.lotes||[]).length)+' registos)</button>';
+  }
   document.getElementById('enc-det-botoes').innerHTML = botoes;
   document.getElementById('status-enc-det').className = 'status';
   irPara('screen-enc-detalhe');
@@ -5282,13 +5528,33 @@ function getLotesLeiteDisponiveis(tipo) {
       });
     });
 
-  // Descontar o que foi usado em produções terminadas E em curso
+  // Descontar o que foi usado em produções de queijo (terminadas E em curso)
   [...getProdutosQueijo(), ...getProdEmCurso()].forEach(p => {
     if (!p.lotesLeite) return;
     p.lotesLeite.forEach(ul => {
       const lote = lotes.find(l => l.id === ul.id);
-      if (lote) lote.litrosRestantes = Math.max(0, lote.litrosRestantes - ul.litros);
+      if (lote) lote.litrosRestantes = Math.max(0, lote.litrosRestantes - (ul.litros||ul.litrosUsados||0));
     });
+  });
+
+  // Descontar o que foi usado em produções de REQUEIJÃO
+  // Requeijão usa leiteTotal do mesmo tipo (ovelha/cabra)
+  // Como não tem loteId associado, desconta FIFO pelos lotes mais antigos
+  const prodReq = getProdutosRequeijao ? getProdutosRequeijao() : [];
+  prodReq.forEach(prq => {
+    // Filtrar só requeijão do mesmo tipo de leite
+    const tipoLeiteReq = prq.tipoLeite || 'ovelha'; // default ovelha
+    if (tipoLeiteReq !== tipo) return;
+    let litrosADescontar = parseFloat(prq.leiteTotal || prq.litros || 0);
+    if (litrosADescontar <= 0) return;
+    // Descontar FIFO (lotes mais antigos primeiro, mas já vêm ordenados desc)
+    // Iterar em ordem cronológica (reversa da lista)
+    for (let i = lotes.length - 1; i >= 0 && litrosADescontar > 0; i--) {
+      const lote = lotes[i];
+      const tirar = Math.min(lote.litrosRestantes, litrosADescontar);
+      lote.litrosRestantes = Math.max(0, lote.litrosRestantes - tirar);
+      litrosADescontar -= tirar;
+    }
   });
 
   return lotes
@@ -8647,9 +8913,8 @@ async function _importFotoProcessar(input) {
 
   try {
     // Gemini vision API — funciona directamente no browser com chave na URL
-    var geminiModel = isPdf
-      ? 'gemini-1.5-flash'          // suporta PDF
-      : 'gemini-2.0-flash';         // melhor para imagens
+    // gemini-1.5-flash: 1500 req/day grátis (vs 15/day do 2.0-flash)
+    var geminiModel = 'gemini-1.5-flash';
 
     var parts = [{ text: promptText }];
     if (!isPdf) {
@@ -8718,11 +8983,26 @@ async function _importFotoProcessar(input) {
   } catch(e) {
     if (status) {
       var msg = e.message || String(e);
-      status.innerHTML = '\u274c Erro: '+msg;
-      if (msg.includes('API_KEY') || msg.includes('key')) {
-        status.innerHTML += '<br><small>Verifica a chave Gemini em Admin \u2192 Config.</small>';
+      var html = '\u274c ';
+      if (msg.includes('quota') || msg.includes('QUOTA') || msg.includes('429') || msg.includes('limit')) {
+        // Parse retry time if available
+        var retryMatch = msg.match(/(\d+\.?\d*)\s*s/);
+        var retryTxt = retryMatch ? ' Tenta em ' + Math.ceil(parseFloat(retryMatch[1])) + ' segundos.' : '';
+        html += '<b>Quota Gemini excedida.</b>' + retryTxt
+          + '<br><small style="color:#92400e">A chave gratuita tem limite de pedidos. '
+          + 'Para uso intensivo considera activar billing em <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#1e40af">aistudio.google.com</a>.</small>';
+        status.style.color = '#92400e';
+        status.style.background = '#fef3c7';
+        status.style.padding = '10px';
+        status.style.borderRadius = '8px';
+      } else if (msg.includes('API_KEY') || msg.includes('key') || msg.includes('INVALID')) {
+        html += 'Chave Gemini inv\xe1lida.<br><small>Vai a Admin \u2192 Config \u2192 Gemini AI.</small>';
+        status.style.color = '#dc2626';
+      } else {
+        html += msg;
+        status.style.color = '#dc2626';
       }
-      status.style.color = '#dc2626';
+      status.innerHTML = html;
     }
   }
 }
@@ -11772,27 +12052,45 @@ function _gerarRelCamaras() {
   if(res) res.innerHTML=html;
 }
 function gerarRelatorioLote(formato) {
-  var porLote=_rlFiltrar();
-  if(porLote===null){ mostrarStatus('status-export','\u26A0\uFE0F Preencha os filtros primeiro','error'); return; }
-  if(!Object.keys(porLote).length){ mostrarStatus('status-export','\u26A0\uFE0F Nenhum lote encontrado com esses filtros','warning'); return; }
+  var porLote;
 
-  if(formato==='xlsx') { _rlXLSX(porLote); return; }
+  // Se chamado da screen-relatorio-lote (print/xlsx depois de preview),
+  // usar cache em vez de tentar ler os filtros outra vez
+  if ((formato === 'print' || formato === 'xlsx') && typeof window._rlDadosCache !== 'undefined' && window._rlDadosCache) {
+    porLote = window._rlDadosCache;
+  } else {
+    porLote = _rlFiltrar();
+    if (porLote === null) {
+      mostrarStatus('status-export', '\u26a0\ufe0f Preencha os filtros primeiro', 'error');
+      return;
+    }
+    if (!Object.keys(porLote).length) {
+      mostrarStatus('status-export', '\u26a0\ufe0f Nenhum lote encontrado com esses filtros', 'warning');
+      return;
+    }
+    // Guardar em cache para uso posterior (print/xlsx a partir do ecrã resultado)
+    window._rlDadosCache = porLote;
+  }
+
+  if (formato === 'xlsx') { _rlXLSX(porLote); return; }
 
   var html = _rlHTML(porLote);
 
-  if(formato==='preview') {
+  if (formato === 'preview') {
     document.getElementById('rel-lote-corpo').innerHTML = html;
     irPara('screen-relatorio-lote');
     return;
   }
-  var a=new Date();
-  var dtStr=a.getDate()+' de '+MESES_FULL[a.getMonth()]+' de '+a.getFullYear()+
-    ' \u00E0s '+String(a.getHours()).padStart(2,'0')+':'+String(a.getMinutes()).padStart(2,'0');
-  var inner='<div class="rel-header"><h1>\uD83E\uDDC0 LactoCeleiro</h1>'+
-    '<div class="rel-sub">Hist\u00F3rico Detalhado de Lotes</div>'+
-    '<div class="rel-data">'+dtStr+'</div></div>'+html+
-    '<div class="rel-rodape">LactoCeleiro &bull; Gest\u00E3o de Produ\u00E7\u00E3o</div>';
-  gerarHTMLParaImpressao(inner,'historico_lotes');
+
+  // print
+  var a = new Date();
+  var dtStr = a.getDate() + ' de ' + MESES_FULL[a.getMonth()] + ' de ' + a.getFullYear() +
+    ' \u00e0s ' + String(a.getHours()).padStart(2,'0') + ':' + String(a.getMinutes()).padStart(2,'0');
+  var inner = '<div class="rel-header"><h1>\uD83E\uDDC0 LactoCeleiro</h1>' +
+    '<div class="rel-sub">Hist\u00f3rico Detalhado de Lotes</div>' +
+    '<div class="rel-data">' + dtStr + '</div></div>' + html +
+    '<div class="rel-rodape">LactoCeleiro &bull; Gest\u00e3o de Produ\u00e7\u00e3o</div>';
+  gerarHTMLParaImpressao(inner, 'historico_lotes');
 }
 
 // ── Construção do HTML ─────────────────────────────────────
