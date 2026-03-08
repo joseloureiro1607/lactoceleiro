@@ -8919,7 +8919,7 @@ async function _importFotoProcessar(input) {
   try {
     // Gemini vision API — funciona directamente no browser com chave na URL
     // gemini-1.5-flash: 1500 req/day grátis (vs 15/day do 2.0-flash)
-    var geminiModel = 'gemini-1.5-flash';
+    var geminiModel = 'gemini-1.5-flash-latest';
 
     var parts = [{ text: promptText }];
     if (!isPdf) {
@@ -8929,7 +8929,7 @@ async function _importFotoProcessar(input) {
       parts.unshift({ inline_data: { mime_type: 'application/pdf', data: base64 } });
     }
 
-    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + geminiModel + ':generateContent?key=' + gkey;
+    var url = 'https://generativelanguage.googleapis.com/v1/models/' + geminiModel + ':generateContent?key=' + gkey;
     var resp = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
