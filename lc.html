@@ -599,6 +599,9 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
           <span style="font-size:18px">📊</span>&nbsp; VER STOCK POR TIPO
         </button>
         <button class="home-btn" id="btn-home-export" onclick="irPara('screen-export')" style="display:none;background:#1e40af;color:white;grid-column:1/-1;padding:16px">EXPORTAR RELATORIOS</button>
+        <button class="home-btn" id="btn-home-rendimentos" onclick="abrirRendimentos()" style="display:none;background:linear-gradient(135deg,#7e22ce,#9333ea);color:white;grid-column:1/-1;padding:14px">
+          <span style="font-size:18px">&#128200;</span>&nbsp; RENDIMENTOS
+        </button>
         <button class="home-btn" id="btn-home-prod-manual" onclick="irParaProducaoManual()" style="display:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;grid-column:1/-1;padding:16px">
           <span style="font-size:18px">&#128295;</span>&nbsp; PRODU&#199;&#195;O MANUAL
         </button></div>
@@ -1421,13 +1424,10 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <div style="font-size:12px;opacity:0.8;margin-top:2px" id="enc-prep-sub"></div>
       </div>
       <div id="enc-prep-linhas"></div>
-      <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <div id="enc-prep-extra-btns" style="margin-top:14px"></div>
+      <div style="margin-top:8px">
         <button class="btn-back" onclick="voltarPagina()">&#8592; Voltar</button>
-        <button class="btn-primary" style="background:#0369a1;margin:0" onclick="enviarParaExpedicao()">
-          &#128666; Enviar para Expedi&#231;&#227;o
-        </button>
       </div>
-      <div id="enc-prep-extra-btns" style="margin-top:8px"></div>
       <div class="status" id="status-enc-prep"></div>
     </div>
 
@@ -8605,80 +8605,125 @@ async function _importFotoProcessar(input) {
   var preview   = document.getElementById('import-foto-preview');
   var resultado = document.getElementById('import-foto-resultado');
   var confirmar = document.getElementById('import-foto-confirmar');
-  if (status)    { status.textContent = '\u23f3 A analisar...'; status.style.color = '#374151'; }
+
+  if (status)    { status.textContent = '\u23f3 A analisar com IA...'; status.style.color = '#374151'; }
   if (resultado) { resultado.style.display = 'none'; resultado.innerHTML = ''; }
   if (confirmar) confirmar.style.display = 'none';
 
+  // Preview da imagem
   if (file.type.startsWith('image/') && preview) {
     preview.innerHTML = '<img src="'+URL.createObjectURL(file)+'" style="max-width:100%;max-height:160px;border-radius:8px;border:2px solid #e5e7eb">';
     preview.style.display = 'block';
   }
 
-  var base64;
+  // Verificar chave Gemini
+  var gkey = localStorage.getItem('lc_gemini_key') || GEMINI_API_KEY || '';
+  if (!gkey) {
+    if (status) {
+      status.innerHTML = '\u274c Sem chave Gemini configurada.<br><small>Vai a <b>Admin \u2192 Config \u2192 Gemini AI</b> e cola a tua chave.</small>';
+      status.style.color = '#dc2626';
+    }
+    return;
+  }
+
+  // Ler ficheiro como base64
+  var base64, mediaType;
   try {
-    base64 = await new Promise(function(res, rej) {
+    var result = await new Promise(function(res, rej) {
       var r = new FileReader();
-      r.onload = function(e) { res(e.target.result.split(',')[1]); };
+      r.onload = function(e) { res(e.target.result); };
       r.onerror = rej;
       r.readAsDataURL(file);
     });
+    base64 = result.split(',')[1];
+    mediaType = file.type || 'image/jpeg';
   } catch(err) {
     if (status) { status.textContent = '\u274c Erro a ler ficheiro: ' + err.message; status.style.color = '#dc2626'; }
     return;
   }
 
-  var mediaType = file.type || 'image/jpeg';
   var isPdf = file.type === 'application/pdf';
+  var promptText = PROMPT_IMPORT_ENC;
 
   try {
-    var content = isPdf
-      ? [{type:'document', source:{type:'base64', media_type:'application/pdf', data:base64}},
-         {type:'text', text:PROMPT_IMPORT_ENC}]
-      : [{type:'image', source:{type:'base64', media_type:mediaType, data:base64}},
-         {type:'text', text:PROMPT_IMPORT_ENC}];
+    // Gemini vision API — funciona directamente no browser com chave na URL
+    var geminiModel = isPdf
+      ? 'gemini-1.5-flash'          // suporta PDF
+      : 'gemini-2.0-flash';         // melhor para imagens
 
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+    var parts = [{ text: promptText }];
+    if (!isPdf) {
+      parts.unshift({ inline_data: { mime_type: mediaType, data: base64 } });
+    } else {
+      // PDF: enviar como inline_data também (Gemini 1.5 suporta)
+      parts.unshift({ inline_data: { mime_type: 'application/pdf', data: base64 } });
+    }
+
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + geminiModel + ':generateContent?key=' + gkey;
+    var resp = await fetch(url, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: content }]
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: parts }] })
     });
+
     if (!resp.ok) {
       var errData = await resp.json().catch(function(){ return {}; });
-      throw new Error((errData.error && errData.error.message) || 'HTTP ' + resp.status);
+      var errMsg = (errData.error && errData.error.message) || ('HTTP ' + resp.status);
+      throw new Error(errMsg);
     }
+
     var data = await resp.json();
-    var text = (data.content || []).map(function(b) { return b.text || ''; }).join('');
-    var clean = text.replace(/```json|```/g, '').trim();
-    var parsed = JSON.parse(clean);
+    var text = (data.candidates||[])[0]?.content?.parts?.[0]?.text || '';
+    if (!text) throw new Error('Sem resposta da IA');
+
+    // Limpar markdown se houver
+    var clean = text.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
+
+    var parsed;
+    try {
+      parsed = JSON.parse(clean);
+    } catch(e2) {
+      // Tentar extrair JSON do meio do texto
+      var m = clean.match(/\{[\s\S]*\}/);
+      if (m) parsed = JSON.parse(m[0]);
+      else throw new Error('Resposta da IA nao e JSON valido: ' + clean.slice(0,100));
+    }
+
     window._importEncDados = parsed;
 
+    // Mostrar resultado
     var el = document.getElementById('import-foto-resultado');
     if (el) {
       el.style.display = 'block';
-      var h = '<div style="font-size:12px;font-weight:800;color:#1e3a5f;margin-bottom:8px">Artigos detectados:</div>';
-      if (parsed.cliente) h += '<div style="font-size:12px;color:#374151;margin-bottom:6px">Cliente: <b>' + parsed.cliente + '</b></div>';
-      if (parsed.dataEntrega) h += '<div style="font-size:12px;color:#374151;margin-bottom:4px">\ud83d\udcc5 Entrega: <b>' + parsed.dataEntrega + '</b></div>';
+      var h = '<div style="font-size:13px;font-weight:900;color:#1e3a5f;margin-bottom:10px">\ud83d\udccb Dados Extraidos pela IA</div>';
+      if (parsed.cliente) h += '<div style="background:#eff6ff;border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:13px"><b>Cliente:</b> '+parsed.cliente+'</div>';
+      if (parsed.dataEntrega) h += '<div style="background:#fef3c7;border-radius:8px;padding:7px 10px;margin-bottom:4px;font-size:12px">\ud83d\udcc5 <b>Entrega:</b> '+parsed.dataEntrega+'</div>';
+      if (parsed.dataExpedicao) h += '<div style="background:#fef3c7;border-radius:8px;padding:7px 10px;margin-bottom:6px;font-size:12px">\ud83d\ude9a <b>Expedi\xe7\xe3o:</b> '+parsed.dataExpedicao+'</div>';
+      if (parsed.obs) h += '<div style="font-size:11px;color:#6b7280;margin-bottom:8px">Obs: '+parsed.obs+'</div>';
       (parsed.linhas || []).forEach(function(l) {
-        var cx = l.caixas ? ' (' + l.caixas + ' cx)' : '';
-        h += '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px;margin-bottom:6px">'
-          + '<div style="font-size:13px;font-weight:700;color:#15803d">' + (l.artigo||'') + '</div>'
-          + '<div style="font-size:12px;color:#374151">Qtd: ' + (l.qtd||0) + (l.referencia ? ' \u2014 Ref: ' + l.referencia : '') + cx + '</div>'
+        var cx = l.caixas ? ' \u2014 '+l.caixas+' cx' : '';
+        h += '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:10px;margin-bottom:6px">'
+          + '<div style="font-size:13px;font-weight:800;color:#15803d">'+(l.artigo||'')+'</div>'
+          + '<div style="font-size:12px;color:#374151">Qtd: '+(l.qtd||0)+(l.referencia?' \u2014 Ref: '+l.referencia:'')+cx+'</div>'
           + '</div>';
       });
+      if (!parsed.linhas || !parsed.linhas.length) {
+        h += '<div style="color:#dc2626;font-size:12px">\u26a0\ufe0f Nenhum artigo detectado. Tenta com imagem mais n\xedtida.</div>';
+      }
       el.innerHTML = h;
     }
-    if (status) { status.textContent = '\u2705 Encomenda lida com sucesso!'; status.style.color = '#15803d'; }
-    if (confirmar) confirmar.style.display = 'block';
+    if (status) { status.textContent = '\u2705 '+(parsed.linhas||[]).length+' artigo(s) detectado(s)!'; status.style.color = '#15803d'; }
+    if (confirmar && parsed.linhas && parsed.linhas.length > 0) confirmar.style.display = 'block';
+
   } catch(e) {
-    if (status) { status.textContent = '\u274c Erro: ' + e.message; status.style.color = '#dc2626'; }
+    if (status) {
+      var msg = e.message || String(e);
+      status.innerHTML = '\u274c Erro: '+msg;
+      if (msg.includes('API_KEY') || msg.includes('key')) {
+        status.innerHTML += '<br><small>Verifica a chave Gemini em Admin \u2192 Config.</small>';
+      }
+      status.style.color = '#dc2626';
+    }
   }
 }
 
@@ -9234,6 +9279,8 @@ function aplicarPermissoesHome() {
   if (btnHomeStock) btnHomeStock.style.display = temPermissao('ver-relatorios') || temPermissao('admin') || temPermissao('direcao') || temPermissao('gestor') ? 'flex' : 'none';
   const btnHomePM = document.getElementById('btn-home-prod-manual');
   if (btnHomePM) btnHomePM.style.display = temPermissao('admin') ? 'flex' : 'none';
+  const btnHomeRend = document.getElementById('btn-home-rendimentos');
+  if (btnHomeRend) btnHomeRend.style.display = (temPermissao('ver-relatorios') || temPermissao('admin') || temPermissao('gestor') || temPermissao('direcao')) ? 'flex' : 'none';
   // Exportar enc no hub (encomendas/expedicao/admin/gestor)
   const btnEncExp = document.getElementById('btn-enc-export');
   if (btnEncExp) btnEncExp.style.display = temPermissao('exportar-enc') ? '' : 'none';
@@ -12848,47 +12895,51 @@ function prepararEncomenda(id) {
   if (!enc) return;
   _prepEncId = id;
 
-  // Inicializar linhas de preparação (preservar o que já estava)
   var prev = enc.prepLinhas || [];
-  _prepLinhas = (enc.linhas || [{ artigo: enc.artigo||'', qtd: enc.qtd||0, caixas: enc.caixas||0 }]).map(function(l, i) {
-    var p = prev[i] || {};
+  _prepLinhas = (enc.linhas || [{ artigo: enc.artigo||'', qtd: enc.qtd||0, caixas: enc.caixas||0 }]).map(function(l, idx) {
+    var p = prev[idx] || {};
     return {
-      artigo: l.artigo || '',
-      qtd: l.qtd || 0,
-      caixas: l.caixas || 0,
-      marca: l.marca || '',
-      lote: p.lote || '',
-      kg: p.kg || '',
-      camara: p.camara || null,
+      artigo:   l.artigo   || '',
+      qtd:      l.qtd      || 0,
+      caixas:   l.caixas   || 0,
+      marca:    l.marca    || '',
+      lote:     p.lote     || '',
+      kg:       p.kg       || '',
+      camara:   p.camara   || null,
       validade: p.validade || ''
     };
   });
 
   document.getElementById('bc-enc-prep').textContent = 'Encomenda #' + enc.nr;
-  document.getElementById('enc-prep-titulo').textContent = 'Encomenda #' + enc.nr + ' — ' + enc.cliente;
-  document.getElementById('enc-prep-sub').textContent = enc.artigo + (enc.obs ? ' · ' + enc.obs : '');
+  document.getElementById('enc-prep-titulo').textContent = 'Encomenda #' + enc.nr + ' \u2014 ' + enc.cliente;
+  var sub = (enc.dataEntrega ? '\ud83d\udcc5 Entrega: '+enc.dataEntrega+' \u2022 ' : '') + (enc.obs || '');
+  document.getElementById('enc-prep-sub').textContent = sub || enc.artigo || '';
   document.getElementById('status-enc-prep').className = 'status';
 
   _renderPrepLinhas();
 
-  // Preencher datas da encomenda
-  var prepDE = document.getElementById('prep-data-entrega');
-  var prepDX = document.getElementById('prep-data-expedicao');
-  if (prepDE) prepDE.value = enc.dataEntrega || '';
-  if (prepDX) prepDX.value = enc.dataExpedicao || '';
-
-  // Botões extra conforme perfil
+  // Botoes conforme perfil
   var extraDiv = document.getElementById('enc-prep-extra-btns');
   if (extraDiv) {
-    var isExpedicaoUser = temPermissao('expedicao') || temPermissao('admin');
-    var btnsHtml = '';
-    if (isExpedicaoUser) {
-      btnsHtml += '<button onclick="expedirAgora()" style="width:100%;padding:13px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:6px">🚚 Expedir e Fechar (saída + email)</button>';
-    } else {
-      btnsHtml += '<button onclick="fecharEncDireto()" style="width:100%;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">✅ Fechar Encomenda (saída + email)</button>';
-      btnsHtml += '<button onclick="enviarParaExpedicao()" style="width:100%;padding:12px;background:#92400e;color:white;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">📦 Enviar para Expedição</button>';
+    var isExpedicao = temPermissao('expedicao');
+    var isAdmin     = temPermissao('admin');
+    var isEnc       = temPermissao('encomendas');
+    var btns = '';
+    if (isExpedicao || isAdmin) {
+      // User expedicao: apenas "Expedir e Fechar"
+      btns += '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px;margin-bottom:8px">'
+        +'<div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:6px">\u{1F4E6} EXPEDI\xc7\xc3O \u2014 D\xe1 sa\xedda de c\xe2mara e fecha</div>'
+        +'<button onclick="expedirAgora()" style="width:100%;padding:13px;background:#15803d;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">\ud83d\ude9a Expedir e Fechar (sa\xedda + PDF)</button>'
+        +'</div>';
+    } else if (isEnc) {
+      // User encomendas: "Fechar" ou "Enviar para Expedicao"
+      btns += '<div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:8px">'
+        +'<div style="font-size:11px;font-weight:700;color:#1e40af;margin-bottom:6px">\u{1F4CB} FECHAR \u2014 D\xe1 sa\xedda de c\xe2mara</div>'
+        +'<button onclick="fecharEncDireto()" style="width:100%;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">\u2705 Fechar Encomenda (sa\xedda + PDF)</button>'
+        +'<button onclick="enviarParaExpedicao()" style="width:100%;padding:12px;background:#92400e;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">\ud83d\udce6 Enviar para Expedi\xe7\xe3o (sem sa\xedda)</button>'
+        +'</div>';
     }
-        extraDiv.innerHTML = btnsHtml;
+    extraDiv.innerHTML = btns;
   }
 
   irPara('screen-enc-preparar');
@@ -13536,10 +13587,11 @@ function enviarParaExpedicao() {
   });
   var semLote = _prepLinhas.filter(function(l){ return !l.lote; });
   if (semLote.length) {
-    mostrarStatus('status-enc-prep','\u26a0\ufe0f '+semLote.length+' linha(s) sem lote. Atribua o lote a todas as linhas.','error');
+    mostrarStatus('status-enc-prep','\u26a0\ufe0f '+semLote.length+' linha(s) sem lote definido.','error');
     return;
   }
-  _confirmarEnvioExpedicao();
+  if (!confirm('Enviar para Expedicao sem dar saida de camara agora?')) return;
+  _confirmarEnvioExpedicao(false);
 }
 
 
@@ -13601,6 +13653,72 @@ function _verificarValidadesPrep() {
   return (_prepLinhas||[]).filter(function(l){ return l.lote && !l.validade; });
 }
 
+
+function _mostrarOpcoesSaida(enc) {
+  var old = document.getElementById('modal-opcoes-saida');
+  if (old) old.remove();
+  var panel = document.createElement('div');
+  panel.id = 'modal-opcoes-saida';
+  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  panel.innerHTML = [
+    '<div style="background:white;border-radius:20px;padding:24px;width:100%;max-width:380px">',
+      '<div style="text-align:center;margin-bottom:16px">',
+        '<div style="font-size:40px;margin-bottom:8px">\u2705</div>',
+        '<div style="font-size:17px;font-weight:900;color:#15803d">Encomenda #'+(enc.nr||'?')+' expedida!</div>',
+        '<div style="font-size:13px;color:#6b7280;margin-top:4px">Sa\xedda de c\xe2mara registada</div>',
+      '</div>',
+      '<div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#6b7280;margin-bottom:10px;text-align:center">Enviar Guia</div>',
+      '<button onclick="_imprimirGuia(\''+enc.id+'\')" style="display:block;width:100%;padding:14px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:10px">\ud83d\udda8\ufe0f Imprimir / Guardar PDF</button>',
+      '<button onclick="_enviarEmailPDF(\''+enc.id+'\')" style="display:block;width:100%;padding:14px;background:#0369a1;color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:10px">\ud83d\udce7 Enviar por Email (qualidade@lactoceleiro.pt)</button>',
+      '<button onclick="_fecharOpcoesSaida()" style="display:block;width:100%;padding:12px;background:#f3f4f6;border:none;border-radius:12px;font-size:14px;cursor:pointer;color:#374151">Fechar sem enviar</button>',
+    '</div>'
+  ].join('');
+  document.body.appendChild(panel);
+}
+
+function _fecharOpcoesSaida() {
+  var old = document.getElementById('modal-opcoes-saida');
+  if (old) old.remove();
+  renderizarEncomendas();
+  irPara('screen-enc-lista');
+}
+
+function _imprimirGuia(encId) {
+  var encs = getEncomendas();
+  var enc = encs.find(function(e){ return e.id===encId; });
+  if (!enc) return;
+  _gerarGuiaExpedicaoPDF(enc);
+  setTimeout(_fecharOpcoesSaida, 2000);
+}
+
+function _enviarEmailPDF(encId) {
+  var encs = getEncomendas();
+  var enc = encs.find(function(e){ return e.id===encId; });
+  if (!enc) return;
+  _gerarGuiaExpedicaoPDF(enc);
+  setTimeout(function() {
+    var assunto = encodeURIComponent('Guia Expedicao #'+(enc.nr||'?')+' - '+(enc.cliente||'')+' - LactoCeleiro');
+    var linhas = (enc.prepLinhas||enc.linhas||[]).map(function(l,i){
+      return (i+1)+'. '+(l.artigo||'')+' | '+(l.qtd||0)+' un | '+(l.caixas||0)+' cx | Lote: '+(l.lote||'--')+(l.validade?' | Val: '+l.validade:'')+(l.kg?' | '+Number(l.kg).toFixed(1)+'kg':'');
+    }).join('\n');
+    var corpo = encodeURIComponent(
+      'Guia de Expedicao - LactoCeleiro\n'
+      +'Encomenda: #'+(enc.nr||'?')+'\n'
+      +'Cliente: '+(enc.cliente||'--')+'\n'
+      +(enc.dataEntrega?'Data Entrega: '+enc.dataEntrega+'\n':'')
+      +(enc.dataExpedicao?'Data Expedicao: '+enc.dataExpedicao+'\n':'')
+      +'\nARTIGOS / LOTES:\n'+linhas
+      +(enc.obs?'\n\nObs: '+enc.obs:'')
+      +'\n\n(Imprime o PDF que abriu e anexa a este email)'
+    );
+    var a = document.createElement('a');
+    a.href = 'mailto:qualidade@lactoceleiro.pt?subject='+assunto+'&body='+corpo;
+    a.click();
+    setTimeout(_fecharOpcoesSaida, 1500);
+  }, 800);
+}
+
+
 function _confirmarEnvioExpedicao(fecharDireto) {
   var encs = getEncomendas();
   var enc = encs.find(function(e){ return e.id === _prepEncId; });
@@ -13608,52 +13726,30 @@ function _confirmarEnvioExpedicao(fecharDireto) {
   var semVal = _verificarValidadesPrep();
   if (semVal.length > 0) {
     var listaSemVal = semVal.map(function(l){ return '\u2022 '+l.artigo+' (lote '+l.lote+')'; }).join('\n');
-    if (!confirm('\u26a0\ufe0f Os seguintes artigos n\xe3o t\xeam validade definida:\n\n'+listaSemVal+'\n\nContinuar mesmo assim?')) return;
+    if (!confirm('\u26a0\ufe0f Artigos sem validade:\n\n'+listaSemVal+'\n\nContinuar?')) return;
   }
-
-  // Guardar linhas de preparação na encomenda
   enc.prepLinhas = _prepLinhas.map(function(l){ return Object.assign({}, l); });
   enc.estado = fecharDireto ? 'concluida' : 'em-expedicao';
   if (fecharDireto) enc.dataConclusao = new Date().toISOString();
   salvarEncomendas(encs);
-
-  // Criar registo de expedição
   var exps = getExpedicoes();
-  var expId = 'exp_' + Date.now();
-  var novaExp = {
-    id: expId,
-    encId: _prepEncId,
-    nr: enc.nr,
-    cliente: enc.cliente,
-    artigo: enc.artigo,
-    obs: enc.obs || '',
-    linhas: _prepLinhas.map(function(l){ return Object.assign({}, l); }),
+  exps.push({
+    id: 'exp_'+Date.now(), encId: _prepEncId, nr: enc.nr, cliente: enc.cliente,
+    artigo: enc.artigo, obs: enc.obs||'',
+    linhas: _prepLinhas.map(function(l){ return Object.assign({},l); }),
     estado: fecharDireto ? 'expedida' : 'pronta',
-    dataCriacao: new Date().toISOString(),
-    dataFormatada: dataHoje(),
-    dataEntrega: enc.dataEntrega || '',
-    dataExpedicao: enc.dataExpedicao || ''
-  };
-  exps.push(novaExp);
+    dataCriacao: new Date().toISOString(), dataFormatada: dataHoje(),
+    dataEntrega: enc.dataEntrega||'', dataExpedicao: enc.dataExpedicao||''
+  });
   salvarExpedicoes(exps);
-
-  // Se fechar direto: dar saidas + gerar PDF
+  _atualizarBadgeExp();
   if (fecharDireto) {
     _darSaidasCamaraPrep(_prepLinhas);
-    _gerarGuiaExpedicaoPDF(enc);
+    _mostrarOpcoesSaida(enc);
+  } else {
+    mostrarStatus('status-enc-prep','\u2713 Encomenda #'+enc.nr+' enviada para Expedi\xe7\xe3o!','success');
+    setTimeout(function(){ renderizarEncomendas(); irPara('screen-enc-lista'); }, 1800);
   }
-
-  // Atualizar badge
-  _atualizarBadgeExp();
-
-  var msg = fecharDireto
-    ? '✓ Encomenda #' + enc.nr + ' expedida! Email enviado para qualidade@lactoceleiro.pt'
-    : '✓ Encomenda #' + enc.nr + ' enviada para Expedição!';
-  mostrarStatus('status-enc-prep', msg, 'success');
-  setTimeout(function(){
-    renderizarEncomendas();
-    irPara('screen-enc-lista');
-  }, 1800);
 }
 
 // Dar saídas de câmara para todas as linhas de preparação
@@ -13691,8 +13787,28 @@ function _darSaidasCamaraPrep(linhas) {
 }
 
 // Botão "Fechar Encomenda" para utilizador encomendas
+
+function _syncLoteInputs() {
+  (_prepLinhas||[]).forEach(function(l,i){
+    var lotEl = document.getElementById('prep-lote-'+i);
+    if (lotEl && lotEl.value.trim()) l.lote = lotEl.value.trim();
+    if (l.lote && (!l.camara || !l.validade)) {
+      var info = _buscarInfoLote(l.lote);
+      if (!l.camara)   l.camara   = info.camara;
+      if (!l.validade) l.validade = info.validade;
+    }
+  });
+}
+
 function fecharEncDireto() {
-  if (!confirm('Confirmar fecho da encomenda? Será dada saída de câmara e enviado email.')) return;
+  // Sync lote inputs manuais
+  _syncLoteInputs();
+  var semLote = _prepLinhas.filter(function(l){ return !l.lote; });
+  if (semLote.length) {
+    mostrarStatus('status-enc-prep','\u26a0\ufe0f '+semLote.length+' linha(s) sem lote. Atribua o lote antes de fechar.','error');
+    return;
+  }
+  if (!confirm('Fechar encomenda? Ser\xe1 dada sa\xedda de c\xe2mara e gerado o guia.')) return;
   _confirmarEnvioExpedicao(true);
 }
 
@@ -13703,7 +13819,13 @@ function enviarParaExpedicao() {
 
 // Botão "Expedir Agora" para utilizador expedição
 function expedirAgora() {
-  if (!confirm('Expedir agora e fechar encomenda? Será dado saída de câmara e enviado email.')) return;
+  _syncLoteInputs();
+  var semLote = _prepLinhas.filter(function(l){ return !l.lote; });
+  if (semLote.length) {
+    mostrarStatus('status-enc-prep','\u26a0\ufe0f '+semLote.length+' linha(s) sem lote.','error');
+    return;
+  }
+  if (!confirm('Expedir e fechar encomenda? Sa\xedda de c\xe2mara ser\xe1 registada.')) return;
   _confirmarEnvioExpedicao(true);
 }
 
@@ -14468,13 +14590,16 @@ function _gerarGuiaExpedicaoPDF(enc) {
 
   var rowsHTML = '';
   linhas.forEach(function(l, i) {
+    var valStyle = l.validade ? 'color:#92400e;font-weight:800' : 'color:#dc2626;font-style:italic';
+    var valTxt   = l.validade || 'SEM VALIDADE';
     rowsHTML += '<tr style="background:'+(i%2===0?'#f9fafb':'white')+'">'
-      +'<td style="padding:8px 10px;font-size:13px;color:#374151">'+(i+1)+'</td>'
+      +'<td style="padding:8px 10px;font-size:12px;color:#374151">'+(i+1)+'</td>'
       +'<td style="padding:8px 10px;font-size:13px;font-weight:700;color:#1e3a5f">'+(l.artigo||'')+'</td>'
-      +'<td style="padding:8px 10px;text-align:center;font-size:13px">'+(l.qtd||0)+'</td>'
+      +'<td style="padding:8px 10px;text-align:center;font-size:13px;font-weight:700">'+(l.qtd||0)+'</td>'
       +'<td style="padding:8px 10px;text-align:center;font-size:13px">'+(l.caixas||0)+'</td>'
       +'<td style="padding:8px 10px;font-family:monospace;font-weight:900;font-size:12px;color:#1e3a5f">'+(l.lote||'\u2014')+'</td>'
-      +'<td style="padding:8px 10px;text-align:center;font-size:12px;color:#92400e">'+(l.validade||'\u2014')+'</td>'
+      +'<td style="padding:8px 10px;text-align:center;font-size:12px">C'+(l.camara||'?')+'</td>'
+      +'<td style="padding:8px 10px;text-align:center;font-size:12px;'+valStyle+'">'+valTxt+'</td>'
       +'<td style="padding:8px 10px;text-align:center;font-size:12px">'+(l.kg?Number(l.kg).toFixed(1)+' kg':'\u2014')+'</td>'
       +'</tr>';
   });
@@ -14482,47 +14607,51 @@ function _gerarGuiaExpedicaoPDF(enc) {
   var htmlContent = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">'
     +'<title>Guia de Expedi\xe7\xe3o #'+enc.nr+'</title>'
     +'<style>'
-    +'@media print { @page { margin: 15mm; } body { -webkit-print-color-adjust: exact; } }'
-    +'body { font-family: Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; }'
-    +'.header { background: linear-gradient(135deg, #1e3a5f, #0369a1); color: white; padding: 20px 24px; margin-bottom: 24px; }'
-    +'.header h1 { margin: 0 0 4px; font-size: 22px; }'
-    +'.header .sub { font-size: 13px; opacity: 0.85; }'
-    +'.info-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin: 0 24px 20px; }'
-    +'.info-box { background: #f8fafc; border: 1px solid #e5e7eb; border-radius: 8px; padding: 10px 14px; }'
-    +'.info-box .label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #6b7280; margin-bottom: 4px; }'
-    +'.info-box .value { font-size: 14px; font-weight: 800; color: #1e3a5f; }'
-    +'table { width: calc(100% - 48px); margin: 0 24px 20px; border-collapse: collapse; border-radius: 10px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); }'
-    +'th { background: #1e3a5f; color: white; padding: 9px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; text-align: left; }'
+    +'@media print { @page { margin: 12mm; size: A4; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display:none; } }'
+    +'* { box-sizing: border-box; }'
+    +'body { font-family: Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; font-size: 13px; }'
+    +'.header { background: #1e3a5f; color: white; padding: 18px 24px; }'
+    +'.header h1 { margin: 0 0 4px; font-size: 20px; }'
+    +'.header .sub { font-size: 12px; opacity: 0.8; }'
+    +'.info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 16px 24px; background: #f8fafc; border-bottom: 2px solid #e5e7eb; }'
+    +'.info-box { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 12px; }'
+    +'.info-box .lbl { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #6b7280; margin-bottom: 3px; }'
+    +'.info-box .val { font-size: 14px; font-weight: 800; color: #1e3a5f; }'
+    +'.table-wrap { padding: 16px 24px; }'
+    +'table { width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; }'
+    +'th { background: #1e3a5f; color: white; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; text-align: left; }'
     +'td { border-bottom: 1px solid #f3f4f6; }'
-    +'.footer { margin: 20px 24px 0; padding: 14px; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; font-size: 12px; color: #0369a1; }'
-    +'</style></head><body>'
+    +'.footer { margin: 0 24px 16px; padding: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 12px; color: #15803d; }'
+    +'</style>'
+    +'</head><body>'
     +'<div class="header">'
-    +'<h1>&#128666; Guia de Expedi\xe7\xe3o</h1>'
-    +'<div class="sub">LactoCeleiro &mdash; Emitido em '+dStr+' '+hStr+'</div>'
+    +'<h1>&#128666; Guia de Expedi\xe7\xe3o \u2014 LactoCeleiro</h1>'
+    +'<div class="sub">Emitido: '+dStr+' '+hStr+'</div>'
     +'</div>'
     +'<div class="info-grid">'
-    +'<div class="info-box"><div class="label">Encomenda</div><div class="value">#'+enc.nr+'</div></div>'
-    +'<div class="info-box"><div class="label">Cliente</div><div class="value">'+(enc.cliente||'\u2014')+'</div></div>'
-    +'<div class="info-box"><div class="label">Data</div><div class="value">'+dStr+'</div></div>'
-    +(enc.dataEntrega?'<div class="info-box"><div class="label">Data Entrega</div><div class="value">'+enc.dataEntrega+'</div></div>':'')
-    +(enc.dataExpedicao?'<div class="info-box"><div class="label">Data Expedi\xe7\xe3o</div><div class="value">'+enc.dataExpedicao+'</div></div>':'')
-    +(enc.obs?'<div class="info-box" style="grid-column:1/-1"><div class="label">Observa\xe7\xf5es</div><div class="value" style="font-size:13px">'+enc.obs+'</div></div>':'')
+    +'<div class="info-box"><div class="lbl">Encomenda</div><div class="val">#'+enc.nr+'</div></div>'
+    +'<div class="info-box"><div class="lbl">Cliente</div><div class="val">'+(enc.cliente||'\u2014')+'</div></div>'
+    +'<div class="info-box"><div class="lbl">Data</div><div class="val">'+dStr+'</div></div>'
+    +(enc.dataEntrega ? '<div class="info-box"><div class="lbl">Entrega</div><div class="val">'+enc.dataEntrega+'</div></div>' : '')
+    +(enc.dataExpedicao ? '<div class="info-box"><div class="lbl">Expedi\xe7\xe3o</div><div class="val">'+enc.dataExpedicao+'</div></div>' : '')
+    +(enc.obs ? '<div class="info-box" style="grid-column:1/-1"><div class="lbl">Obs</div><div class="val" style="font-size:12px">'+enc.obs+'</div></div>' : '')
     +'</div>'
-    +'<table>'
-    +'<thead><tr>'
-    +'<th>#</th><th>Artigo</th><th style="text-align:center">Qtd</th><th style="text-align:center">Caixas</th>'
-    +'<th>Lote</th><th style="text-align:center">Validade</th><th style="text-align:center">Peso</th>'
-    +'</tr></thead>'
-    +'<tbody>'+rowsHTML+'</tbody>'
-    +'</table>'
-    +'<div class="footer">\u2713 Guia gerado automaticamente pela app LactoCeleiro. Verificar antes de expedir.</div>'
-    +'<div style="text-align:center;margin:20px 0;font-size:12px;color:#9ca3af">LactoCeleiro &mdash; Expedi\xe7\xe3o #'+enc.nr+' &mdash; '+dStr+'</div>'
-    +'<script>window.onload=function(){window.print(); setTimeout(function(){window.close();},1200);};<\/script>'
+    +'<div class="table-wrap">'
+    +'<table><thead><tr>'
+    +'<th>#</th><th>Artigo</th><th style="text-align:center">Qtd</th><th style="text-align:center">Cx</th>'
+    +'<th>Lote</th><th style="text-align:center">C\xe2mara</th><th style="text-align:center">Validade</th><th style="text-align:center">Peso</th>'
+    +'</tr></thead><tbody>'+rowsHTML+'</tbody></table>'
+    +'</div>'
+    +'<div class="footer">\u2713 Guia gerado automaticamente. Verificar conte\xfado antes de expedir.</div>'
+    +'<div class="no-print" style="text-align:center;padding:12px;background:#eff6ff">'
+    +'<button onclick="window.print()" style="padding:12px 24px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-right:8px">&#128438; Imprimir / Guardar PDF</button>'
+    +'<button onclick="window.close()" style="padding:12px 20px;background:#f3f4f6;border:none;border-radius:8px;font-size:13px;cursor:pointer">Fechar</button>'
+    +'</div>'
     +'</body></html>';
 
-  var win = window.open('', '_blank', 'width=800,height=700,scrollbars=yes');
+  var win = window.open('', '_blank', 'width=820,height=750,scrollbars=yes');
   if (!win) {
-    alert('Activa pop-ups para imprimir o guia. Abre as defini\xe7\xf5es do browser e permite pop-ups para este site.');
+    alert('Activa os pop-ups para este site para poder imprimir o guia.');
     return;
   }
   win.document.write(htmlContent);
