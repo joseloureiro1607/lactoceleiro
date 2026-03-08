@@ -5537,25 +5537,30 @@ function getLotesLeiteDisponiveis(tipo) {
     });
   });
 
-  // Descontar o que foi usado em produções de REQUEIJÃO
-  // Requeijão usa leiteTotal do mesmo tipo (ovelha/cabra)
-  // Como não tem loteId associado, desconta FIFO pelos lotes mais antigos
-  const prodReq = getProdutosRequeijao ? getProdutosRequeijao() : [];
-  prodReq.forEach(prq => {
-    // Filtrar só requeijão do mesmo tipo de leite
-    const tipoLeiteReq = prq.tipoLeite || 'ovelha'; // default ovelha
-    if (tipoLeiteReq !== tipo) return;
-    let litrosADescontar = parseFloat(prq.leiteTotal || prq.litros || 0);
-    if (litrosADescontar <= 0) return;
-    // Descontar FIFO (lotes mais antigos primeiro, mas já vêm ordenados desc)
-    // Iterar em ordem cronológica (reversa da lista)
-    for (let i = lotes.length - 1; i >= 0 && litrosADescontar > 0; i--) {
-      const lote = lotes[i];
-      const tirar = Math.min(lote.litrosRestantes, litrosADescontar);
-      lote.litrosRestantes = Math.max(0, lote.litrosRestantes - tirar);
-      litrosADescontar -= tirar;
-    }
+  // Descontar leite usado em REQUEIJÃO (concluído)
+  // concluirLoteRQ escreve em lc_saidas_leite_v1 com {tipo:'ovelha', litros:N}
+  const saidasLeiteRQ = JSON.parse(localStorage.getItem('lc_saidas_leite_v1') || '[]');
+  let totalRQConcluido = saidasLeiteRQ
+    .filter(s => s.tipo === tipo && s.origem === 'requeijao')
+    .reduce((s, x) => s + (x.litros || 0), 0);
+
+  // Descontar leite usado em REQUEIJÃO EM CURSO
+  // lc_prq_em_curso_v1: cada lote tem caldeiras com c.leite[].litros
+  const emCursoRQ = JSON.parse(localStorage.getItem('lc_prq_em_curso_v1') || '[]');
+  let totalRQEmCurso = 0;
+  emCursoRQ.forEach(lote => {
+    (lote.caldeiras || []).forEach(c => {
+      (c.leite || []).forEach(x => { totalRQEmCurso += (x.litros || 0); });
+    });
   });
+
+  // Descontar total requeijão FIFO (mais antigos primeiro = fim do array)
+  let totalRQDescontar = totalRQConcluido + totalRQEmCurso;
+  for (let i = lotes.length - 1; i >= 0 && totalRQDescontar > 0; i--) {
+    const tirar = Math.min(lotes[i].litrosRestantes, totalRQDescontar);
+    lotes[i].litrosRestantes = Math.max(0, lotes[i].litrosRestantes - tirar);
+    totalRQDescontar -= tirar;
+  }
 
   return lotes
     .filter(l => l.litrosRestantes > 0)
