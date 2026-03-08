@@ -1520,6 +1520,12 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
           <span>📂</span> IMPORTAR EXCEL PRIMEBRANDS
         </button>
       </div>
+      <div style="margin-top:6px">
+        <button class="main-btn" onclick="abrirImportarFotoEnc()"
+          style="width:100%;padding:16px 12px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <span>📷</span> IMPORTAR FOTO / PDF ENCOMENDA
+        </button>
+      </div>
       <div style="display:flex;gap:8px;margin-top:12px">
         <button class="btn-back" onclick="irPara('screen-home')" style="flex:1">← Voltar</button>
       </div>
@@ -1610,7 +1616,8 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         </div>
       </div>
 
-      <button class="btn-primary laranja" onclick="confirmarSaida()">✓ Confirmar Saída</button>
+      <button class="btn-primary laranja" id="btn-confirmar-saida" onclick="confirmarSaida()">✓ Confirmar Saída</button>
+      <div id="saida-pos-opcoes" style="margin-top:8px;display:none"></div>
       <button class="btn-back" onclick="voltarSaidaLotes()">← Voltar</button>
       <div class="status" id="status-saida"></div>
     </div>
@@ -2675,6 +2682,70 @@ function registarC5Outro() {
 // ===
 // SAÍDAS
 // ===
+
+// ── Fechar encomenda + email (utilizador expedição/admin) ──
+function _fecharEncExpedicaoEmail() {
+  if (!encAtualId) return;
+  var encs = getEncomendas();
+  var enc  = encs.find(function(x){ return x.id===encAtualId; });
+  if (!enc) return;
+  enc.estado = 'concluida';
+  enc.dataConclusao = new Date().toISOString();
+  salvarEncomendas(encs);
+  _enviarEmailQualidade(enc);
+  mostrarStatus('status-saida','✅ Encomenda #'+enc.nr+' concluída! Email enviado.','success');
+  var id = encAtualId; encAtualId = null;
+  var posDiv = document.getElementById('saida-pos-opcoes');
+  if (posDiv) posDiv.style.display = 'none';
+  var btnConf = document.getElementById('btn-confirmar-saida');
+  if (btnConf) btnConf.style.display = 'block';
+  setTimeout(function(){ abrirEncomenda(id); }, 1800);
+}
+
+// ── Fechar encomenda + email (utilizador encomendas) ──
+function _fecharEncSemExpedicao() {
+  if (!encAtualId) return;
+  var encs = getEncomendas();
+  var enc  = encs.find(function(x){ return x.id===encAtualId; });
+  if (!enc) return;
+  enc.estado = 'concluida';
+  enc.dataConclusao = new Date().toISOString();
+  salvarEncomendas(encs);
+  _enviarEmailQualidade(enc);
+  mostrarStatus('status-saida','✅ Encomenda #'+enc.nr+' fechada! Email enviado.','success');
+  var id = encAtualId; encAtualId = null;
+  var posDiv = document.getElementById('saida-pos-opcoes');
+  if (posDiv) posDiv.style.display = 'none';
+  var btnConf = document.getElementById('btn-confirmar-saida');
+  if (btnConf) btnConf.style.display = 'block';
+  setTimeout(function(){ abrirEncomenda(id); }, 1800);
+}
+
+// ── Enviar encomenda para expedição (utilizador encomendas) ──
+function _enviarEncParaExpedicaoFlow() {
+  if (!encAtualId) return;
+  var encs = getEncomendas();
+  var enc  = encs.find(function(x){ return x.id===encAtualId; });
+  if (!enc) return;
+  // Criar expedição a partir das saídas já registadas
+  _prepEncId = encAtualId;
+  _prepLinhas = (enc.lotes||[]).map(function(l,i) {
+    var linha = (enc.linhas||[])[i] || {};
+    return {
+      artigo: linha.artigo||enc.artigo||'', qtd: l.qtd||0,
+      caixas: l.caixas||linha.caixas||0, lote: l.lote||'',
+      camara: l.camara||null, validade: l.validade||'', kg: l.kg||''
+    };
+  });
+  enc.estado = 'em-expedicao';
+  salvarEncomendas(encs);
+  encAtualId = null;
+  var posDiv = document.getElementById('saida-pos-opcoes');
+  if (posDiv) posDiv.style.display = 'none';
+  var btnConf = document.getElementById('btn-confirmar-saida');
+  if (btnConf) btnConf.style.display = 'block';
+  _confirmarEnvioExpedicao(false);
+}
 function escolherSaidaCamara(num) {
   camaraAtual = num;
   document.getElementById('bc-saida-lotes').textContent = `Câmara ${num}`;
@@ -2876,14 +2947,44 @@ function confirmarSaida() {
     : `✓ ${qtd} un abatidas do lote ${nomeLote}. Restam ${lote.qtd} un em câmara`;
   mostrarStatus('status-saida', msg, 'success');
 
-  setTimeout(() => {
-    if (encAtualId) {
-      // Voltar ao detalhe da encomenda para poder abater mais lotes
-      abrirEncomenda(encAtualId);
+  if (encAtualId) {
+    // Verificar perfil para mostrar acções pós-saída
+    const isExpUser = temPermissao('expedicao') || temPermissao('admin');
+    const isEncUser = temPermissao('encomendas');
+
+    if (isExpUser) {
+      // Expedição: esconde botão confirmar, mostra só "Mais saídas" e "Fechar+Email"
+      const btnConf = document.getElementById('btn-confirmar-saida');
+      if (btnConf) btnConf.style.display = 'none';
+      const posDiv = document.getElementById('saida-pos-opcoes');
+      if (posDiv) {
+        posDiv.innerHTML = '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px;margin-bottom:6px">'
+          + '<div style="font-size:12px;font-weight:800;color:#15803d;margin-bottom:8px">✅ Saída registada!</div>'
+          + '<button onclick="voltarSaidaLotes()" style="width:100%;padding:11px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">📤 + Mais Saídas desta Encomenda</button>'
+          + '<button onclick="_fecharEncExpedicaoEmail()" style="width:100%;padding:12px;background:#15803d;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">🚚 Fechar Encomenda + Email</button>'
+          + '</div>';
+        posDiv.style.display = 'block';
+      }
+    } else if (isEncUser) {
+      // Encomendas: esconde botão confirmar, mostra opções
+      const btnConf = document.getElementById('btn-confirmar-saida');
+      if (btnConf) btnConf.style.display = 'none';
+      const posDiv = document.getElementById('saida-pos-opcoes');
+      if (posDiv) {
+        posDiv.innerHTML = '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px;margin-bottom:6px">'
+          + '<div style="font-size:12px;font-weight:800;color:#15803d;margin-bottom:8px">✅ Saída registada! O que fazer?</div>'
+          + '<button onclick="voltarSaidaLotes()" style="width:100%;padding:11px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">📤 + Mais Saídas desta Encomenda</button>'
+          + '<button onclick="_fecharEncSemExpedicao()" style="width:100%;padding:11px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">✅ Fechar Encomenda + Email</button>'
+          + '<button onclick="_enviarEncParaExpedicaoFlow()" style="width:100%;padding:11px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">🚚 Enviar para Expedição</button>'
+          + '</div>';
+        posDiv.style.display = 'block';
+      }
     } else {
-      voltarSaidaLotes();
+      setTimeout(() => { abrirEncomenda(encAtualId); }, 2200);
     }
-  }, 2200);
+  } else {
+    setTimeout(() => { voltarSaidaLotes(); }, 2200);
+  }
 }
 
 // ===
@@ -8324,14 +8425,16 @@ async function testarGemini() {
   }
 }
 
-var PROMPT_IMPORT_ENC = 'Analisa esta imagem ou documento (encomenda de queijo). '
-  + 'Extrai TODOS os artigos com quantidades. '
-  + 'Regras referencia: "grande" sem apimentado -> ref "G" (4un/cx), "pequeno" -> ref "P" (8un/cx), '
-  + '"apimentado" ou "apimentado grande" -> ref "PPP" (5un/cx), requeijao -> 9un/cx, cabra -> 8un/cx. '
-  + 'Soma artigos do mesmo tamanho se aparecerem em linhas separadas. '
-  + 'Responde APENAS em JSON valido sem markdown sem texto adicional: '
-  + '{"linhas":[{"artigo":"nome completo","qtd":numero,"referencia":"G ou P ou PP ou PPP ou DOP ou vazio","caixas":numero}],'
-  + '"cliente":"nome ou vazio","obs":"vazio ou observacoes","dataEntrega":"DD/MM/AAAA ou vazio"}';
+var PROMPT_IMPORT_ENC = 'Analisa esta imagem ou documento — e uma encomenda de queijo/requeijao. '
+  + 'EXTRAI: 1) nome do cliente, 2) data de entrega, 3) todos os artigos com quantidades. '
+  + 'ARTIGOS LactoCeleiro: Queijo Ovelha Grande (ref G, 4un/cx), Queijo Ovelha Pequeno (ref P, 8un/cx), '
+  + 'Queijo Ovelha Apimentado Grande (ref PPP, 5un/cx), Queijo DOP (ref DOP, 4un/cx), '
+  + 'Queijo de Cabra (ref cabra, 8un/cx), Requeijao Embalado (9un/cx), Requeijao Embrulhado (9un/cx). '
+  + 'Se tiver marcas de distribuidores (PrimeBreands, etc) extrai os artigos equivalentes. '
+  + 'Soma quantidades do mesmo artigo/tamanho se aparecerem em multiplas linhas. '
+  + 'RESPONDE APENAS com JSON valido, sem markdown, sem texto extra: '
+  + '{"linhas":[{"artigo":"nome exacto LactoCeleiro","qtd":numero,"referencia":"G|P|PPP|DOP|cabra","caixas":numero,"obsLinha":""}],'
+  + '"cliente":"nome cliente ou vazio","obs":"obs gerais ou vazio","dataEntrega":"DD/MM/AAAA ou vazio","dataExpedicao":"DD/MM/AAAA ou vazio"}'
 
 function _fecharModalImportFoto() {
   var m = document.getElementById('modal-import-foto');
@@ -9303,6 +9406,10 @@ function adminTab(tab) {
   if (cfgPanel) cfgPanel.style.display = tab === 'config' ? '' : 'none';
   var cfgBtn = document.getElementById('tab-config');
   if (cfgBtn) { cfgBtn.style.background = tab==='config'?'#1e3a5f':'#f3f4f6'; cfgBtn.style.color = tab==='config'?'white':'#6b7280'; }
+  var editarPanel = document.getElementById('admin-panel-editar');
+  if (editarPanel) editarPanel.style.display = tab === 'editar' ? '' : 'none';
+  var tabEditar = document.getElementById('tab-editar');
+  if (tabEditar) { tabEditar.style.background = tab==='editar'?'#1e3a5f':'#f3f4f6'; tabEditar.style.color = tab==='editar'?'white':'#6b7280'; }
   if (tab === 'utilizadores') adminRenderUtilizadores();
   if (tab === 'config') _mostrarGeminiStatus();
 }
@@ -9493,6 +9600,86 @@ function adminApagarUtilizador(id) {
   adminRenderUtilizadores();
 }
 
+
+// ── Funções admin tab Editar ──
+
+function adminAbrirEditorCamaras() {
+  var e = getEstado();
+  var h = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;overflow-y:auto;padding:16px;box-sizing:border-box">'
+    +'<div style="background:white;border-radius:16px;padding:20px;max-width:480px;margin:0 auto">'
+    +'<div style="font-size:15px;font-weight:800;color:#1e3a5f;margin-bottom:12px">🏭 Lotes nas Câmaras</div>';
+  [1,2,3,4,5].forEach(function(nc) {
+    var lotes = e[nc] || [];
+    if (!lotes.length) return;
+    h += '<div style="font-weight:800;color:#1e3a5f;font-size:13px;margin:10px 0 6px">Câmara '+nc+'</div>';
+    lotes.forEach(function(l) {
+      h += '<div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border-radius:8px;padding:8px 10px;margin-bottom:4px">'
+        +'<div><div style="font-family:monospace;font-weight:800;font-size:12px">'+l.lote+'</div><div style="font-size:11px;color:#6b7280">'+l.qtd+' un'+(l.peso?' · '+l.peso+' kg':'')+'</div></div>'
+        +'<div style="display:flex;gap:6px">'
+        +'<button onclick="document.querySelector(\'[data-adm-cam]\').remove();editarLoteCamara('+nc+',\''+l.id+'\')" style="padding:6px 10px;background:#eff6ff;color:#1e40af;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✏️</button>'
+        +'</div></div>';
+    });
+  });
+  h += '<button onclick="this.closest(\'[data-adm-cam],[style*=fixed]\').remove()" style="width:100%;padding:12px;background:#f3f4f6;border:none;border-radius:10px;font-weight:700;color:#6b7280;cursor:pointer;margin-top:12px">Fechar</button>'
+    +'</div></div>';
+  var d = document.createElement('div');
+  d.setAttribute('data-adm-cam','1');
+  d.innerHTML = h;
+  document.body.appendChild(d);
+}
+
+function adminAbrirEditorLeite() {
+  // Redirecionar para o ecrã de entradas de leite com modo admin
+  irPara('screen-leite');
+}
+
+function adminAbrirEditorLavagens() {
+  var e = getEstado();
+  var h = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;overflow-y:auto;padding:16px;box-sizing:border-box">'
+    +'<div style="background:white;border-radius:16px;padding:20px;max-width:480px;margin:0 auto">'
+    +'<div style="font-size:15px;font-weight:800;color:#1e3a5f;margin-bottom:12px">🧼 Lavagens por Câmara</div>';
+  var temLav = false;
+  [1,2,3,4,5].forEach(function(nc) {
+    (e[nc]||[]).forEach(function(l) {
+      var lavs = l.lavagens||[];
+      if (!lavs.length) return;
+      temLav = true;
+      h += '<div style="font-weight:800;color:#1e3a5f;font-size:13px;margin:10px 0 4px">'+l.lote+' (C'+nc+')</div>';
+      lavs.forEach(function(lav, li) {
+        var ds = lav.horaInicio ? new Date(lav.horaInicio).toLocaleDateString('pt-PT') : '—';
+        var nr = lav.nrPessoas||lav.numPessoas||'?';
+        h += '<div style="display:flex;justify-content:space-between;align-items:center;background:#f0fdf4;border-radius:8px;padding:7px 10px;margin-bottom:4px">'
+          +'<div><div style="font-size:12px;font-weight:700">Lav. '+(li+1)+' — '+ds+'</div><div style="font-size:11px;color:#6b7280">'+nr+' pessoa(s)'+(lav.horaFim?' · ✓ concluída':' · ⏳ em curso')+'</div></div>'
+          +'<button onclick="document.querySelector(\'[data-adm-lav]\').remove();editarLavagem('+nc+',\''+l.id+'\','+li+')" style="padding:6px 10px;background:#eff6ff;color:#1e40af;border:none;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer">✏️</button>'
+          +'</div>';
+      });
+    });
+  });
+  if (!temLav) h += '<div style="text-align:center;padding:30px;color:#9ca3af">Sem lavagens registadas</div>';
+  h += '<button onclick="this.closest(\'[data-adm-lav],[style*=fixed]\').remove()" style="width:100%;padding:12px;background:#f3f4f6;border:none;border-radius:10px;font-weight:700;color:#6b7280;cursor:pointer;margin-top:12px">Fechar</button>'
+    +'</div></div>';
+  var d = document.createElement('div');
+  d.setAttribute('data-adm-lav','1');
+  d.innerHTML = h;
+  document.body.appendChild(d);
+}
+
+function adminEditarDatas() {
+  var modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML = '<div style="background:white;border-radius:16px;padding:22px;width:100%;max-width:380px">'
+    +'<div style="font-size:15px;font-weight:800;color:#1e3a5f;margin-bottom:14px">📅 Corrigir Datas</div>'
+    +'<div style="font-size:12px;color:#6b7280;margin-bottom:14px">Use as funções de edição individuais: selecione o lote/encomenda e edite a data directamente no formulário de edição.</div>'
+    +'<div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:8px">Atalhos:</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">'
+    +'<button onclick="this.closest(\'[style*=fixed]\').remove();adminAbrirEditorCamaras()" style="padding:11px;background:#eff6ff;color:#1e40af;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">🏭 Câmaras — editar data entrada</button>'
+    +'<button onclick="this.closest(\'[style*=fixed]\').remove();irPara(\'screen-enc-lista\')" style="padding:11px;background:#f5f3ff;color:#7c3aed;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">📦 Encomendas</button>'
+    +'<button onclick="this.closest(\'[style*=fixed]\').remove();adminAbrirEditorLavagens()" style="padding:11px;background:#f0fdf4;color:#15803d;border:none;border-radius:10px;font-weight:700;font-size:13px;cursor:pointer">🧼 Lavagens — editar hora início/fim</button>'
+    +'</div>'
+    +'<button onclick="this.closest(\'[style*=fixed]\').remove()" style="width:100%;padding:12px;background:#f3f4f6;border:none;border-radius:10px;font-weight:700;color:#6b7280;cursor:pointer">Fechar</button>'
+    +'</div>';
+  document.body.appendChild(modal);
+}
 function adminEliminar(tipo) {
   const msgs = {
     'producoes-queijo':    'Tens a certeza? Todas as produções de queijo serão eliminadas.',
@@ -10087,16 +10274,36 @@ function editarLoteCamara(camara, loteId) {
             <input id="ed-data" type="date" value="${(reg.data||'').slice(0,10)}" style="width:100%;padding:9px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box"></div>
           <div><label style="font-size:12px;font-weight:700;color:#6b7280">REFERÊNCIA</label>
             <input id="ed-ref" type="text" value="${reg.referencia||''}" style="width:100%;padding:9px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box"></div>
+          <div><label style="font-size:12px;font-weight:700;color:#6b7280">NR PESSOAS (lavagem)</label>
+            <input id="ed-nrpessoas" type="number" min="0" value="${reg.nrPessoas||reg.numPessoas||''}" style="width:100%;padding:9px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box"></div>
+          <div><label style="font-size:12px;font-weight:700;color:#6b7280">VALIDADE</label>
+            <input id="ed-validade" type="text" placeholder="DD/MM/AAAA" value="${reg.validade||''}" style="width:100%;padding:9px;border:1.5px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box"></div>
         </div>
         <div style="display:flex;gap:8px;margin-top:16px">
           <button onclick="document.getElementById('modal-edit').remove()" style="flex:1;padding:11px;background:#f3f4f6;color:#6b7280;border:none;border-radius:10px;font-weight:700;cursor:pointer">Cancelar</button>
           <button onclick="guardarLoteCamara('${camara}','${loteId}')" style="flex:2;padding:11px;background:#15803d;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer">✓ Guardar</button>
         </div>
+        <button onclick="_eliminarLoteCamara('${camara}','${loteId}')" style="width:100%;padding:11px;background:#fee2e2;color:#dc2626;border:2px solid #fecaca;border-radius:10px;font-weight:800;cursor:pointer;margin-top:8px;font-size:13px">🗑️ Eliminar Lote da Câmara</button>
       </div>
     </div>`;
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
+
+function _eliminarLoteCamara(camara, loteId) {
+  if (!temPermissao('admin')) return;
+  if (!confirm('⚠️ Eliminar DEFINITIVAMENTE o lote da câmara?\nEsta acção não pode ser desfeita.')) return;
+  var e = getEstado();
+  var lotes = e[parseInt(camara)] || [];
+  var idx = lotes.findIndex(function(l){ return String(l.id) === String(loteId); });
+  if (idx < 0) return;
+  lotes.splice(idx, 1);
+  salvarEstado(e);
+  var modal = document.getElementById('modal-edit');
+  if (modal) modal.remove();
+  atualizarResumoCamaras();
+  irPara('screen-cura');
+}
 function guardarLoteCamara(camara, loteId) {
   const e = getEstado();
   const lotes = e[camara] || [];
@@ -10107,9 +10314,13 @@ function guardarLoteCamara(camara, loteId) {
   const peso = parseFloat(document.getElementById('ed-peso').value) || 0;
   const data = document.getElementById('ed-data').value;
   const referencia = document.getElementById('ed-ref').value.trim();
+  const edNr = parseInt((document.getElementById('ed-nrpessoas')||{}).value||0);
+  const edVal = ((document.getElementById('ed-validade')||{}).value||'').trim();
   e[camara][idx] = { ...e[camara][idx], lote, qtd, peso, referencia,
     data: data ? data + 'T12:00:00.000Z' : e[camara][idx].data,
-    dataFormatada: data ? data.split('-').reverse().join('/') : e[camara][idx].dataFormatada
+    dataFormatada: data ? data.split('-').reverse().join('/') : e[camara][idx].dataFormatada,
+    ...(edNr > 0 ? {nrPessoas: edNr, numPessoas: edNr} : {}),
+    ...(edVal ? {validade: edVal} : {})
   };
   salvarEstado(e);
   document.getElementById('modal-edit').remove();
@@ -10982,10 +11193,25 @@ function editarLavagem(camaraNum, loteId, lavIdx) {
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px">' +
     '<button type="button" onclick="document.getElementById(\'edit-lavagem-panel\').remove()" style="padding:14px;background:#f3f4f6;border:none;border-radius:12px;font-size:14px;font-weight:700;color:#6b7280;cursor:pointer">Cancelar</button>' +
     '<button type="button" onclick="_guardarEditLavagem(' + camaraNum + ',' + loteId + ',' + lavIdx + ')" style="padding:14px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">\u2713 Guardar</button>' +
+    '</div>' +
+    '<button type="button" onclick="_eliminarLavagem(' + camaraNum + ',' + loteId + ',' + lavIdx + ')" style="width:100%;padding:12px;background:#fee2e2;color:#dc2626;border:2px solid #fecaca;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;margin-top:8px">🗑️ Eliminar esta Lavagem</button>' +
     '</div></div>';
   document.body.appendChild(panel);
 }
 
+
+function _eliminarLavagem(camaraNum, loteId, lavIdx) {
+  if (!confirm('Eliminar esta lavagem?')) return;
+  var e = getEstado();
+  var lote = (e[camaraNum]||[]).find(function(l){ return l.id === loteId; });
+  if (!lote || !lote.lavagens) return;
+  lote.lavagens.splice(lavIdx, 1);
+  salvarEstado(e);
+  var panel = document.getElementById('edit-lavagem-panel');
+  if (panel) panel.remove();
+  var newIdx = (e[camaraNum]||[]).findIndex(function(l){ return l.id === loteId; });
+  if (newIdx >= 0) abrirDetalhesLote(camaraNum, newIdx);
+}
 function _guardarEditLavagem(camaraNum, loteId, lavIdx) {
   var e = getEstado();
   var lote = (e[camaraNum]||[]).find(function(l){ return l.id === loteId; });
@@ -11000,7 +11226,8 @@ function _guardarEditLavagem(camaraNum, loteId, lavIdx) {
   }
   lav.horaInicio     = setTime(document.getElementById('el-inicio').value, lav.horaInicio);
   lav.horaFim        = setTime(document.getElementById('el-fim').value, lav.horaFim);
-  lav.numPessoas     = parseInt(document.getElementById('el-pessoas').value) || lav.numPessoas;
+  var nr = parseInt(document.getElementById('el-pessoas').value);
+  if (nr > 0) { lav.numPessoas = nr; lav.nrPessoas = nr; }
   var dest = parseInt(document.getElementById('el-dest').value);
   if (dest >= 1 && dest <= 5) lav.camaraDestino = dest;
   lav.qtdTransferida = parseInt(document.getElementById('el-qtd').value) || lav.qtdTransferida;
@@ -11894,31 +12121,88 @@ cams.forEach(function(l, ci) {
       }
     }
 
-    // Pessoas envolvidas
+    // Pessoas envolvidas — extrai nrPessoas/operadores de qualquer campo
+    function _extrairPessoas(obj) {
+      if (!obj) return '';
+      var v = obj.nrPessoas||obj.operadores||obj.pessoas||obj.nomes||obj.workers||'';
+      if (!v && v !== 0) return '';
+      if (Array.isArray(v)) return v.join(', ');
+      return String(v);
+    }
     var pessoasInfo = [];
     if(pq) {
-      var pp = pq.operadores||pq.pessoas||pq.nrPessoas||pq.nomes||'';
-      if(pp) pessoasInfo.push('🏭 Produção: '+(Array.isArray(pp)?pp.join(', '):pp));
+      var ppProd = _extrairPessoas(pq);
+      var nrProd = parseInt(pq.nrPessoas||pq.nr_pessoas||pq.numPessoas||0);
+      if(ppProd || nrProd>0) pessoasInfo.push({ label:'🏭 Produção', val: ppProd || (nrProd+' pessoa'+(nrProd>1?'s':'')) });
     }
     cams.forEach(function(cam) {
       var lavs = cam.lavagens||[];
-      if(lavs.length) pessoasInfo.push('🧼 C'+cam.camara+': '+lavs.length+' lavagem(ns)');
       lavs.forEach(function(lav,li) {
-        var pp2 = lav.operadores||lav.pessoas||lav.nrPessoas||lav.nomes||'';
-        if(pp2) pessoasInfo.push('  Lav.'+(li+1)+': '+(Array.isArray(pp2)?pp2.join(', '):pp2));
+        var ppLav = _extrairPessoas(lav);
+        var nrLav = lav.nrPessoas||lav.nr_pessoas||'';
+        var lavLabel = '🧼 Lav.'+(li+1)+' (C'+cam.camara+')';
+        if(ppLav) pessoasInfo.push({ label:lavLabel, val:ppLav });
+        else if(nrLav) pessoasInfo.push({ label:lavLabel, val:nrLav+' pessoa(s)' });
       });
-      var pp3 = cam.operadores||cam.pessoas||cam.nomes||'';
-      if(pp3) pessoasInfo.push('🏠 C'+cam.camara+': '+(Array.isArray(pp3)?pp3.join(', '):pp3));
+      var ppCam = _extrairPessoas(cam);
+      if(ppCam) pessoasInfo.push({ label:'🏠 C'+cam.camara, val:ppCam });
     });
-    if(pessoasInfo.length>0) {
-      html+='<div style="padding:8px 18px 14px">'
-        +'<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#6b7280;letter-spacing:.05em;margin-bottom:6px">👷 Pessoas Envolvidas</div>'
-        +'<div style="display:flex;flex-direction:column;gap:4px">';
-      pessoasInfo.forEach(function(p) {
-        html+='<div style="font-size:12px;color:#374151;background:#f9fafb;border-radius:6px;padding:4px 8px">'+p+'</div>';
+    // Sempre mostrar secção de equipa e lavagens
+    var totalLavagens = cams.reduce(function(a,c){return a+(c.lavagens||[]).length;},0);
+    // Contar nr pessoas por câmara (de lavargens)
+    var nrPessoasTotal = 0;
+    if(pq) nrPessoasTotal += parseInt(pq.nrPessoas||pq.nr_pessoas||pq.numPessoas||0);
+    cams.forEach(function(cam) {
+      var lavs = cam.lavagens||[];
+      lavs.forEach(function(lav) {
+        var nr = parseInt(lav.nrPessoas||lav.nr_pessoas||0);
+        if(nr>0) nrPessoasTotal += nr;
       });
-      html+='</div></div>';
+    });
+    html+='<div style="background:#f8fafc;border-top:1px solid #e5e7eb;padding:10px 18px 14px">';
+    html+='<div style="font-size:11px;font-weight:800;text-transform:uppercase;color:#6b7280;letter-spacing:.05em;margin-bottom:8px">👷 Equipa e Lavagens</div>';
+    // Grid com métricas principais
+    html+='<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:6px;margin-bottom:8px">';
+    if(totalLavagens>0) {
+      html+='<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px;text-align:center">'
+        +'<div style="font-size:10px;color:#6b7280;font-weight:700;text-transform:uppercase">Lavagens</div>'
+        +'<div style="font-size:20px;font-weight:900;color:#15803d">'+totalLavagens+'</div>'
+        +'</div>';
     }
+    if(nrPessoasTotal>0) {
+      html+='<div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:8px;text-align:center">'
+        +'<div style="font-size:10px;color:#6b7280;font-weight:700;text-transform:uppercase">Pessoas (total)</div>'
+        +'<div style="font-size:20px;font-weight:900;color:#1e40af">'+nrPessoasTotal+'</div>'
+        +'</div>';
+    }
+    html+='</div>';
+    // Detalhe por câmara com lavagens e nr pessoas
+    if(totalLavagens>0) {
+      cams.forEach(function(cam) {
+        var lavs = cam.lavagens||[];
+        if(!lavs.length) return;
+        html+='<div style="font-size:11px;font-weight:700;color:#374151;margin-bottom:3px">Câmara '+cam.camara+':</div>';
+        lavs.forEach(function(lav,li) {
+          var ppLav = _extrairPessoas(lav);
+          var nrLav = parseInt(lav.nrPessoas||lav.nr_pessoas||0);
+          var ds = lav.horaInicio ? new Date(lav.horaInicio).toLocaleDateString('pt-PT') : '';
+          var concl = lav.horaFim ? '✓' : '⏳';
+          var linhaLav = concl+' Lav.'+(li+1);
+          if(ds) linhaLav += ' ('+ds+')';
+          if(nrLav>0) linhaLav += ' — '+nrLav+' pessoa(s)';
+          if(ppLav) linhaLav += ' — '+ppLav;
+          html+='<div style="font-size:11px;color:#6b7280;padding:2px 8px;background:#f9fafb;border-radius:5px;margin-bottom:2px">'+linhaLav+'</div>';
+        });
+      });
+    }
+    if(!totalLavagens && !pessoasInfo.length) {
+      html+='<div style="font-size:11px;color:#9ca3af">Sem registo de equipa ou lavagens</div>';
+    }
+    // Detalhes adicionais de operadores
+    pessoasInfo.forEach(function(p) {
+      html+='<div style="font-size:11px;color:#374151;padding:2px 8px;border-radius:5px;margin-bottom:2px"><strong>'+p.label+':</strong> '+p.val+'</div>';
+    });
+    html+='</div>';
 
     html+='</div>'; // fim card lote
   });
@@ -12311,11 +12595,12 @@ function prepararEncomenda(id) {
     var isExpedicaoUser = temPermissao('expedicao') || temPermissao('admin');
     var btnsHtml = '';
     if (isExpedicaoUser) {
-      btnsHtml += '<button onclick="expedirAgora()" style="width:100%;padding:13px;background:#15803d;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:6px">🚚 Expedir Agora (dar saída + fechar + email)</button>';
+      btnsHtml += '<button onclick="expedirAgora()" style="width:100%;padding:13px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:6px">🚚 Expedir e Fechar (saída + email)</button>';
     } else {
-      btnsHtml += '<button onclick="fecharEncDireto()" style="width:100%;padding:12px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer">✅ Fechar Encomenda</button>';
+      btnsHtml += '<button onclick="fecharEncDireto()" style="width:100%;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">✅ Fechar Encomenda (saída + email)</button>';
+      btnsHtml += '<button onclick="enviarParaExpedicao()" style="width:100%;padding:12px;background:#92400e;color:white;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">📦 Enviar para Expedição</button>';
     }
-    extraDiv.innerHTML = btnsHtml;
+        extraDiv.innerHTML = btnsHtml;
   }
 
   irPara('screen-enc-preparar');
@@ -13055,7 +13340,12 @@ function _darSaidasCamaraPrep(linhas) {
 
 // Botão "Fechar Encomenda" para utilizador encomendas
 function fecharEncDireto() {
-  if (!confirm('Confirmar fecho direto da encomenda? Será enviado email para qualidade@lactoceleiro.pt')) return;
+  if (!confirm('Confirmar fecho da encomenda? Será dada saída de câmara e enviado email.')) return;
+  _confirmarEnvioExpedicao(true);
+}
+
+function enviarParaExpedicao() {
+  if (!confirm('Enviar para Expedição? Saída de câmara será feita depois pela Expedição.')) return;
   _confirmarEnvioExpedicao(false);
 }
 
@@ -13152,6 +13442,366 @@ function _vaInfo(val) {
   return {color:'#15803d',badge:''};
 }
 
+
+
+// ════════════════════════════════════════════════════════════════
+// ADMIN — Painel de Gestão Completa
+// ════════════════════════════════════════════════════════════════
+
+function abrirAdminGeral() {
+  if (!temPermissao('admin')) return;
+  var old = document.getElementById('modal-admin-geral');
+  if (old) old.remove();
+  var panel = document.createElement('div');
+  panel.id = 'modal-admin-geral';
+  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9000;display:flex;align-items:flex-end;justify-content:center';
+  var h = '<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+  h += '<div style="font-size:17px;font-weight:900;color:#1e3a5f">\u2699\ufe0f Admin — Gestão de Dados</div>';
+  h += '<button onclick="document.getElementById(\'modal-admin-geral\').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:36px;height:36px;font-size:20px;cursor:pointer">\xd7</button>';
+  h += '</div>';
+  // Secções
+  var seccoes = [
+    { label:'\ud83e\uddc0 Lotes Câmaras', fn:'adminListarLotes()' },
+    { label:'\ud83e\uddf9 Lavagens', fn:'adminListarLavagens()' },
+    { label:'\ud83d\udce6 Encomendas', fn:'adminListarEncomendas()' },
+    { label:'\ud83e\udd5b Lotes de Leite', fn:'adminListarLeite()' }
+  ];
+  seccoes.forEach(function(s) {
+    h += '<button onclick="'+s.fn+'" style="display:block;width:100%;padding:14px;background:#f8fafc;border:2px solid #e5e7eb;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:10px;text-align:left">';
+    h += s.label + ' \u203a</button>';
+  });
+  h += '</div>';
+  panel.innerHTML = h;
+  document.body.appendChild(panel);
+}
+
+// ── Admin: Listar Lotes em Câmaras ───────────────────────────
+function adminListarLotes() {
+  if (!temPermissao('admin')) return;
+  var e = getEstado();
+  var old = document.getElementById('modal-admin-lotes');
+  if (old) old.remove();
+  var panel = document.createElement('div');
+  panel.id = 'modal-admin-lotes';
+  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9100;display:flex;align-items:flex-end;justify-content:center';
+  var h = '<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">';
+  h += '<div style="font-size:16px;font-weight:900;color:#1e3a5f">\ud83e\uddc0 Lotes nas Câmaras</div>';
+  h += '<button onclick="document.getElementById(\'modal-admin-lotes\').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer">\xd7</button>';
+  h += '</div>';
+  for (var c=1; c<=5; c++) {
+    var lotes = e[c] || [];
+    if (!lotes.length) continue;
+    h += '<div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#1e40af;background:#dbeafe;border-radius:8px;padding:6px 10px;margin-bottom:8px">Câmara '+c+'</div>';
+    lotes.forEach(function(l, li) {
+      h += '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:10px;margin-bottom:8px">';
+      h += '<div style="font-size:13px;font-weight:800;color:#1e3a5f">'+l.lote+' — '+l.qtd+' un</div>';
+      h += '<div style="font-size:11px;color:#6b7280">'+(l.tipo||'')+(l.referencia?' / ref.'+l.referencia:'')+(l.dataFormatada?' — '+l.dataFormatada:'')+'</div>';
+      h += '<div style="display:flex;gap:6px;margin-top:8px">';
+      h += '<button onclick="adminEditarLote('+c+',\''+l.lote+'\')" style="flex:1;padding:7px;background:#dbeafe;color:#1e40af;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer">\u270f\ufe0f Editar</button>';
+      h += '<button onclick="adminEliminarLote('+c+',\''+l.lote+'\')" style="flex:1;padding:7px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer">\ud83d\uddd1\ufe0f Eliminar</button>';
+      h += '</div></div>';
+    });
+  }
+  h += '</div>';
+  panel.innerHTML = h;
+  document.body.appendChild(panel);
+}
+
+function adminEditarLote(camara, loteId) {
+  var e = getEstado();
+  var idx = (e[camara]||[]).findIndex(function(l){return l.lote===loteId;});
+  if (idx<0) return;
+  var lote = e[camara][idx];
+  var old = document.getElementById('modal-admin-editar-lote');
+  if (old) old.remove();
+  var panel = document.createElement('div');
+  panel.id = 'modal-admin-editar-lote';
+  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9200;display:flex;align-items:center;justify-content:center;padding:20px';
+  var h = '<div style="background:white;border-radius:16px;padding:20px;width:100%;max-width:400px">';
+  h += '<div style="font-size:15px;font-weight:900;color:#1e3a5f;margin-bottom:14px">\u270f\ufe0f Editar Lote '+loteId+'</div>';
+  var fmtDate = function(iso){if(!iso)return '';var d=new Date(iso);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');};
+  var fields = [
+    {id:'al-qtd',label:'Quantidade (un)',val:lote.qtd||'',type:'number'},
+    {id:'al-data',label:'Data entrada câmara',val:fmtDate(lote.dataEntrada||lote.data),type:'date'},
+    {id:'al-validade',label:'Validade (YYYY-MM-DD)',val:fmtDate(lote.validade),type:'date'}
+  ];
+  fields.forEach(function(f){
+    h += '<div style="margin-bottom:10px"><label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">'+f.label+'</label>';
+    h += '<input id="'+f.id+'" type="'+f.type+'" value="'+f.val+'" style="width:100%;padding:9px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box"></div>';
+  });
+  h += '<div style="display:flex;gap:8px;margin-top:14px">';
+  h += '<button onclick="adminGuardarLote('+camara+',\''+loteId+'\')" style="flex:1;padding:12px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">\u2713 Guardar</button>';
+  h += '<button onclick="document.getElementById(\'modal-admin-editar-lote\').remove()" style="padding:12px 16px;background:#f3f4f6;border:none;border-radius:10px;font-size:14px;cursor:pointer">Cancelar</button>';
+  h += '</div></div>';
+  panel.innerHTML = h;
+  document.body.appendChild(panel);
+}
+
+function adminGuardarLote(camara, loteId) {
+  var e = getEstado();
+  var idx = (e[camara]||[]).findIndex(function(l){return l.lote===loteId;});
+  if (idx<0) return;
+  var lote = e[camara][idx];
+  var qtd = parseInt(document.getElementById('al-qtd').value)||0;
+  var data = document.getElementById('al-data').value;
+  var val = document.getElementById('al-validade').value;
+  lote.qtd = qtd;
+  if (data) { lote.dataEntrada = new Date(data).toISOString(); lote.dataFormatada = new Date(data).toLocaleDateString('pt-PT'); }
+  if (val) lote.validade = new Date(val).toISOString();
+  salvarEstado(e);
+  document.getElementById('modal-admin-editar-lote').remove();
+  atualizarResumoCamaras();
+  alert('✓ Lote '+loteId+' actualizado');
+  adminListarLotes();
+}
+
+function adminEliminarLote(camara, loteId) {
+  if (!confirm('⚠️ Eliminar lote '+loteId+' da câmara '+camara+'? Esta ação não pode ser desfeita.')) return;
+  var e = getEstado();
+  e[camara] = (e[camara]||[]).filter(function(l){return l.lote!==loteId;});
+  salvarEstado(e);
+  atualizarResumoCamaras();
+  alert('✓ Lote '+loteId+' eliminado');
+  adminListarLotes();
+}
+
+// ── Admin: Listar Lavagens ────────────────────────────────────
+function adminListarLavagens() {
+  if (!temPermissao('admin')) return;
+  var e = getEstado();
+  var old = document.getElementById('modal-admin-lavagens');
+  if (old) old.remove();
+  var panel = document.createElement('div');
+  panel.id = 'modal-admin-lavagens';
+  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9100;display:flex;align-items:flex-end;justify-content:center';
+  var h = '<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">';
+  h += '<div style="font-size:16px;font-weight:900;color:#1e3a5f">\ud83e\uddf9 Lavagens</div>';
+  h += '<button onclick="document.getElementById(\'modal-admin-lavagens\').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer">\xd7</button>';
+  h += '</div>';
+  var found = false;
+  for (var c=1; c<=5; c++) {
+    (e[c]||[]).forEach(function(l) {
+      var lavs = l.lavagens||[];
+      if (!lavs.length) return;
+      found = true;
+      h += '<div style="font-size:12px;font-weight:800;color:#1e3a5f;margin-bottom:6px">'+l.lote+' (C'+c+')</div>';
+      lavs.forEach(function(lav, li) {
+        var ds = lav.horaInicio ? new Date(lav.horaInicio).toLocaleDateString('pt-PT') : '—';
+        var hr = lav.horaInicio ? new Date(lav.horaInicio).toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'}) : '';
+        h += '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:10px;margin-bottom:8px">';
+        h += '<div style="font-size:12px;font-weight:800;color:#15803d">Lav.'+(li+1)+' — '+ds+(hr?' '+hr:'')+'</div>';
+        if (lav.nrPessoas||lav.numPessoas) h += '<div style="font-size:11px;color:#6b7280">'+( lav.nrPessoas||lav.numPessoas)+' pessoa(s)</div>';
+        h += '<div style="display:flex;gap:6px;margin-top:8px">';
+        h += '<button onclick="editarLavagem('+c+',\''+l.id+'\','+li+')" style="flex:1;padding:7px;background:#dcfce7;color:#15803d;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer">\u270f\ufe0f Editar</button>';
+        h += '<button onclick="_eliminarLavagem('+c+',\''+l.id+'\','+li+');adminListarLavagens();" style="flex:1;padding:7px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer">\ud83d\uddd1\ufe0f Eliminar</button>';
+        h += '</div></div>';
+      });
+    });
+  }
+  if (!found) h += '<div style="text-align:center;color:#9ca3af;padding:24px">Sem lavagens registadas</div>';
+  h += '</div>';
+  panel.innerHTML = h;
+  document.body.appendChild(panel);
+}
+
+// ── Admin: Listar e Editar Encomendas ────────────────────────
+function adminListarEncomendas() {
+  if (!temPermissao('admin')) return;
+  var encs = getEncomendas();
+  var old = document.getElementById('modal-admin-encomendas');
+  if (old) old.remove();
+  var panel = document.createElement('div');
+  panel.id = 'modal-admin-encomendas';
+  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9100;display:flex;align-items:flex-end;justify-content:center';
+  var h = '<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">';
+  h += '<div style="font-size:16px;font-weight:900;color:#1e3a5f">\ud83d\udce6 Encomendas ('+encs.length+')</div>';
+  h += '<button onclick="document.getElementById(\'modal-admin-encomendas\').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer">\xd7</button>';
+  h += '</div>';
+  if (!encs.length) {
+    h += '<div style="text-align:center;color:#9ca3af;padding:24px">Sem encomendas</div>';
+  } else {
+    var estadoCor = {aberta:'#15803d',parcial:'#d97706',concluida:'#6b7280','em-expedicao':'#1e40af'};
+    encs.slice().reverse().forEach(function(enc) {
+      var cor = estadoCor[enc.estado]||'#374151';
+      h += '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:12px;margin-bottom:10px">';
+      h += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+      h += '<div><div style="font-size:13px;font-weight:800;color:#1e3a5f">Enc. #'+(enc.nr||'?')+' — '+(enc.cliente||'?')+'</div>';
+      h += '<div style="font-size:11px;color:'+cor+';font-weight:700">'+enc.estado+'</div>';
+      h += '<div style="font-size:11px;color:#6b7280">'+(enc.artigo||'')+' '+(enc.dataFormatada||enc.dataEntrega||'')+'</div></div>';
+      h += '</div>';
+      h += '<div style="display:flex;gap:6px;margin-top:8px">';
+      h += '<button onclick="adminEditarEncomenda(\''+enc.id+'\')" style="flex:1;padding:7px;background:#dbeafe;color:#1e40af;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer">\u270f\ufe0f Editar</button>';
+      h += '<button onclick="adminEliminarEncomenda(\''+enc.id+'\')" style="flex:1;padding:7px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer">\ud83d\uddd1\ufe0f Eliminar</button>';
+      h += '</div></div>';
+    });
+  }
+  h += '</div>';
+  panel.innerHTML = h;
+  document.body.appendChild(panel);
+}
+
+function adminEditarEncomenda(encId) {
+  var encs = getEncomendas();
+  var enc = encs.find(function(e){return e.id===encId;});
+  if (!enc) return;
+  var old = document.getElementById('modal-admin-enc-edit');
+  if (old) old.remove();
+  var panel = document.createElement('div');
+  panel.id = 'modal-admin-enc-edit';
+  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9200;display:flex;align-items:center;justify-content:center;padding:20px';
+  var fmtDate = function(v){if(!v)return '';try{var d=new Date(v);return isNaN(d)?v.slice?v.slice(0,10):'':(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));}catch(e){return '';}};
+  var h = '<div style="background:white;border-radius:16px;padding:20px;width:100%;max-width:420px;max-height:85vh;overflow-y:auto">';
+  h += '<div style="font-size:15px;font-weight:900;color:#1e3a5f;margin-bottom:14px">\u270f\ufe0f Editar Enc. #'+(enc.nr||'?')+'</div>';
+  h += '<div style="margin-bottom:10px"><label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Cliente</label>';
+  h += '<input id="ae-cliente" value="'+(enc.cliente||'')+'" style="width:100%;padding:9px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box"></div>';
+  h += '<div style="margin-bottom:10px"><label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Estado</label>';
+  h += '<select id="ae-estado" style="width:100%;padding:9px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px">';
+  ['aberta','parcial','em-expedicao','concluida'].forEach(function(s){
+    h += '<option value="'+s+'"'+(enc.estado===s?' selected':'')+'>'+s+'</option>';
+  });
+  h += '</select></div>';
+  h += '<div style="margin-bottom:10px"><label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Data Entrega</label>';
+  h += '<input id="ae-dataEntrega" type="date" value="'+fmtDate(enc.dataEntrega)+'" style="width:100%;padding:9px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box"></div>';
+  h += '<div style="margin-bottom:10px"><label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Data Expedição</label>';
+  h += '<input id="ae-dataExpedicao" type="date" value="'+fmtDate(enc.dataExpedicao)+'" style="width:100%;padding:9px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box"></div>';
+  h += '<div style="margin-bottom:10px"><label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Observações</label>';
+  h += '<textarea id="ae-obs" rows="2" style="width:100%;padding:9px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box">'+(enc.obs||'')+'</textarea></div>';
+  h += '<div style="display:flex;gap:8px;margin-top:14px">';
+  h += '<button onclick="adminGuardarEncomenda(\''+encId+'\')" style="flex:1;padding:12px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">\u2713 Guardar</button>';
+  h += '<button onclick="document.getElementById(\'modal-admin-enc-edit\').remove()" style="padding:12px 16px;background:#f3f4f6;border:none;border-radius:10px;font-size:14px;cursor:pointer">Cancelar</button>';
+  h += '</div></div>';
+  panel.innerHTML = h;
+  document.body.appendChild(panel);
+}
+
+function adminGuardarEncomenda(encId) {
+  var encs = getEncomendas();
+  var enc = encs.find(function(e){return e.id===encId;});
+  if (!enc) return;
+  enc.cliente = document.getElementById('ae-cliente').value.trim();
+  enc.estado = document.getElementById('ae-estado').value;
+  enc.dataEntrega = document.getElementById('ae-dataEntrega').value;
+  enc.dataExpedicao = document.getElementById('ae-dataExpedicao').value;
+  enc.obs = document.getElementById('ae-obs').value.trim();
+  salvarEncomendas(encs);
+  document.getElementById('modal-admin-enc-edit').remove();
+  alert('\u2713 Encomenda actualizada');
+  adminListarEncomendas();
+  if (typeof renderizarEncomendas==='function') renderizarEncomendas();
+}
+
+function adminEliminarEncomenda(encId) {
+  var encs = getEncomendas();
+  var enc = encs.find(function(e){return e.id===encId;});
+  if (!confirm('\u26a0\ufe0f Eliminar encomenda #'+(enc&&enc.nr||'?')+'? Esta ação não pode ser desfeita.')) return;
+  salvarEncomendas(encs.filter(function(e){return e.id!==encId;}));
+  alert('\u2713 Encomenda eliminada');
+  adminListarEncomendas();
+  if (typeof renderizarEncomendas==='function') renderizarEncomendas();
+}
+
+// ── Admin: Lotes de Leite ─────────────────────────────────────
+function adminListarLeite() {
+  if (!temPermissao('admin')) return;
+  var entradas = getEntradasLeite();
+  var old = document.getElementById('modal-admin-leite');
+  if (old) old.remove();
+  var panel = document.createElement('div');
+  panel.id = 'modal-admin-leite';
+  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9100;display:flex;align-items:flex-end;justify-content:center';
+  var h = '<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">';
+  h += '<div style="font-size:16px;font-weight:900;color:#1e3a5f">\ud83e\udd5b Lotes de Leite ('+entradas.length+')</div>';
+  h += '<button onclick="document.getElementById(\'modal-admin-leite\').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer">\xd7</button>';
+  h += '</div>';
+  if (!entradas.length) {
+    h += '<div style="text-align:center;color:#9ca3af;padding:24px">Sem lotes de leite</div>';
+  } else {
+    entradas.slice().reverse().slice(0,30).forEach(function(ent, i) {
+      var realIdx = entradas.length - 1 - i;
+      var data = ent.data ? new Date(ent.data).toLocaleDateString('pt-PT') : (ent.dataFormatada||'—');
+      h += '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:10px;padding:10px;margin-bottom:8px">';
+      h += '<div style="font-size:13px;font-weight:800;color:#1e3a5f">'+(ent.fornecedor||'Fornecedor')+'</div>';
+      h += '<div style="font-size:11px;color:#6b7280">'+data+' — '+(ent.ovelha?ent.ovelha+'L ovelha':'')+(ent.cabra?' '+ent.cabra+'L cabra':'')+(ent.dop?' '+ent.dop+'L DOP':'')+'</div>';
+      h += '<div style="display:flex;gap:6px;margin-top:8px">';
+      h += '<button onclick="adminEditarLeite('+realIdx+')" style="flex:1;padding:7px;background:#fef3c7;color:#92400e;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer">\u270f\ufe0f Editar</button>';
+      h += '<button onclick="adminEliminarLeite('+realIdx+')" style="flex:1;padding:7px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:11px;font-weight:800;cursor:pointer">\ud83d\uddd1\ufe0f Eliminar</button>';
+      h += '</div></div>';
+    });
+  }
+  h += '</div>';
+  panel.innerHTML = h;
+  document.body.appendChild(panel);
+}
+
+function adminEditarLeite(idx) {
+  var entradas = getEntradasLeite();
+  var ent = entradas[idx];
+  if (!ent) return;
+  var old = document.getElementById('modal-admin-leite-edit');
+  if (old) old.remove();
+  var panel = document.createElement('div');
+  panel.id = 'modal-admin-leite-edit';
+  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9200;display:flex;align-items:center;justify-content:center;padding:20px';
+  var fmtDate = function(v){if(!v)return '';try{var d=new Date(v);return isNaN(d)?'':(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));}catch(e){return '';}};
+  var h = '<div style="background:white;border-radius:16px;padding:20px;width:100%;max-width:400px">';
+  h += '<div style="font-size:15px;font-weight:900;color:#1e3a5f;margin-bottom:14px">\u270f\ufe0f Editar Lote de Leite</div>';
+  var fields = [
+    {id:'al-data',label:'Data',val:fmtDate(ent.data||ent.dataFormatada),type:'date'},
+    {id:'al-forn',label:'Fornecedor',val:ent.fornecedor||'',type:'text'},
+    {id:'al-ovelha',label:'Litros Ovelha',val:ent.ovelha||0,type:'number'},
+    {id:'al-cabra',label:'Litros Cabra',val:ent.cabra||0,type:'number'},
+    {id:'al-dop',label:'Litros DOP',val:ent.dop||0,type:'number'}
+  ];
+  fields.forEach(function(f){
+    h += '<div style="margin-bottom:10px"><label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">'+f.label+'</label>';
+    h += '<input id="'+f.id+'" type="'+f.type+'" value="'+f.val+'" style="width:100%;padding:9px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;box-sizing:border-box"></div>';
+  });
+  h += '<div style="display:flex;gap:8px;margin-top:14px">';
+  h += '<button onclick="adminGuardarLeite('+idx+')" style="flex:1;padding:12px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">\u2713 Guardar</button>';
+  h += '<button onclick="document.getElementById(\'modal-admin-leite-edit\').remove()" style="padding:12px 16px;background:#f3f4f6;border:none;border-radius:10px;font-size:14px;cursor:pointer">Cancelar</button>';
+  h += '</div></div>';
+  panel.innerHTML = h;
+  document.body.appendChild(panel);
+}
+
+function adminGuardarLeite(idx) {
+  var entradas = getEntradasLeite();
+  var ent = entradas[idx];
+  if (!ent) return;
+  var data = document.getElementById('al-data').value;
+  if (data) { ent.data = new Date(data).toISOString(); ent.dataFormatada = new Date(data).toLocaleDateString('pt-PT'); }
+  ent.fornecedor = document.getElementById('al-forn').value.trim();
+  ent.ovelha = parseFloat(document.getElementById('al-ovelha').value)||0;
+  ent.cabra  = parseFloat(document.getElementById('al-cabra').value)||0;
+  ent.dop    = parseFloat(document.getElementById('al-dop').value)||0;
+  salvarEntradasLeite(entradas);
+  document.getElementById('modal-admin-leite-edit').remove();
+  alert('\u2713 Lote de leite actualizado');
+  adminListarLeite();
+}
+
+function adminEliminarLeite(idx) {
+  var entradas = getEntradasLeite();
+  if (!confirm('\u26a0\ufe0f Eliminar este lote de leite? Esta ação não pode ser desfeita.')) return;
+  entradas.splice(idx, 1);
+  salvarEntradasLeite(entradas);
+  alert('\u2713 Lote de leite eliminado');
+  adminListarLeite();
+}
+
+// Botão Admin Geral visível no menu admin
+function mostrarBotaoAdminGeral() {
+  // Adicionar botão "Gestão de Dados" nas opções admin
+  var existingBtn = document.getElementById('btn-admin-geral');
+  if (!existingBtn && temPermissao('admin')) {
+    // será chamado via onClick em HTML
+  }
+}
 
 function eliminarExpedicaoAdmin(expId) {
   if (!temPermissao('admin')) return;
@@ -13578,6 +14228,10 @@ setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
           style="flex:1;padding:10px;border-radius:10px;border:none;background:#f3f4f6;color:#6b7280;font-weight:700;font-size:13px;cursor:pointer">
           🤖 Config
         </button>
+        <button id="tab-editar" onclick="adminTab('editar')"
+          style="flex:1;padding:10px;border-radius:10px;border:none;background:#f3f4f6;color:#6b7280;font-weight:700;font-size:13px;cursor:pointer">
+          ✏️ Editar
+        </button>
       </div>
 
       <!-- PAINEL UTILIZADORES -->
@@ -13613,6 +14267,15 @@ setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
 
       <!-- PAINEL DADOS -->
       <div id="admin-panel-dados" style="display:none">
+        <div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:14px;padding:14px;margin-bottom:14px">
+          <div style="font-weight:800;color:#1e40af;margin-bottom:10px;font-size:14px">🗂️ Gestão de Dados — Edição Completa</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button onclick="adminListarLotes()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🧀 Editar / Eliminar Lotes nas Câmaras</button>
+            <button onclick="adminListarLavagens()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🧹 Editar / Eliminar Lavagens</button>
+            <button onclick="adminListarEncomendas()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">📦 Editar / Eliminar Encomendas</button>
+            <button onclick="adminListarLeite()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🥛 Editar / Eliminar Lotes de Leite</button>
+          </div>
+        </div>
         <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:12px;padding:14px;margin-bottom:12px">
           <div style="font-weight:700;color:#dc2626;margin-bottom:8px">⚠️ Zona de eliminação — ação irreversível</div>
           <div style="display:flex;flex-direction:column;gap:8px">
@@ -13630,6 +14293,33 @@ setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
             </button>
             <button onclick="adminEliminar('tudo')" style="padding:12px;background:#fef2f2;border:2px solid #dc2626;border-radius:10px;color:#dc2626;font-weight:800;font-size:13px;cursor:pointer;text-align:left">
               ☠️ ELIMINAR TUDO (reset total)
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- PAINEL EDITAR ADMIN -->
+      <div id="admin-panel-editar" style="display:none">
+        <div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:14px;padding:14px;margin-bottom:12px">
+          <div style="font-weight:800;color:#1e40af;margin-bottom:10px;font-size:14px">✏️ Editar Dados</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button onclick="adminAbrirEditorCamaras()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
+              🏭 Editar Lotes nas Câmaras
+            </button>
+            <button onclick="irPara('screen-enc-lista')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
+              📦 Editar/Eliminar Encomendas
+            </button>
+            <button onclick="abrirExpedicao()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
+              🚚 Editar/Eliminar Expedições
+            </button>
+            <button onclick="adminAbrirEditorLeite()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
+              🥛 Editar Entradas de Leite
+            </button>
+            <button onclick="adminAbrirEditorLavagens()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
+              🧼 Editar/Eliminar Lavagens
+            </button>
+            <button onclick="adminEditarDatas()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
+              📅 Corrigir Datas (câmaras, encomendas)
             </button>
           </div>
         </div>
