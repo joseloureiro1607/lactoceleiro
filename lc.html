@@ -8822,13 +8822,30 @@ async function testarGemini() {
   try {
     var resp = await fetch(GEMINI_URL_BASE + key, {
       method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({contents:[{parts:[{text:'Responde apenas: OK'}]}]})
+      body: JSON.stringify({contents:[{parts:[{text:'Responde apenas com a palavra: OK'}]}]})
     });
     var data = await resp.json();
-    var txt = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'sem resposta';
-    if (el) { el.textContent = 'Gemini OK: ' + txt; el.style.background='#f0fdf4'; el.style.color='#15803d'; }
+    // Mostrar resposta completa para diagnóstico
+    if (!resp.ok) {
+      var errMsg = (data.error && data.error.message) || ('HTTP ' + resp.status);
+      if (el) { el.textContent = '\u274c Erro: ' + errMsg; el.style.background='#fef2f2'; el.style.color='#dc2626'; }
+      return;
+    }
+    // Verificar se há bloqueio
+    if (data.promptFeedback && data.promptFeedback.blockReason) {
+      if (el) { el.textContent = '\u26a0\ufe0f Bloqueado: ' + data.promptFeedback.blockReason; el.style.background='#fef3c7'; el.style.color='#92400e'; }
+      return;
+    }
+    var txt = (data.candidates||[])[0]?.content?.parts?.[0]?.text || '';
+    if (!txt) {
+      // Mostrar estrutura real da resposta para debug
+      var debug = JSON.stringify(data).slice(0, 200);
+      if (el) { el.textContent = '\u26a0\ufe0f Resposta vazia. Estrutura: ' + debug; el.style.background='#fef3c7'; el.style.color='#92400e'; }
+      return;
+    }
+    if (el) { el.textContent = '\u2705 Gemini OK: ' + txt.trim(); el.style.background='#f0fdf4'; el.style.color='#15803d'; }
   } catch(e) {
-    if (el) { el.textContent = 'Erro: ' + e.message; el.style.background='#fef2f2'; el.style.color='#dc2626'; }
+    if (el) { el.textContent = '\u274c Erro: ' + e.message; el.style.background='#fef2f2'; el.style.color='#dc2626'; }
   }
 }
 
@@ -8930,11 +8947,31 @@ async function _importFotoProcessar(input) {
     }
 
     var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + geminiModel + ':generateContent?key=' + gkey;
-    var resp = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contents: [{ parts: parts }] })
-    });
+
+    // Retry automático até 3x quando quota excedida (429)
+    var resp, tentativa = 0;
+    while (true) {
+      tentativa++;
+      resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contents: [{ parts: parts }] })
+      });
+      if (resp.status === 429 && tentativa < 3) {
+        var errJson = await resp.clone().json().catch(function(){ return {}; });
+        var errMsg2 = (errJson.error && errJson.error.message) || '';
+        var retryMatch = errMsg2.match(/(\d+\.?\d*)\s*s/);
+        var waitSec = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) + 2 : 35;
+        if (waitSec > 70) throw new Error(errMsg2);
+        if (status) {
+          status.textContent = '\u23f3 Quota excedida — a tentar em ' + waitSec + 's (' + tentativa + '/3)...';
+          status.style.color = '#92400e';
+        }
+        await new Promise(function(r){ setTimeout(r, waitSec * 1000); });
+        continue;
+      }
+      break;
+    }
 
     if (!resp.ok) {
       var errData = await resp.json().catch(function(){ return {}; });
