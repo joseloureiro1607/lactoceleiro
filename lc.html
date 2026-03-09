@@ -8832,7 +8832,7 @@ async function testarGemini() {
     var resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-      body: JSON.stringify({ model: 'meta-llama/llama-3.2-11b-vision-instruct:free', messages: [{ role: 'user', content: 'Responde apenas: OK' }] })
+      body: JSON.stringify({ model: 'openrouter/auto', messages: [{ role: 'user', content: 'Responde apenas: OK' }] })
     });
     var data = await resp.json();
     if (!resp.ok) {
@@ -8955,7 +8955,7 @@ async function _importFotoProcessar(input) {
     var resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + gkey },
-      body: JSON.stringify({ model: 'meta-llama/llama-3.2-11b-vision-instruct:free', messages: messages })
+      body: JSON.stringify({ model: 'openrouter/auto', messages: messages })
     });
 
     if (!resp.ok) {
