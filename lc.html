@@ -598,17 +598,9 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <button class="home-btn" id="btn-home-stock" onclick="abrirStockModal()" style="display:none;background:linear-gradient(135deg,#0f766e,#0d9488);color:white;grid-column:1/-1;padding:14px">
           <span style="font-size:18px">📊</span>&nbsp; VER STOCK POR TIPO
         </button>
-        <button class="home-btn" id="btn-home-export" onclick="irPara('screen-export')" style="display:none;background:linear-gradient(135deg,#1e40af,#1d4ed8);color:white;grid-column:1/-1">
-          <span class="home-btn-icon">&#128202;</span>
-          <span class="home-btn-label">EXPORTAR<br>RELAT&#211;RIOS</span>
-        </button>
-        <button class="home-btn" id="btn-home-rendimentos" onclick="abrirRendimentos()" style="display:none;background:linear-gradient(135deg,#7e22ce,#9333ea);color:white;grid-column:1/-1">
-          <span class="home-btn-icon">&#128200;</span>
-          <span class="home-btn-label">RENDIMENTOS</span>
-        </button>
-        <button class="home-btn" id="btn-home-prod-manual" onclick="irParaProducaoManual()" style="display:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;grid-column:1/-1">
-          <span class="home-btn-icon">&#128295;</span>
-          <span class="home-btn-label">PRODU&#199;&#195;O<br>MANUAL</span>
+        <button class="home-btn" id="btn-home-export" onclick="irPara('screen-export')" style="display:none;background:#1e40af;color:white;grid-column:1/-1;padding:16px">EXPORTAR RELATORIOS</button>
+        <button class="home-btn" id="btn-home-prod-manual" onclick="irParaProducaoManual()" style="display:none;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;grid-column:1/-1;padding:16px">
+          <span style="font-size:18px">&#128295;</span>&nbsp; PRODU&#199;&#195;O MANUAL
         </button></div>
       <div id="home-resumo-section" style="margin-top:20px">
         <div class="section-title">Resumo de Hoje</div>
@@ -1429,10 +1421,13 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <div style="font-size:12px;opacity:0.8;margin-top:2px" id="enc-prep-sub"></div>
       </div>
       <div id="enc-prep-linhas"></div>
-      <div id="enc-prep-extra-btns" style="margin-top:14px"></div>
-      <div style="margin-top:8px">
+      <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <button class="btn-back" onclick="voltarPagina()">&#8592; Voltar</button>
+        <button class="btn-primary" style="background:#0369a1;margin:0" onclick="enviarParaExpedicao()">
+          &#128666; Enviar para Expedi&#231;&#227;o
+        </button>
       </div>
+      <div id="enc-prep-extra-btns" style="margin-top:8px"></div>
       <div class="status" id="status-enc-prep"></div>
     </div>
 
@@ -1578,17 +1573,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <div class="sl-stock" id="saida-lote-stock">Stock disponível: —</div>
       </div>
 
-      <div id="saida-validade-box" style="display:none;background:#fef3c7;border:2px solid #fbbf24;border-radius:10px;padding:10px 14px;margin-bottom:10px">
-        <div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:3px">&#128197; Validade do lote</div>
-        <div id="saida-validade-val" style="font-size:18px;font-weight:900;color:#92400e;font-family:'DM Mono',monospace">&#8212;</div>
-      </div>
-      <!-- Introduzir validade quando lote não tem (fica guardada permanentemente) -->
-      <div id="saida-validade-input-box" style="display:none;background:#fef3c7;border:2px solid #fbbf24;border-radius:10px;padding:12px 14px;margin-bottom:10px">
-        <div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:6px">&#128197; Introduzir Validade (obrig. para fechar)</div>
-        <input type="date" id="saida-validade-inp"
-          style="width:100%;padding:10px;border:2px solid #fbbf24;border-radius:8px;font-size:15px;font-weight:700;font-family:'DM Mono',monospace;color:#92400e;background:white;box-sizing:border-box">
-        <div style="font-size:10px;color:#92400e;margin-top:4px">&#9432; Esta validade fica guardada para todas as sa&#237;das futuras deste lote</div>
-      </div><div class="form-row"><div class="form-group"><label>Quantidade (un)</label><input type="number" id="saida-qtd" class="big" placeholder="0" min="1"></div><div class="form-group"><label>Peso (kg)</label><input type="number" id="saida-kg" class="big" placeholder="0.0" step="0.1" min="0"></div></div>
+      <div id="saida-validade-box" style="display:none;background:#fef3c7;border:2px solid #fbbf24;border-radius:10px;padding:10px 14px;margin-bottom:10px"><div style="font-size:11px;font-weight:800;color:#92400e;margin-bottom:3px">&#128197; Validade do lote</div><div id="saida-validade-val" style="font-size:18px;font-weight:900;color:#92400e;font-family:'DM Mono',monospace">&#8212;</div></div><div class="form-row"><div class="form-group"><label>Quantidade (un)</label><input type="number" id="saida-qtd" class="big" placeholder="0" min="1"></div><div class="form-group"><label>Peso (kg)</label><input type="number" id="saida-kg" class="big" placeholder="0.0" step="0.1" min="0"></div></div>
 
       <!-- Destino da saída — só visível quando NÃO vem de encomenda do sistema -->
       <div id="saida-destino-campos" style="margin-top:4px">
@@ -1876,7 +1861,6 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
       <div class="status" id="status-export"></div>
       <div style="margin-bottom:10px">
         <button class="btn-primary" style="background:#0e7490;width:100%" onclick="abrirRelatorioCamaras()">🏠 Entradas / Saídas por Câmara</button>
-        <button onclick="abrirRendimentos()" style="display:block;width:100%;padding:13px;background:linear-gradient(135deg,#7e22ce,#9333ea);color:white;border:none;border-radius:12px;font-size:13px;font-weight:800;cursor:pointer;margin-top:4px">📈 Rendimentos (L/un, L/kg por lote)</button>
       </div>
       <div style="display:flex;gap:8px;margin-top:4px"><button class="btn-back" onclick="voltarPagina()" style="flex:1">← Voltar</button><button class="btn-back" onclick="irPara('screen-home')" style="width:48px;flex-shrink:0;font-size:18px;padding:10px">🏠</button></div>
     </div>
@@ -1897,84 +1881,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
     <!-- CONGELAÇÃO -->
     <!-- ══════════════════════════════ -->
     <!-- CONGELAÇÃO: ESCOLHA DE CÂMARA -->
-    
-    <!-- ══════════════════════════════ -->
-    <!-- RENDIMENTOS                   -->
-    <!-- ══════════════════════════════ -->
-    <div class="screen" id="screen-rendimentos">
-      <div class="breadcrumb">
-        <span class="bc-link" onclick="irPara('screen-home')">In&#237;cio</span> <span>&#8250;</span>
-        <strong>Rendimentos</strong>
-      </div>
-      <div style="background:linear-gradient(135deg,#7e22ce,#9333ea);border-radius:14px;padding:14px 16px;margin-bottom:14px;color:white">
-        <div style="font-size:11px;opacity:0.75;text-transform:uppercase;margin-bottom:2px">An&#225;lise</div>
-        <div style="font-size:17px;font-weight:800">&#128200; Rendimentos por Lote</div>
-      </div>
-
-      <!-- Filtros -->
-      <div style="background:white;border:2px solid #e5e7eb;border-radius:14px;padding:14px;margin-bottom:14px">
-        <div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#374151;margin-bottom:10px">&#128269; Filtros</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-          <div>
-            <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Modo</label>
-            <select id="rend-filtro-modo" onchange="_renderRendimentos()" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:700">
-              <option value="saida">Sa&#237;da de Produ&#231;&#227;o</option>
-              <option value="final">Rendimento Final (vendas)</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Tipo</label>
-            <select id="rend-filtro-tipo" onchange="_renderRendimentos()" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:700">
-              <option value="">Todos</option>
-              <option value="ovelha">Ovelha</option>
-              <option value="cabra">Cabra</option>
-              <option value="dop">DOP</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Refer&#234;ncia</label>
-            <select id="rend-filtro-ref" onchange="_renderRendimentos()" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;font-weight:700">
-              <option value="">Todas</option>
-              <option value="G">Grande (G)</option>
-              <option value="P">Pequeno (P)</option>
-              <option value="PPP">Apimentado G (PPP)</option>
-              <option value="DOP">DOP</option>
-            </select>
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Data de</label>
-            <input id="rend-filtro-data-min" type="date" onchange="_renderRendimentos()" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box">
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Data at&#233;</label>
-            <input id="rend-filtro-data-max" type="date" onchange="_renderRendimentos()" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box">
-          </div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-          <div>
-            <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Lote m&#237;n.</label>
-            <input id="rend-filtro-lote-min" type="text" placeholder="ex: 261001" oninput="_renderRendimentos()" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;font-family:monospace">
-          </div>
-          <div>
-            <label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:3px">Lote m&#225;x.</label>
-            <input id="rend-filtro-lote-max" type="text" placeholder="ex: 261999" oninput="_renderRendimentos()" style="width:100%;padding:8px;border:2px solid #e5e7eb;border-radius:8px;font-size:13px;box-sizing:border-box;font-family:monospace">
-          </div>
-        </div>
-        <div style="margin-top:10px;display:flex;gap:8px">
-          <button onclick="document.querySelectorAll('#rend-filtro-tipo,#rend-filtro-ref,#rend-filtro-data-min,#rend-filtro-data-max,#rend-filtro-lote-min,#rend-filtro-lote-max').forEach(function(e){e.value=''});document.getElementById('rend-filtro-modo').value='saida';_renderRendimentos()" style="flex:1;padding:9px;background:#f3f4f6;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">Limpar Filtros</button>
-          <button onclick="_exportarRendimentos()" style="flex:1;padding:9px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">&#128438; Exportar PDF</button>
-        </div>
-      </div>
-
-      <!-- Resultado -->
-      <div id="rend-corpo"></div>
-
-      <div style="margin-top:14px">
-        <button class="btn-back" onclick="voltarPagina()">&#8592; Voltar</button>
-      </div>
-    </div>
-
-<div class="screen" id="screen-congelacao">
+    <div class="screen" id="screen-congelacao">
       <div class="breadcrumb"><span class="bc-link" onclick="irPara('screen-home')">Início</span> <span>›</span> <strong>Congelação</strong></div>
       <div class="step-badge" style="border:2px solid #bae6fd;background:#e0f2fe;color:#0369a1">🧊 Congelação</div>
       <div class="section-title" style="margin-top:12px">Selecionar Câmara de Congelação</div>
@@ -2123,7 +2030,12 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
   <div id="print-relatorio" class="print-only" style="padding:0; font-family:'DM Sans',sans-serif;">
     <div class="rel-header">
       <h1>🧀 LactoCeleiro</h1>
-      <div class="rel-sub">Relatório de Lotes por Câmara</d// ===
+      <div class="rel-sub">Relatório de Lotes por Câmara</div>
+    </div>
+  </div>
+
+<script>
+// ===
 // CONSTANTES E ESTADO
 // ===
 const MESES_FULL = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -2777,7 +2689,7 @@ function _fecharEncExpedicaoEmail() {
   enc.estado = 'concluida';
   enc.dataConclusao = new Date().toISOString();
   salvarEncomendas(encs);
-  _mostrarOpcoesSaida(enc);
+  _enviarEmailQualidade(enc);
   mostrarStatus('status-saida','✅ Encomenda #'+enc.nr+' concluída! Email enviado.','success');
   var id = encAtualId; encAtualId = null;
   var posDiv = document.getElementById('saida-pos-opcoes');
@@ -2788,70 +2700,6 @@ function _fecharEncExpedicaoEmail() {
 }
 
 // ── Fechar encomenda + email (utilizador encomendas) ──
-
-function _verSaidasEncomenda(encId) {
-  var encs = getEncomendas();
-  var enc = encs.find(function(e){ return e.id===encId; });
-  if (!enc) return;
-
-  // Saídas do histórico associadas a esta encomenda
-  var hist = getHistorico().filter(function(h){
-    return h.encomendaId === encId || h.encId === encId;
-  });
-  // Também usar enc.lotes se existirem
-  var lotes = enc.lotes || [];
-
-  var linhas = hist.length ? hist : lotes;
-
-  if (!linhas.length) {
-    alert('Sem saídas de câmara registadas para esta encomenda.');
-    return;
-  }
-
-  // Gerar janela de impressão
-  var rowsHtml = linhas.map(function(l, i) {
-    var loteStr = l.lote || l.nomeLote || '--';
-    var qtd = l.qtdSaida || l.qtd || 0;
-    var kg = l.kg ? Number(l.kg).toFixed(1)+' kg' : '--';
-    var val = l.validade || '--';
-    var data = l.dataFormatada || '--';
-    var camara = l.camara ? 'C'+l.camara : '--';
-    return '<tr style="background:'+(i%2===0?'#f9fafb':'white')+'">'
-      +'<td style="padding:7px 10px;font-size:12px">'+(i+1)+'</td>'
-      +'<td style="padding:7px 10px;font-weight:700;font-family:monospace;font-size:12px">'+loteStr+'</td>'
-      +'<td style="padding:7px 10px;text-align:center">'+qtd+' un</td>'
-      +'<td style="padding:7px 10px;text-align:center">'+kg+'</td>'
-      +'<td style="padding:7px 10px;text-align:center;color:'+(val==='--'?'#dc2626':'#92400e')+';font-weight:700">'+val+'</td>'
-      +'<td style="padding:7px 10px;text-align:center">'+camara+'</td>'
-      +'<td style="padding:7px 10px;text-align:center;font-size:11px;color:#6b7280">'+data+'</td>'
-      +'</tr>';
-  }).join('');
-
-  var html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">'
-    +'<title>Sa\xeddas Encomenda #'+enc.nr+'</title>'
-    +'<style>@media print{.no-print{display:none}@page{margin:12mm}}body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}'
-    +'.hdr{background:#1e3a5f;color:white;padding:16px 24px}.hdr h1{margin:0 0 4px;font-size:18px}.hdr .sub{font-size:12px;opacity:.8}'
-    +'table{width:100%;border-collapse:collapse}.tbl-wrap{padding:16px 24px}'
-    +'th{background:#1e3a5f;color:white;padding:7px 10px;font-size:11px;text-align:left}'
-    +'</style></head><body>'
-    +'<div class="hdr"><h1>&#128230; Sa\xeddas de C\xe2mara</h1>'
-    +'<div class="sub">Encomenda #'+enc.nr+' \u2014 '+enc.cliente+'</div>'
-    +'</div>'
-    +'<div class="tbl-wrap"><table><thead><tr>'
-    +'<th>#</th><th>Lote</th><th style="text-align:center">Qtd</th><th style="text-align:center">Peso</th>'
-    +'<th style="text-align:center">Validade</th><th style="text-align:center">C\xe2mara</th><th style="text-align:center">Data</th>'
-    +'</tr></thead><tbody>'+rowsHtml+'</tbody></table></div>'
-    +'<div class="no-print" style="text-align:center;padding:12px;background:#eff6ff">'
-    +'<button onclick="window.print()" style="padding:10px 20px;background:#1e3a5f;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:700;margin-right:8px">&#128438; Imprimir</button>'
-    +'<button onclick="window.close()" style="padding:10px 16px;background:#f3f4f6;border:none;border-radius:8px;cursor:pointer">Fechar</button>'
-    +'</div></body></html>';
-
-  var win = window.open('','_blank','width=800,height=600,scrollbars=yes');
-  if (!win) { alert('Activa os pop-ups para imprimir.'); return; }
-  win.document.write(html);
-  win.document.close();
-}
-
 function _fecharEncSemExpedicao() {
   if (!encAtualId) return;
   var encs = getEncomendas();
@@ -2860,7 +2708,7 @@ function _fecharEncSemExpedicao() {
   enc.estado = 'concluida';
   enc.dataConclusao = new Date().toISOString();
   salvarEncomendas(encs);
-  _mostrarOpcoesSaida(enc);
+  _enviarEmailQualidade(enc);
   mostrarStatus('status-saida','✅ Encomenda #'+enc.nr+' fechada! Email enviado.','success');
   var id = encAtualId; encAtualId = null;
   var posDiv = document.getElementById('saida-pos-opcoes');
@@ -2972,22 +2820,8 @@ function abrirFormSaida(idx, l) {
   document.getElementById('status-saida').className = 'status';
   document.getElementById('saida-enc-info').style.display = 'none';
   document.getElementById('saida-destino-campos').style.display = 'block';
-  // Validade: mostrar existente ou pedir para introduzir
   var _vb = document.getElementById('saida-validade-box');
-  var _vi = document.getElementById('saida-validade-input-box');
-  var _vval = document.getElementById('saida-validade-val');
-  var _vinput = document.getElementById('saida-validade-inp');
-  if (l.validade) {
-    // Tem validade — mostrar
-    if (_vval) _vval.textContent = l.validade;
-    if (_vb) _vb.style.display = 'block';
-    if (_vi) _vi.style.display = 'none';
-  } else {
-    // Sem validade — mostrar input para introduzir
-    if (_vb) _vb.style.display = 'none';
-    if (_vi) _vi.style.display = 'block';
-    if (_vinput) _vinput.value = '';
-  }
+  if (_vb) { if (l.validade) { document.getElementById('saida-validade-val').textContent = l.validade; _vb.style.display = 'block'; } else { _vb.style.display = 'none'; } }
 
   // Popular select de encomendas do sistema (abertas/parciais)
   const encs = getEncomendas().filter(e => e.estado !== 'concluida');
@@ -3043,105 +2877,6 @@ function voltarSaidaLotes() {
   irPara('screen-saida-lotes');
 }
 
-
-// ── Saída avulsa: guia de saída ──────────────────────────────
-function _imprimirGuiaSaidaAvulsa() {
-  var d = window._ultimaSaidaAvulsa;
-  if (!d) return;
-  var hoje = new Date();
-  var dStr = ('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
-  var hStr = ('0'+hoje.getHours()).slice(-2)+':'+('0'+hoje.getMinutes()).slice(-2);
-
-  var html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">'
-    + '<title>Guia Sa\xedda C'+d.camara+'</title>'
-    + '<style>@media print{.no-print{display:none}@page{margin:12mm;size:A4}body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}'
-    + 'body{font-family:Arial,sans-serif;color:#1e293b;margin:0;padding:0}'
-    + '.hdr{background:#1e3a5f;color:white;padding:18px 24px}.hdr h1{margin:0 0 4px;font-size:20px}.hdr .sub{font-size:12px;opacity:.8}'
-    + '.info{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:16px 24px;background:#f8fafc;border-bottom:2px solid #e5e7eb}'
-    + '.box{background:white;border:1px solid #e5e7eb;border-radius:8px;padding:8px 12px}'
-    + '.box .l{font-size:9px;font-weight:800;text-transform:uppercase;color:#6b7280;margin-bottom:3px}'
-    + '.box .v{font-size:16px;font-weight:800;color:#1e3a5f}'
-    + '.ftr{margin:12px 24px;padding:10px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:12px;color:#15803d}'
-    + '</style></head><body>'
-    + '<div class="hdr"><h1>\ud83d\udce4 Guia de Sa\xedda de C\xe2mara</h1>'
-    + '<div class="sub">LactoCeleiro \u2014 Emitido: '+dStr+' '+hStr+'</div></div>'
-    + '<div class="info">'
-    + '<div class="box"><div class="l">Lote</div><div class="v" style="font-family:monospace">'+d.lote+'</div></div>'
-    + '<div class="box"><div class="l">C\xe2mara</div><div class="v">C'+d.camara+'</div></div>'
-    + '<div class="box"><div class="l">Data</div><div class="v">'+dStr+'</div></div>'
-    + '<div class="box"><div class="l">Quantidade</div><div class="v">'+d.qtd+' un</div></div>'
-    + (d.kg ? '<div class="box"><div class="l">Peso</div><div class="v">'+Number(d.kg).toFixed(1)+' kg</div></div>' : '')
-    + '<div class="box"><div class="l">Validade</div><div class="v" style="color:'+(d.validade?'#92400e':'#dc2626')+'">'+(d.validade||'N\xe3o definida')+'</div></div>'
-    + (d.cliente ? '<div class="box" style="grid-column:1/-1"><div class="l">Cliente / Destino</div><div class="v">'+d.cliente+'</div></div>' : '')
-    + '</div>'
-    + '<div class="ftr">\u2713 Registo autom\xe1tico LactoCeleiro</div>'
-    + '<div class="no-print" style="text-align:center;padding:12px;background:#eff6ff">'
-    + '<button onclick="window.print()" style="padding:12px 24px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;margin-right:8px">\ud83d\udda8\ufe0f Imprimir / PDF</button>'
-    + '<button onclick="window.close()" style="padding:10px 16px;background:#f3f4f6;border:none;border-radius:8px;cursor:pointer">Fechar</button>'
-    + '</div></body></html>';
-
-  var win = window.open('', '_blank', 'width=820,height=650,scrollbars=yes');
-  if (!win) { alert('Activa pop-ups para imprimir.'); return; }
-  win.document.write(html);
-  win.document.close();
-}
-
-function _emailGuiaSaidaAvulsa() {
-  var d = window._ultimaSaidaAvulsa;
-  if (!d) return;
-  _imprimirGuiaSaidaAvulsa(); // Abre janela impressão primeiro
-  setTimeout(function() {
-    var assunto = encodeURIComponent('Sa\xedda C\xe2mara C'+d.camara+' \u2014 Lote '+d.lote+' \u2014 LactoCeleiro');
-    var corpo = encodeURIComponent(
-      'Sa\xedda de C\xe2mara \u2014 LactoCeleiro\n'
-      + 'Lote: '+d.lote+'\n'
-      + 'C\xe2mara: C'+d.camara+'\n'
-      + 'Data: '+d.data+'\n'
-      + 'Quantidade: '+d.qtd+' un\n'
-      + (d.kg ? 'Peso: '+Number(d.kg).toFixed(1)+' kg\n' : '')
-      + 'Validade: '+(d.validade||'N\xe3o definida')+'\n'
-      + (d.cliente ? 'Cliente/Destino: '+d.cliente+'\n' : '')
-      + '\n(Imprime o PDF e anexa)'
-    );
-    var a = document.createElement('a');
-    a.href = 'mailto:qualidade@lactoceleiro.pt?subject='+assunto+'&body='+corpo;
-    a.click();
-  }, 800);
-}
-
-function _enviarSaidaAvulsaParaExpedicao() {
-  var d = window._ultimaSaidaAvulsa;
-  if (!d) return;
-  // Criar encomenda de expedição avulsa com os dados desta saída
-  var exps = getExpedicoes();
-  var novaExp = {
-    id: 'exp_'+Date.now(),
-    encId: null,
-    nr: 'AVULSO',
-    cliente: d.cliente || 'Sem cliente',
-    artigo: d.lote,
-    linhas: [{
-      artigo: d.lote,
-      qtd: d.qtd,
-      caixas: 0,
-      lote: d.lote,
-      camara: d.camara,
-      validade: d.validade || '',
-      kg: d.kg || ''
-    }],
-    estado: 'pronta',
-    dataCriacao: new Date().toISOString(),
-    dataFormatada: dataHoje()
-  };
-  exps.push(novaExp);
-  salvarExpedicoes(exps);
-  _atualizarBadgeExp();
-  var _posDiv = document.getElementById('saida-pos-opcoes');
-  if (_posDiv) {
-    _posDiv.innerHTML += '<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:10px;margin-top:6px;font-size:13px;color:#1e40af;font-weight:700">\u2713 Sa\xedda enviada para Expedi\xe7\xe3o!</div>';
-  }
-}
-
 function confirmarSaida() {
   const qtd = parseInt(document.getElementById('saida-qtd').value);
   if (!qtd || qtd <= 0) { mostrarStatus('status-saida','⚠️ Introduza a quantidade','error'); return; }
@@ -3170,17 +2905,7 @@ function confirmarSaida() {
 
   const nomeLote = lote.lote;
   const kgSaida = parseFloat((document.getElementById('saida-kg')||{value:''}).value) || null;
-  // Validade: usar existente ou ler do input e guardar permanentemente no lote
-  var validadeExistente = lote.validade || '';
-  var validadeInput = '';
-  var _vinpEl = document.getElementById('saida-validade-inp');
-  if (_vinpEl && _vinpEl.value.trim()) validadeInput = _vinpEl.value.trim();
-  var validade = validadeExistente || validadeInput || null;
-  // Guardar validade introduzida de volta no lote (persistente para futuras saídas)
-  if (!validadeExistente && validade) {
-    lote.validade = validade;
-    salvarEstado(e);
-  }
+  const validade = lote.validade || null;
   const clienteManual = document.getElementById('saida-cliente-manual') ? document.getElementById('saida-cliente-manual').value.trim() : '';
   const encPapel = document.getElementById('saida-enc-papel') ? document.getElementById('saida-enc-papel').value.trim() : '';
   const reg = {
@@ -3255,42 +2980,7 @@ function confirmarSaida() {
       setTimeout(() => { abrirEncomenda(encAtualId); }, 2200);
     }
   } else {
-    // Saída avulsa (sem encomenda do sistema) — mostrar opções pós-saída por perfil
-    var _posDiv = document.getElementById('saida-pos-opcoes');
-    var _btnConf = document.getElementById('btn-confirmar-saida');
-    if (_btnConf) _btnConf.style.display = 'none';
-    if (_posDiv) {
-      var isEncUser = temPermissao('encomendas') || temPermissao('admin');
-      var isExpUser = temPermissao('expedicao') || temPermissao('admin');
-
-      // Construir dados desta saída para o guia
-      var _saidaData = {
-        lote: nomeLote,
-        camara: camaraAtual,
-        qtd: qtd,
-        kg: kgSaida,
-        validade: validade,
-        cliente: clienteManual || encPapel || '',
-        data: dataHoje()
-      };
-      window._ultimaSaidaAvulsa = _saidaData;
-
-      var btns = '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px;margin-bottom:6px">'
-        + '<div style="font-size:12px;font-weight:800;color:#15803d;margin-bottom:10px">\u2705 Sa\xedda registada! O que fazer?</div>'
-        + '<button onclick="_imprimirGuiaSaidaAvulsa()" style="display:block;width:100%;padding:12px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\udda8\ufe0f Imprimir / Guardar PDF</button>'
-        + '<button onclick="_emailGuiaSaidaAvulsa()" style="display:block;width:100%;padding:12px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\udce7 Enviar por Email (qualidade@lactoceleiro.pt)</button>';
-
-      if (isEncUser && !isExpUser) {
-        // Utilizador encomendas: pode enviar para expedição
-        btns += '<button onclick="_enviarSaidaAvulsaParaExpedicao()" style="display:block;width:100%;padding:12px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\ude9a Enviar para Expedi\xe7\xe3o</button>';
-      }
-
-      btns += '<button onclick="voltarSaidaLotes()" style="display:block;width:100%;padding:10px;background:#f3f4f6;border:none;border-radius:10px;font-size:13px;cursor:pointer;color:#374151">Nova Sa\xedda</button>'
-        + '</div>';
-
-      _posDiv.innerHTML = btns;
-      _posDiv.style.display = 'block';
-    }
+    setTimeout(() => { voltarSaidaLotes(); }, 2200);
   }
 }
 
@@ -3549,62 +3239,6 @@ function criarEncomenda() {
   setTimeout(() => { irPara('screen-enc-lista'); renderizarEncomendas(); }, 1800);
 }
 
-
-function _editarDatasEncomenda(encId) {
-  var encs = getEncomendas();
-  var enc = encs.find(function(e){ return e.id===encId; });
-  if (!enc) return;
-  var old = document.getElementById('modal-datas-enc');
-  if (old) old.remove();
-  var fmtDate = function(v) {
-    if (!v) return '';
-    try {
-      var d = new Date(v);
-      if (!isNaN(d)) return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
-    } catch(e) {}
-    // Try DD/MM/YYYY
-    var parts = String(v).split('/');
-    if (parts.length===3) return parts[2]+'-'+parts[1].padStart(2,'0')+'-'+parts[0].padStart(2,'0');
-    return '';
-  };
-  var panel = document.createElement('div');
-  panel.id = 'modal-datas-enc';
-  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  panel.innerHTML = [
-    '<div style="background:white;border-radius:18px;padding:24px;width:100%;max-width:360px">',
-      '<div style="font-size:16px;font-weight:900;color:#1e3a5f;margin-bottom:16px">\ud83d\udcc5 Datas da Encomenda</div>',
-      '<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Data de Entrega</label>',
-      '<input id="de-entrega" type="date" value="'+fmtDate(enc.dataEntrega)+'" style="width:100%;padding:11px;border:2px solid #e5e7eb;border-radius:10px;font-size:15px;box-sizing:border-box;margin-bottom:12px">',
-      '<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:4px">Data de Expedi\xe7\xe3o</label>',
-      '<input id="de-expedicao" type="date" value="'+fmtDate(enc.dataExpedicao)+'" style="width:100%;padding:11px;border:2px solid #e5e7eb;border-radius:10px;font-size:15px;box-sizing:border-box;margin-bottom:16px">',
-      '<div style="display:flex;gap:8px">',
-        '<button onclick="_guardarDatasEncomenda(\''+encId+'\')" style="flex:1;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">\u2713 Guardar</button>',
-        '<button onclick="document.getElementById(\'modal-datas-enc\').remove()" style="padding:13px 16px;background:#f3f4f6;border:none;border-radius:10px;font-size:14px;cursor:pointer">\u2715</button>',
-      '</div>',
-    '</div>'
-  ].join('');
-  document.body.appendChild(panel);
-}
-
-function _guardarDatasEncomenda(encId) {
-  var encs = getEncomendas();
-  var enc = encs.find(function(e){ return e.id===encId; });
-  if (!enc) return;
-  var entrega = document.getElementById('de-entrega').value;
-  var expedicao = document.getElementById('de-expedicao').value;
-  var fmtPT = function(v) {
-    if (!v) return '';
-    var d = new Date(v);
-    return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
-  };
-  enc.dataEntrega = entrega ? fmtPT(entrega) : '';
-  enc.dataExpedicao = expedicao ? fmtPT(expedicao) : '';
-  salvarEncomendas(encs);
-  document.getElementById('modal-datas-enc').remove();
-  // Refresh view
-  abrirEncomenda(encId);
-}
-
 function abrirEncomenda(id) {
   const encs = getEncomendas();
   const enc = encs.find(e => e.id === id);
@@ -3614,13 +3248,8 @@ function abrirEncomenda(id) {
   document.getElementById('bc-enc-det').textContent = `Encomenda #${enc.nr}`;
   document.getElementById('enc-det-nr').textContent = `#${enc.nr} · ${enc.dataFormatada}`;
   document.getElementById('enc-det-cliente').textContent = `${enc.cliente} · ${enc.artigo}${enc.marca ? ' · ' + enc.marca : ''}`;
-  var _detX = document.getElementById('enc-det-extra');
-  if (_detX) {
-    var _xH = '';
-    if (enc.localEntrega) _xH += '<div style="font-size:12px;color:#6b7280;margin-top:2px">\uD83D\uDCCD ' + enc.localEntrega + '</div>';
-    if (enc.obs) _xH += '<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:6px;padding:4px 8px;margin-top:4px">\uD83D\uDCCB Obs: ' + enc.obs + '</div>';
-    _detX.innerHTML = _xH;
-  }
+  var _xEl = document.getElementById('enc-det-extra');
+  if (_xEl) { var _xH=''; if(enc.localEntrega)_xH+='<div style="font-size:12px;color:#6b7280">\uD83D\uDCCD '+enc.localEntrega+'</div>'; if(enc.obs)_xH+='<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:6px;padding:4px 8px;margin-top:4px">\uD83D\uDCCB Obs: '+enc.obs+'</div>'; _xEl.innerHTML=_xH; }
 
   const totalAbatido = (enc.lotes||[]).reduce((a,l) => a+l.qtd, 0);
   const restante = enc.qtd - totalAbatido;
@@ -3632,9 +3261,7 @@ function abrirEncomenda(id) {
         <div><div style="font-size:11px;color:var(--texto-suave);text-transform:uppercase;font-weight:700">Abatido</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:var(--verde-medio)">${totalAbatido}</div></div>
         <div><div style="font-size:11px;color:var(--texto-suave);text-transform:uppercase;font-weight:700">Restante</div><div style="font-size:20px;font-weight:700;font-family:'DM Mono',monospace;color:${restante>0?'var(--laranja)':'var(--verde-medio)'};">${restante}</div></div>
       </div>
-      ${enc.dataEntrega
-        ? `<div style="margin-top:8px;font-size:12px;color:#374151;font-weight:600">\u{1F4C5} Entrega: <strong>${enc.dataEntrega}</strong>${enc.dataExpedicao?' &bull; \u{1F69A} Expedi\u00e7\u00e3o: <strong>'+enc.dataExpedicao+'</strong>':''} <button onclick="_editarDatasEncomenda('${enc.id}')" style="font-size:10px;background:#dbeafe;border:1px solid #93c5fd;border-radius:4px;padding:1px 6px;cursor:pointer;color:#1e40af;font-weight:700;margin-left:4px">editar</button></div>`
-        : `<div style="margin-top:8px;background:#fef3c7;border-radius:7px;padding:6px 10px;font-size:12px;color:#92400e;font-weight:700">\u26a0\ufe0f Sem datas — <button onclick="_editarDatasEncomenda('${enc.id}')" style="font-size:11px;background:#fde68a;border:1px solid #fbbf24;border-radius:5px;padding:2px 8px;cursor:pointer;color:#92400e;font-weight:800">Definir datas</button></div>`}
+      ${enc.dataEntrega?`<div style="margin-top:8px;font-size:12px;color:#6b7280">📅 Entrega: <strong>${enc.dataEntrega}</strong></div>`:''}
       <div style="margin-top:4px;font-size:12px;color:var(--texto-suave)">${enc.caixas} caixas${enc.marca?' · Marca: '+enc.marca:''}${enc.obs?' · '+enc.obs:''}</div>
     </div>
     ${enc.linhas && enc.linhas.length > 1 ? `
@@ -3694,15 +3321,6 @@ function abrirEncomenda(id) {
       botoes += `<button class="btn-primary" style="background:#15803d" onclick="concluirEncomenda('${enc.id}')">&#10003; Marcar como Concluída</button>`;
   }
 
-  // Botão Ver Saídas de Câmara (se tiver saídas registadas)
-  var temSaidas = (enc.lotes && enc.lotes.length > 0) ||
-    getHistorico().some(function(h){ return h.encomendaId===enc.id || h.encId===enc.id; });
-  if (temSaidas) {
-    botoes += '<button onclick="_verSaidasEncomenda(\'' + enc.id + '\')" '
-      + 'style="width:100%;padding:12px;background:#f0fdf4;border:2px solid #86efac;border-radius:10px;'
-      + 'font-size:13px;font-weight:800;color:#15803d;cursor:pointer;margin-top:8px">'
-      + '\ud83d\udcca Ver Sa\xeddas de C\xe2mara ('+((enc.lotes||[]).length)+' registos)</button>';
-  }
   document.getElementById('enc-det-botoes').innerHTML = botoes;
   document.getElementById('status-enc-det').className = 'status';
   irPara('screen-enc-detalhe');
@@ -5528,39 +5146,14 @@ function getLotesLeiteDisponiveis(tipo) {
       });
     });
 
-  // Descontar o que foi usado em produções de queijo (terminadas E em curso)
+  // Descontar o que foi usado em produções terminadas E em curso
   [...getProdutosQueijo(), ...getProdEmCurso()].forEach(p => {
     if (!p.lotesLeite) return;
     p.lotesLeite.forEach(ul => {
       const lote = lotes.find(l => l.id === ul.id);
-      if (lote) lote.litrosRestantes = Math.max(0, lote.litrosRestantes - (ul.litros||ul.litrosUsados||0));
+      if (lote) lote.litrosRestantes = Math.max(0, lote.litrosRestantes - ul.litros);
     });
   });
-
-  // Descontar leite usado em REQUEIJÃO (concluído)
-  // concluirLoteRQ escreve em lc_saidas_leite_v1 com {tipo:'ovelha', litros:N}
-  const saidasLeiteRQ = JSON.parse(localStorage.getItem('lc_saidas_leite_v1') || '[]');
-  let totalRQConcluido = saidasLeiteRQ
-    .filter(s => s.tipo === tipo && s.origem === 'requeijao')
-    .reduce((s, x) => s + (x.litros || 0), 0);
-
-  // Descontar leite usado em REQUEIJÃO EM CURSO
-  // lc_prq_em_curso_v1: cada lote tem caldeiras com c.leite[].litros
-  const emCursoRQ = JSON.parse(localStorage.getItem('lc_prq_em_curso_v1') || '[]');
-  let totalRQEmCurso = 0;
-  emCursoRQ.forEach(lote => {
-    (lote.caldeiras || []).forEach(c => {
-      (c.leite || []).forEach(x => { totalRQEmCurso += (x.litros || 0); });
-    });
-  });
-
-  // Descontar total requeijão FIFO (mais antigos primeiro = fim do array)
-  let totalRQDescontar = totalRQConcluido + totalRQEmCurso;
-  for (let i = lotes.length - 1; i >= 0 && totalRQDescontar > 0; i--) {
-    const tirar = Math.min(lotes[i].litrosRestantes, totalRQDescontar);
-    lotes[i].litrosRestantes = Math.max(0, lotes[i].litrosRestantes - tirar);
-    totalRQDescontar -= tirar;
-  }
 
   return lotes
     .filter(l => l.litrosRestantes > 0)
@@ -8787,7 +8380,7 @@ const PERFIS = {
 
 // === GEMINI AI ===
 var GEMINI_API_KEY = localStorage.getItem('lc_gemini_key') || '';
-var GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=';
+var GEMINI_URL_BASE = 'https://openrouter.ai/api/v1/chat/completions';
 
 function _mostrarGeminiStatus() {
   var el = document.getElementById('gemini-key-status');
@@ -8802,25 +8395,16 @@ function _mostrarGeminiStatus() {
   }
 }
 
-function _adminLimparGeminiKey() {
-  localStorage.removeItem('lc_gemini_key');
-  GEMINI_API_KEY = '';
-  var inp = document.getElementById('admin-gemini-key-inp');
-  if (inp) { inp.value = ''; inp.focus(); }
-  _mostrarGeminiStatus();
-  alert('Chave apagada. Cola agora a chave nova.');
-}
-
 function _adminGuardarGeminiKey() {
   var inp = document.getElementById('admin-gemini-key-inp');
   if (!inp) return;
   var key = inp.value.trim();
-  if (!key || !key.startsWith('sk-or-')) { alert('Chave invalida — deve comecar por sk-or-...'); return; }
+  if (!key || !key.startsWith('sk-or-')) { alert('Chave invalida — deve comecar por AIza...'); return; }
   localStorage.setItem('lc_gemini_key', key);
   GEMINI_API_KEY = key;
   inp.value = '';
   _mostrarGeminiStatus();
-  alert('\u2705 Chave guardada! Clica Testar para confirmar.');
+  alert('Chave guardada!');
 }
 
 async function testarGemini() {
@@ -8830,26 +8414,18 @@ async function testarGemini() {
   if (el) { el.textContent = 'A testar...'; el.style.background='#eff6ff'; el.style.color='#1e40af'; }
   try {
     var resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
-      body: JSON.stringify({ model: 'openrouter/auto', messages: [{ role: 'user', content: 'Responde apenas: OK' }] })
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify({model:'meta-llama/llama-3.2-11b-vision-instruct:free',messages:[{role:'user',content:'Responde apenas: OK'}]})
     });
     var data = await resp.json();
-    if (!resp.ok) {
-      var msg = (data.error && data.error.message) || ('HTTP ' + resp.status);
-      if (el) { el.innerHTML = '\u274c ' + msg; el.style.background='#fef2f2'; el.style.color='#dc2626'; }
-      return;
-    }
-    var txt = (data.choices||[])[0]?.message?.content || 'sem resposta';
-    if (el) { el.textContent = '\u2705 OK: ' + txt.trim(); el.style.background='#f0fdf4'; el.style.color='#15803d'; }
-  } catch(e) {
-    if (el) { el.textContent = '\u274c ' + e.message; el.style.background='#fef2f2'; el.style.color='#dc2626'; }
-  }
+    if (!resp.ok) { var msg=(data.error&&data.error.message)||('HTTP '+resp.status); if(el){el.textContent='\u274c '+msg;el.style.background='#fef2f2';el.style.color='#dc2626';} return; }
+    var txt = (data.choices||[])[0]?.message?.content||'sem resposta';
+    if(el){el.textContent='\u2705 OK: '+txt.trim();el.style.background='#f0fdf4';el.style.color='#15803d';}
+  } catch(e) { if(el){el.textContent='\u274c '+e.message;el.style.background='#fef2f2';el.style.color='#dc2626';} }
 }
 
-var PROMPT_IMPORT_ENC = 'Analisa esta imagem — e uma encomenda de queijo/requeijao enviada a LactoCeleiro. '
-  + 'IMPORTANTE: LactoCeleiro e o FORNECEDOR (somos nos). O CLIENTE e a empresa que faz o pedido (ex: Cafe Stop, ALDI, etc). NUNCA uses LactoCeleiro como cliente. '
-  + 'EXTRAI: 1) CLIENTE (quem encomenda, nao LactoCeleiro), 2) local de entrega se indicado, 3) data de entrega, 4) artigos/quantidades. '
+var PROMPT_IMPORT_ENC = 'Analisa esta imagem — encomenda de queijo/requeijao. LactoCeleiro e o FORNECEDOR, nao o cliente. O CLIENTE e quem encomenda (ex: Cafe Stop, ALDI). NUNCA uses LactoCeleiro como cliente. '
   + 'EXTRAI: 1) nome do cliente, 2) data de entrega, 3) todos os artigos com quantidades. '
   + 'ARTIGOS LactoCeleiro: Queijo Ovelha Grande (ref G, 4un/cx), Queijo Ovelha Pequeno (ref P, 8un/cx), '
   + 'Queijo Ovelha Apimentado Grande (ref PPP, 5un/cx), Queijo DOP (ref DOP, 4un/cx), '
@@ -8858,7 +8434,7 @@ var PROMPT_IMPORT_ENC = 'Analisa esta imagem — e uma encomenda de queijo/reque
   + 'Soma quantidades do mesmo artigo/tamanho se aparecerem em multiplas linhas. '
   + 'RESPONDE APENAS com JSON valido, sem markdown, sem texto extra: '
   + '{"linhas":[{"artigo":"nome exacto LactoCeleiro","qtd":numero,"referencia":"G|P|PPP|DOP|cabra","caixas":numero,"obsLinha":""}],'
-  + '"cliente":"quem encomenda (nao LactoCeleiro)","localEntrega":"local ou vazio","obs":"obs ou vazio","dataEntrega":"DD/MM/AAAA ou vazio","dataExpedicao":"DD/MM/AAAA ou vazio"}'
+  + '"cliente":"nome cliente ou vazio","obs":"obs gerais ou vazio","dataEntrega":"DD/MM/AAAA ou vazio","dataExpedicao":"DD/MM/AAAA ou vazio"}'
 
 function _fecharModalImportFoto() {
   var m = document.getElementById('modal-import-foto');
@@ -8893,146 +8469,76 @@ async function _importFotoProcessar(input) {
   var preview   = document.getElementById('import-foto-preview');
   var resultado = document.getElementById('import-foto-resultado');
   var confirmar = document.getElementById('import-foto-confirmar');
-
-  if (status)    { status.textContent = '\u23f3 A analisar com IA...'; status.style.color = '#374151'; }
+  if (status)    { status.textContent = '\u23f3 A analisar...'; status.style.color = '#374151'; }
   if (resultado) { resultado.style.display = 'none'; resultado.innerHTML = ''; }
   if (confirmar) confirmar.style.display = 'none';
 
-  // Preview da imagem
   if (file.type.startsWith('image/') && preview) {
     preview.innerHTML = '<img src="'+URL.createObjectURL(file)+'" style="max-width:100%;max-height:160px;border-radius:8px;border:2px solid #e5e7eb">';
     preview.style.display = 'block';
   }
 
-  // Verificar chave Gemini — se inválida pedir no momento
-  var gkey = localStorage.getItem('lc_gemini_key') || GEMINI_API_KEY || '';
-  if (!gkey || !gkey.startsWith('sk-or-')) {
-    var novaChave = prompt(
-      (gkey ? '\u274c Chave inválida (' + gkey.slice(0,8) + '...). ' : '') +
-      'Cola aqui a tua chave OpenRouter (começa por sk-or-...):\n\n' +
-      'Obtém GRÁTIS em: openrouter.ai/keys'
-    );
-    if (!novaChave || !novaChave.trim().startsWith('sk-or-')) {
-      if (status) { status.textContent = '\u274c Chave inválida. Obtém grátis em openrouter.ai/keys'; status.style.color = '#dc2626'; }
-      return;
-    }
-    gkey = novaChave.trim();
-    localStorage.setItem('lc_gemini_key', gkey);
-    GEMINI_API_KEY = gkey;
-  }
-
-  // Ler ficheiro como base64
-  var base64, mediaType;
+  var base64;
   try {
-    var result = await new Promise(function(res, rej) {
+    base64 = await new Promise(function(res, rej) {
       var r = new FileReader();
-      r.onload = function(e) { res(e.target.result); };
+      r.onload = function(e) { res(e.target.result.split(',')[1]); };
       r.onerror = rej;
       r.readAsDataURL(file);
     });
-    base64 = result.split(',')[1];
-    mediaType = file.type || 'image/jpeg';
   } catch(err) {
     if (status) { status.textContent = '\u274c Erro a ler ficheiro: ' + err.message; status.style.color = '#dc2626'; }
     return;
   }
 
+  var mediaType = file.type || 'image/jpeg';
   var isPdf = file.type === 'application/pdf';
-  var promptText = PROMPT_IMPORT_ENC;
 
   try {
-    // Gemini vision API — funciona directamente no browser com chave na URL
-    // gemini-1.5-flash: 1500 req/day grátis (vs 15/day do 2.0-flash)
-    // gemini-2.0-flash via v1beta — mesmo URL que testarGemini (confirmado a funcionar)
-    // OpenRouter API com visão — gratuito sem billing
-    var imageUrl = 'data:' + mediaType + ';base64,' + base64;
-    var messages = [{
-      role: 'user',
-      content: [
-        { type: 'image_url', image_url: { url: imageUrl } },
-        { type: 'text', text: promptText }
-      ]
-    }];
+    var content = isPdf
+      ? [{type:'document', source:{type:'base64', media_type:'application/pdf', data:base64}},
+         {type:'text', text:PROMPT_IMPORT_ENC}]
+      : [{type:'image', source:{type:'base64', media_type:mediaType, data:base64}},
+         {type:'text', text:PROMPT_IMPORT_ENC}];
 
-    var resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + gkey },
-      body: JSON.stringify({ model: 'openrouter/auto', messages: messages })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: content }]
+      })
     });
-
     if (!resp.ok) {
       var errData = await resp.json().catch(function(){ return {}; });
-      var errMsg = (errData.error && errData.error.message) || ('HTTP ' + resp.status);
-      throw new Error(errMsg);
+      throw new Error((errData.error && errData.error.message) || 'HTTP ' + resp.status);
     }
-
     var data = await resp.json();
-    var text = (data.choices||[])[0]?.message?.content || '';
-    if (!text) throw new Error('Sem resposta da IA');
-
-    // Limpar markdown se houver
-    var clean = text.replace(/```json\s*/g,'').replace(/```\s*/g,'').trim();
-
-    var parsed;
-    try {
-      parsed = JSON.parse(clean);
-    } catch(e2) {
-      // Tentar extrair JSON do meio do texto
-      var m = clean.match(/\{[\s\S]*\}/);
-      if (m) parsed = JSON.parse(m[0]);
-      else throw new Error('Resposta da IA nao e JSON valido: ' + clean.slice(0,100));
-    }
-
+    var text = (data.content || []).map(function(b) { return b.text || ''; }).join('');
+    var clean = text.replace(/```json|```/g, '').trim();
+    var parsed = JSON.parse(clean);
     window._importEncDados = parsed;
 
-    // Mostrar resultado
     var el = document.getElementById('import-foto-resultado');
     if (el) {
       el.style.display = 'block';
-      var h = '<div style="font-size:13px;font-weight:900;color:#1e3a5f;margin-bottom:10px">\ud83d\udccb Dados Extraidos pela IA</div>';
-      if (parsed.cliente) h += '<div style="background:#eff6ff;border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:13px"><b>Cliente:</b> '+parsed.cliente+'</div>';
-      if (parsed.dataEntrega) h += '<div style="background:#fef3c7;border-radius:8px;padding:7px 10px;margin-bottom:4px;font-size:12px">\ud83d\udcc5 <b>Entrega:</b> '+parsed.dataEntrega+'</div>';
-      if (parsed.dataExpedicao) h += '<div style="background:#fef3c7;border-radius:8px;padding:7px 10px;margin-bottom:6px;font-size:12px">\ud83d\ude9a <b>Expedi\xe7\xe3o:</b> '+parsed.dataExpedicao+'</div>';
-      if (parsed.obs) h += '<div style="font-size:11px;color:#6b7280;margin-bottom:8px">Obs: '+parsed.obs+'</div>';
+      var h = '<div style="font-size:12px;font-weight:800;color:#1e3a5f;margin-bottom:8px">Artigos detectados:</div>';
+      if (parsed.cliente) h += '<div style="font-size:12px;color:#374151;margin-bottom:6px">Cliente: <b>' + parsed.cliente + '</b></div>';
+      if (parsed.dataEntrega) h += '<div style="font-size:12px;color:#374151;margin-bottom:4px">\ud83d\udcc5 Entrega: <b>' + parsed.dataEntrega + '</b></div>';
       (parsed.linhas || []).forEach(function(l) {
-        var cx = l.caixas ? ' \u2014 '+l.caixas+' cx' : '';
-        h += '<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:10px;margin-bottom:6px">'
-          + '<div style="font-size:13px;font-weight:800;color:#15803d">'+(l.artigo||'')+'</div>'
-          + '<div style="font-size:12px;color:#374151">Qtd: '+(l.qtd||0)+(l.referencia?' \u2014 Ref: '+l.referencia:'')+cx+'</div>'
+        var cx = l.caixas ? ' (' + l.caixas + ' cx)' : '';
+        h += '<div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:8px;margin-bottom:6px">'
+          + '<div style="font-size:13px;font-weight:700;color:#15803d">' + (l.artigo||'') + '</div>'
+          + '<div style="font-size:12px;color:#374151">Qtd: ' + (l.qtd||0) + (l.referencia ? ' \u2014 Ref: ' + l.referencia : '') + cx + '</div>'
           + '</div>';
       });
-      if (!parsed.linhas || !parsed.linhas.length) {
-        h += '<div style="color:#dc2626;font-size:12px">\u26a0\ufe0f Nenhum artigo detectado. Tenta com imagem mais n\xedtida.</div>';
-      }
       el.innerHTML = h;
     }
-    if (status) { status.textContent = '\u2705 '+(parsed.linhas||[]).length+' artigo(s) detectado(s)!'; status.style.color = '#15803d'; }
-    if (confirmar && parsed.linhas && parsed.linhas.length > 0) confirmar.style.display = 'block';
-
+    if (status) { status.textContent = '\u2705 Encomenda lida com sucesso!'; status.style.color = '#15803d'; }
+    if (confirmar) confirmar.style.display = 'block';
   } catch(e) {
-    if (status) {
-      var msg = e.message || String(e);
-      var html = '\u274c ';
-      if (msg.includes('quota') || msg.includes('QUOTA') || msg.includes('429') || msg.includes('limit')) {
-        // Parse retry time if available
-        var retryMatch = msg.match(/(\d+\.?\d*)\s*s/);
-        var retryTxt = retryMatch ? ' Tenta em ' + Math.ceil(parseFloat(retryMatch[1])) + ' segundos.' : '';
-        html += '<b>Quota Gemini excedida.</b>' + retryTxt
-          + '<br><small style="color:#92400e">A chave gratuita tem limite de pedidos. '
-          + 'Para uso intensivo considera activar billing em <a href="https://aistudio.google.com/apikey" target="_blank" style="color:#1e40af">aistudio.google.com</a>.</small>';
-        status.style.color = '#92400e';
-        status.style.background = '#fef3c7';
-        status.style.padding = '10px';
-        status.style.borderRadius = '8px';
-      } else if (msg.includes('API_KEY') || msg.includes('key') || msg.includes('INVALID')) {
-        html += 'Chave Gemini inv\xe1lida.<br><small>Vai a Admin \u2192 Config \u2192 Gemini AI.</small>';
-        status.style.color = '#dc2626';
-      } else {
-        html += msg;
-        status.style.color = '#dc2626';
-      }
-      status.innerHTML = html;
-    }
+    if (status) { status.textContent = '\u274c Erro: ' + e.message; status.style.color = '#dc2626'; }
   }
 }
 
@@ -9081,9 +8587,7 @@ function _confirmarImportEnc() {
 
   var enc = {
     id:'enc_'+Date.now(), nr:(getEncomendas().length||0)+1,
-    cliente: dados.cliente||'Importado', obs: dados.obs||'',
-    localEntrega: dados.localEntrega||'',
-    estado:'aberta',
+    cliente: dados.cliente||'Importado', obs: dados.obs||'', localEntrega: dados.localEntrega||'', estado:'aberta',
     data: new Date().toISOString(),
     dataFormatada: new Date().toLocaleDateString('pt-PT',{day:'numeric',month:'long'}),
     dataEntrega: dados.dataEntrega||'', dataExpedicao: dados.dataExpedicao||'',
@@ -9590,8 +9094,6 @@ function aplicarPermissoesHome() {
   if (btnHomeStock) btnHomeStock.style.display = temPermissao('ver-relatorios') || temPermissao('admin') || temPermissao('direcao') || temPermissao('gestor') ? 'flex' : 'none';
   const btnHomePM = document.getElementById('btn-home-prod-manual');
   if (btnHomePM) btnHomePM.style.display = temPermissao('admin') ? 'flex' : 'none';
-  const btnHomeRend = document.getElementById('btn-home-rendimentos');
-  if (btnHomeRend) btnHomeRend.style.display = (temPermissao('ver-relatorios') || temPermissao('admin') || temPermissao('gestor') || temPermissao('direcao')) ? 'flex' : 'none';
   // Exportar enc no hub (encomendas/expedicao/admin/gestor)
   const btnEncExp = document.getElementById('btn-enc-export');
   if (btnEncExp) btnEncExp.style.display = temPermissao('exportar-enc') ? '' : 'none';
@@ -12083,45 +11585,27 @@ function _gerarRelCamaras() {
   if(res) res.innerHTML=html;
 }
 function gerarRelatorioLote(formato) {
-  var porLote;
+  var porLote=_rlFiltrar();
+  if(porLote===null){ mostrarStatus('status-export','\u26A0\uFE0F Preencha os filtros primeiro','error'); return; }
+  if(!Object.keys(porLote).length){ mostrarStatus('status-export','\u26A0\uFE0F Nenhum lote encontrado com esses filtros','warning'); return; }
 
-  // Se chamado da screen-relatorio-lote (print/xlsx depois de preview),
-  // usar cache em vez de tentar ler os filtros outra vez
-  if ((formato === 'print' || formato === 'xlsx') && typeof window._rlDadosCache !== 'undefined' && window._rlDadosCache) {
-    porLote = window._rlDadosCache;
-  } else {
-    porLote = _rlFiltrar();
-    if (porLote === null) {
-      mostrarStatus('status-export', '\u26a0\ufe0f Preencha os filtros primeiro', 'error');
-      return;
-    }
-    if (!Object.keys(porLote).length) {
-      mostrarStatus('status-export', '\u26a0\ufe0f Nenhum lote encontrado com esses filtros', 'warning');
-      return;
-    }
-    // Guardar em cache para uso posterior (print/xlsx a partir do ecrã resultado)
-    window._rlDadosCache = porLote;
-  }
-
-  if (formato === 'xlsx') { _rlXLSX(porLote); return; }
+  if(formato==='xlsx') { _rlXLSX(porLote); return; }
 
   var html = _rlHTML(porLote);
 
-  if (formato === 'preview') {
+  if(formato==='preview') {
     document.getElementById('rel-lote-corpo').innerHTML = html;
     irPara('screen-relatorio-lote');
     return;
   }
-
-  // print
-  var a = new Date();
-  var dtStr = a.getDate() + ' de ' + MESES_FULL[a.getMonth()] + ' de ' + a.getFullYear() +
-    ' \u00e0s ' + String(a.getHours()).padStart(2,'0') + ':' + String(a.getMinutes()).padStart(2,'0');
-  var inner = '<div class="rel-header"><h1>\uD83E\uDDC0 LactoCeleiro</h1>' +
-    '<div class="rel-sub">Hist\u00f3rico Detalhado de Lotes</div>' +
-    '<div class="rel-data">' + dtStr + '</div></div>' + html +
-    '<div class="rel-rodape">LactoCeleiro &bull; Gest\u00e3o de Produ\u00e7\u00e3o</div>';
-  gerarHTMLParaImpressao(inner, 'historico_lotes');
+  var a=new Date();
+  var dtStr=a.getDate()+' de '+MESES_FULL[a.getMonth()]+' de '+a.getFullYear()+
+    ' \u00E0s '+String(a.getHours()).padStart(2,'0')+':'+String(a.getMinutes()).padStart(2,'0');
+  var inner='<div class="rel-header"><h1>\uD83E\uDDC0 LactoCeleiro</h1>'+
+    '<div class="rel-sub">Hist\u00F3rico Detalhado de Lotes</div>'+
+    '<div class="rel-data">'+dtStr+'</div></div>'+html+
+    '<div class="rel-rodape">LactoCeleiro &bull; Gest\u00E3o de Produ\u00E7\u00E3o</div>';
+  gerarHTMLParaImpressao(inner,'historico_lotes');
 }
 
 // ── Construção do HTML ─────────────────────────────────────
@@ -12725,154 +12209,6 @@ cams.forEach(function(l, ci) {
 
   return html || '<div style="text-align:center;padding:32px;color:#6b7280">Nenhum lote encontrado</div>';
 }
-// =====================================
-// RENDIMENTOS
-// =====================================
-
-
-function _exportarRendimentos() {
-  // Trigger a print of the current results
-  var corpo = document.getElementById('rend-corpo');
-  if (!corpo || !corpo.innerHTML) { alert('Sem dados para exportar.'); return; }
-  var html = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8"><title>Rendimentos LactoCeleiro</title>'
-    +'<style>@media print{@page{margin:12mm}}body{font-family:Arial,sans-serif;color:#1e293b;padding:20px}'
-    +'.header{background:#7e22ce;color:white;padding:16px 20px;border-radius:8px;margin-bottom:16px}'
-    +'h1{margin:0 0 4px;font-size:20px}.sub{font-size:12px;opacity:.85}'
-    +'table{width:100%;border-collapse:collapse;font-size:11px}th{background:#7e22ce;color:white;padding:7px 8px;text-align:left}'
-    +'td{padding:6px 8px;border-bottom:1px solid #f3f4f6}</style></head><body>'
-    +'<div class="header"><h1>Rendimentos LactoCeleiro</h1><div class="sub">Exportado em '+new Date().toLocaleDateString('pt-PT')+'</div></div>'
-    + corpo.innerHTML
-    +'<script>window.onload=function(){window.print();setTimeout(function(){window.close();},1200);}<\/script>'
-    +'</body></html>';
-  var win = window.open('','_blank','width=900,height=700');
-  if (!win) { alert('Activa pop-ups para exportar.'); return; }
-  win.document.write(html);
-  win.document.close();
-}
-
-function abrirRendimentos() {
-  irPara('screen-rendimentos');
-  setTimeout(_renderRendimentos, 50);
-}
-
-function _renderRendimentos() {
-  var prods = getProdutosQueijo ? getProdutosQueijo() : [];
-  var hist = getHistorico ? getHistorico() : [];
-
-  var fTipo    = (document.getElementById('rend-filtro-tipo')||{value:''}).value || '';
-  var fRef     = (document.getElementById('rend-filtro-ref')||{value:''}).value || '';
-  var fModo    = (document.getElementById('rend-filtro-modo')||{value:'saida'}).value || 'saida';
-  var fLoteMin = ((document.getElementById('rend-filtro-lote-min')||{value:''}).value||'').trim();
-  var fLoteMax = ((document.getElementById('rend-filtro-lote-max')||{value:''}).value||'').trim();
-  var fDataMin = (document.getElementById('rend-filtro-data-min')||{value:''}).value || '';
-  var fDataMax = (document.getElementById('rend-filtro-data-max')||{value:''}).value || '';
-
-  var lista = prods.filter(function(p) {
-    if (fTipo && p.tipo !== fTipo) return false;
-    if (fRef  && (p.referencia||'').toUpperCase() !== fRef.toUpperCase()) return false;
-    if (fLoteMin && p.lote < fLoteMin) return false;
-    if (fLoteMax && p.lote > fLoteMax) return false;
-    if (fDataMin) { var pd = p.data ? new Date(p.data) : new Date(p.dataFormatada); if (pd < new Date(fDataMin)) return false; }
-    if (fDataMax) { var pd2 = p.data ? new Date(p.data) : new Date(p.dataFormatada); var dMax = new Date(fDataMax); dMax.setHours(23,59,59); if (pd2 > dMax) return false; }
-    return true;
-  });
-
-  var saidasPorLote = {};
-  if (fModo === 'final') {
-    hist.forEach(function(h) {
-      if (h.operacao === 'saida' && h.lote) {
-        if (!saidasPorLote[h.lote]) saidasPorLote[h.lote] = { qtdVendida: 0, kgVendido: 0 };
-        saidasPorLote[h.lote].qtdVendida += (h.qtdSaida || h.qtd || 0);
-        if (h.kg) saidasPorLote[h.lote].kgVendido += parseFloat(h.kg);
-      }
-    });
-  }
-
-  var totalLeite = 0, totalQtd = 0, totalPeso = 0;
-  lista.forEach(function(p) {
-    totalLeite += parseFloat(p.leiteTotal||0);
-    totalQtd   += parseInt(p.qtd||0);
-    totalPeso  += parseFloat(p.peso||0);
-  });
-  var rendLU = totalQtd  > 0 ? (totalLeite/totalQtd).toFixed(2)  : '—';
-  var rendLK = totalPeso > 0 ? (totalLeite/totalPeso).toFixed(2) : '—';
-
-  var el = document.getElementById('rend-corpo');
-  if (!el) return;
-  var html = '';
-
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin-bottom:16px">';
-  [
-    ['Lotes', lista.length, '', '#1e3a5f', '#eff6ff'],
-    ['Leite total', totalLeite.toFixed(0), 'L', '#0369a1', '#e0f2fe'],
-    ['Queijos', totalQtd, 'un', '#15803d', '#f0fdf4'],
-    ['Peso', totalPeso.toFixed(1), 'kg', '#92400e', '#fef3c7'],
-    ['L/unidade', rendLU, 'L', '#7e22ce', '#f5f3ff'],
-    ['L/kg', rendLK, 'L', '#be185d', '#fdf2f8']
-  ].forEach(function(c) {
-    html += '<div style="background:'+c[4]+';border-radius:12px;padding:10px;text-align:center">'
-      +'<div style="font-size:9px;font-weight:800;text-transform:uppercase;color:'+c[3]+';opacity:.75;margin-bottom:3px">'+c[0]+'</div>'
-      +'<div style="font-size:20px;font-weight:900;color:'+c[3]+'">'+c[1]+'</div>'
-      +'<div style="font-size:10px;color:'+c[3]+';opacity:.8">'+c[2]+'</div>'
-      +'</div>';
-  });
-  html += '</div>';
-
-  if (!lista.length) {
-    html += '<div style="text-align:center;padding:32px;color:#9ca3af">Sem lotes com os filtros seleccionados</div>';
-    el.innerHTML = html;
-    return;
-  }
-
-  html += '<div style="overflow-x:auto">';
-  html += '<table style="width:100%;border-collapse:collapse;font-size:12px">';
-  html += '<thead><tr style="background:#1e3a5f;color:white">'
-    +'<th style="padding:7px 8px;text-align:left">Lote</th>'
-    +'<th style="padding:7px 8px;text-align:left">Tipo</th>'
-    +'<th style="padding:7px 8px;text-align:left">Ref</th>'
-    +'<th style="padding:7px 8px;text-align:left">Data</th>'
-    +'<th style="padding:7px 8px;text-align:right">Leite (L)</th>'
-    +'<th style="padding:7px 8px;text-align:right">Qtd</th>'
-    +'<th style="padding:7px 8px;text-align:right">Peso (kg)</th>'
-    +'<th style="padding:7px 8px;text-align:right">L/un</th>'
-    +'<th style="padding:7px 8px;text-align:right">L/kg</th>';
-  if (fModo === 'final') html += '<th style="padding:7px 8px;text-align:right">Vendidos</th><th style="padding:7px 8px;text-align:right">L/un final</th>';
-  html += '</tr></thead><tbody>';
-
-  lista.forEach(function(p, i) {
-    var leite = parseFloat(p.leiteTotal||0);
-    var qtd   = parseInt(p.qtd||0);
-    var peso  = parseFloat(p.peso||0);
-    var lUnid = qtd  > 0 ? (leite/qtd).toFixed(2)  : '—';
-    var lKg   = peso > 0 ? (leite/peso).toFixed(2) : '—';
-    var saida = saidasPorLote[p.lote];
-    var vendidos  = saida ? saida.qtdVendida : '—';
-    var rendFinal = (saida && saida.qtdVendida > 0 && leite > 0) ? (leite/saida.qtdVendida).toFixed(2) : '—';
-    var lUnidN = parseFloat(lUnid);
-    var rCor = isNaN(lUnidN) ? '#374151' : lUnidN < 5 ? '#15803d' : lUnidN < 7 ? '#d97706' : '#dc2626';
-
-    html += '<tr style="background:'+(i%2===0?'#f9fafb':'white')+';border-bottom:1px solid #f3f4f6">'
-      +'<td style="padding:6px 8px;font-family:monospace;font-weight:900;font-size:11px;color:#1e3a5f">'+p.lote+'</td>'
-      +'<td style="padding:6px 8px;font-size:11px;color:#6b7280">'+(p.tipo||'—')+'</td>'
-      +'<td style="padding:6px 8px;font-size:11px;font-weight:700">'+(p.referencia||'—')+'</td>'
-      +'<td style="padding:6px 8px;font-size:11px;color:#6b7280">'+(p.dataFormatada||'')+'</td>'
-      +'<td style="padding:6px 8px;text-align:right;font-weight:700">'+(leite||'—')+'</td>'
-      +'<td style="padding:6px 8px;text-align:right">'+(qtd||'—')+'</td>'
-      +'<td style="padding:6px 8px;text-align:right">'+(peso||'—')+'</td>'
-      +'<td style="padding:6px 8px;text-align:right;font-weight:900;color:'+rCor+'">'+lUnid+'</td>'
-      +'<td style="padding:6px 8px;text-align:right;font-weight:700;color:'+rCor+'">'+lKg+'</td>';
-    if (fModo === 'final') {
-      html += '<td style="padding:6px 8px;text-align:right">'+vendidos+'</td>'
-             +'<td style="padding:6px 8px;text-align:right;font-weight:900;color:#7e22ce">'+rendFinal+'</td>';
-    }
-    html += '</tr>';
-  });
-
-  html += '</tbody></table></div>';
-  el.innerHTML = html;
-}
-
-
 
 // ── Export XLSX ────────────────────────────────────────────
 function _rlXLSX(porLote) {
@@ -13224,51 +12560,47 @@ function prepararEncomenda(id) {
   if (!enc) return;
   _prepEncId = id;
 
+  // Inicializar linhas de preparação (preservar o que já estava)
   var prev = enc.prepLinhas || [];
-  _prepLinhas = (enc.linhas || [{ artigo: enc.artigo||'', qtd: enc.qtd||0, caixas: enc.caixas||0 }]).map(function(l, idx) {
-    var p = prev[idx] || {};
+  _prepLinhas = (enc.linhas || [{ artigo: enc.artigo||'', qtd: enc.qtd||0, caixas: enc.caixas||0 }]).map(function(l, i) {
+    var p = prev[i] || {};
     return {
-      artigo:   l.artigo   || '',
-      qtd:      l.qtd      || 0,
-      caixas:   l.caixas   || 0,
-      marca:    l.marca    || '',
-      lote:     p.lote     || '',
-      kg:       p.kg       || '',
-      camara:   p.camara   || null,
+      artigo: l.artigo || '',
+      qtd: l.qtd || 0,
+      caixas: l.caixas || 0,
+      marca: l.marca || '',
+      lote: p.lote || '',
+      kg: p.kg || '',
+      camara: p.camara || null,
       validade: p.validade || ''
     };
   });
 
   document.getElementById('bc-enc-prep').textContent = 'Encomenda #' + enc.nr;
-  document.getElementById('enc-prep-titulo').textContent = 'Encomenda #' + enc.nr + ' \u2014 ' + enc.cliente;
-  var sub = (enc.dataEntrega ? '\ud83d\udcc5 Entrega: '+enc.dataEntrega+' \u2022 ' : '') + (enc.obs || '');
-  document.getElementById('enc-prep-sub').textContent = sub || enc.artigo || '';
+  document.getElementById('enc-prep-titulo').textContent = 'Encomenda #' + enc.nr + ' — ' + enc.cliente;
+  document.getElementById('enc-prep-sub').textContent = enc.artigo + (enc.obs ? ' · ' + enc.obs : '');
   document.getElementById('status-enc-prep').className = 'status';
 
   _renderPrepLinhas();
 
-  // Botoes conforme perfil
+  // Preencher datas da encomenda
+  var prepDE = document.getElementById('prep-data-entrega');
+  var prepDX = document.getElementById('prep-data-expedicao');
+  if (prepDE) prepDE.value = enc.dataEntrega || '';
+  if (prepDX) prepDX.value = enc.dataExpedicao || '';
+
+  // Botões extra conforme perfil
   var extraDiv = document.getElementById('enc-prep-extra-btns');
   if (extraDiv) {
-    var isExpedicao = temPermissao('expedicao');
-    var isAdmin     = temPermissao('admin');
-    var isEnc       = temPermissao('encomendas');
-    var btns = '';
-    if (isExpedicao) {
-      // User expedicao: apenas "Expedir e Fechar"
-      btns += '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px;margin-bottom:8px">'
-        +'<div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:6px">\u{1F4E6} EXPEDI\xc7\xc3O \u2014 D\xe1 sa\xedda de c\xe2mara e fecha</div>'
-        +'<button onclick="expedirAgora()" style="width:100%;padding:13px;background:#15803d;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">\ud83d\ude9a Expedir e Fechar (sa\xedda + PDF)</button>'
-        +'</div>';
-    } else if (isEnc || isAdmin) {
-      // User encomendas/admin: "Fechar" ou "Enviar para Expedicao"
-      btns += '<div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:8px">'
-        +'<div style="font-size:11px;font-weight:700;color:#1e40af;margin-bottom:6px">\u{1F4CB} FECHAR \u2014 D\xe1 sa\xedda de c\xe2mara</div>'
-        +'<button onclick="fecharEncDireto()" style="width:100%;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">\u2705 Fechar Encomenda (sa\xedda + PDF)</button>'
-        +'<button onclick="enviarParaExpedicao()" style="width:100%;padding:12px;background:#92400e;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">\ud83d\udce6 Enviar para Expedi\xe7\xe3o (sem sa\xedda)</button>'
-        +'</div>';
+    var isExpedicaoUser = temPermissao('expedicao') || temPermissao('admin');
+    var btnsHtml = '';
+    if (isExpedicaoUser) {
+      btnsHtml += '<button onclick="expedirAgora()" style="width:100%;padding:13px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:6px">🚚 Expedir e Fechar (saída + email)</button>';
+    } else {
+      btnsHtml += '<button onclick="fecharEncDireto()" style="width:100%;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">✅ Fechar Encomenda (saída + email)</button>';
+      btnsHtml += '<button onclick="enviarParaExpedicao()" style="width:100%;padding:12px;background:#92400e;color:white;border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer">📦 Enviar para Expedição</button>';
     }
-    extraDiv.innerHTML = btns;
+        extraDiv.innerHTML = btnsHtml;
   }
 
   irPara('screen-enc-preparar');
@@ -13297,8 +12629,8 @@ function _renderPrepLinhas() {
       infoBlock = '<div id="prep-info-'+i+'" style="background:'+(refMismatch?'#fef2f2':'#eff6ff')+';border:2px solid '+(refMismatch?'#fca5a5':'#bfdbfe')+';border-radius:8px;padding:8px 10px;margin-top:8px">'
         +'<div style="font-size:12px;font-weight:800;color:#1e40af">C'+(l.camara||'?')+' \xb7 '+l.lote+' \xb7 '+dispStr+'</div>'
         +(l.validade
-          ? '<div style=\"font-size:11px;color:#92400e;font-weight:700;margin-top:2px\">\u2705 '+l.validade+' \u2014 <button type=\"button\" onclick=\"_editarValidadeLinha('+i+')\" style=\"font-size:10px;background:#fef3c7;border:1px solid #fbbf24;border-radius:4px;padding:2px 7px;cursor:pointer;color:#92400e;font-weight:700\">editar</button></div>'
-          : '<div style=\"font-size:12px;color:#dc2626;font-weight:800;margin-top:4px\">\u26a0\ufe0f Sem validade \u2014 <button type=\"button\" onclick=\"_editarValidadeLinha('+i+')\" style=\"font-size:12px;background:#fee2e2;border:2px solid #fca5a5;border-radius:7px;padding:3px 10px;cursor:pointer;color:#dc2626;font-weight:800\">Introduzir validade</button></div>')
+          ? '<div style="font-size:11px;color:#92400e;font-weight:700;margin-top:2px">\ud83d\udcc5 '+l.validade+'</div>'
+          : '<div style="font-size:11px;color:#9ca3af;margin-top:2px">Validade a definir na Expedi\xe7\xe3o</div>')
         +(refMismatch ? '<div style="font-size:11px;color:#dc2626;font-weight:800;margin-top:4px">⚠️ Ref. incompatível (lote: '+(found&&found.referencia||'?')+')</div>' : '')
         +'</div>';
     }
@@ -13916,174 +13248,60 @@ function enviarParaExpedicao() {
   });
   var semLote = _prepLinhas.filter(function(l){ return !l.lote; });
   if (semLote.length) {
-    mostrarStatus('status-enc-prep','\u26a0\ufe0f '+semLote.length+' linha(s) sem lote definido.','error');
+    mostrarStatus('status-enc-prep','\u26a0\ufe0f '+semLote.length+' linha(s) sem lote. Atribua o lote a todas as linhas.','error');
     return;
   }
-  if (!confirm('Enviar para Expedicao sem dar saida de camara agora?')) return;
-  _confirmarEnvioExpedicao(false);
+  _confirmarEnvioExpedicao();
 }
-
-
-// ── Editar validade por linha ──────────────────────────────
-function _editarValidadeLinha(idx) {
-  var l = _prepLinhas && _prepLinhas[idx];
-  if (!l) return;
-  var old = document.getElementById('modal-validade-linha');
-  if (old) old.remove();
-  var panel = document.createElement('div');
-  panel.id = 'modal-validade-linha';
-  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  var valAtual = '';
-  if (l.validade) {
-    try {
-      var parts = l.validade.split('/');
-      if (parts.length===3) valAtual = parts[2]+'-'+parts[1].padStart(2,'0')+'-'+parts[0].padStart(2,'0');
-      else { var dd = new Date(l.validade); if(!isNaN(dd)) valAtual = dd.toISOString().slice(0,10); }
-    } catch(e2) {}
-  }
-  panel.innerHTML = [
-    '<div style="background:white;border-radius:18px;padding:24px;width:100%;max-width:340px">',
-      '<div style="font-size:16px;font-weight:900;color:#1e3a5f;margin-bottom:4px">\ud83d\udcc5 Validade</div>',
-      '<div style="font-size:13px;color:#374151;font-weight:700;margin-bottom:2px">'+l.artigo+'</div>',
-      '<div style="font-size:12px;color:#6b7280;margin-bottom:16px">Lote: '+(l.lote||'\u2014')+'</div>',
-      '<label style="font-size:12px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Data de Validade</label>',
-      '<input id="val-linha-input" type="date" value="'+valAtual+'" style="width:100%;padding:12px;border:2px solid #e5e7eb;border-radius:10px;font-size:16px;box-sizing:border-box;margin-bottom:12px">',
-      '<div style="font-size:11px;color:#92400e;background:#fef3c7;border-radius:8px;padding:8px;margin-bottom:16px">Esta validade ser\xe1 gravada no lote e aplicada nas pr\xf3ximas sa\xeddas.</div>',
-      '<div style="display:flex;gap:8px">',
-        '<button onclick="_guardarValidadeLinha('+idx+')" style="flex:1;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">\u2713 Guardar</button>',
-        '<button onclick="document.getElementById(\'modal-validade-linha\').remove()" style="padding:13px 16px;background:#f3f4f6;border:none;border-radius:10px;font-size:14px;cursor:pointer">\u2715</button>',
-      '</div>',
-    '</div>'
-  ].join('');
-  document.body.appendChild(panel);
-  setTimeout(function(){ var inp=document.getElementById('val-linha-input'); if(inp) inp.focus(); }, 100);
-}
-
-function _guardarValidadeLinha(idx) {
-  var inp = document.getElementById('val-linha-input');
-  if (!inp || !inp.value) { alert('Introduz uma data de validade.'); return; }
-  var d = new Date(inp.value);
-  var valStr = ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
-  _prepLinhas[idx].validade = valStr;
-  if (_prepLinhas[idx].lote && _prepLinhas[idx].camara) {
-    var e = getEstado();
-    var loteObj = (e[_prepLinhas[idx].camara]||[]).find(function(l){ return l.lote===_prepLinhas[idx].lote; });
-    if (loteObj) {
-      loteObj.validade = d.toISOString();
-      loteObj.validadeFormatada = valStr;
-      salvarEstado(e); atualizarResumoCamaras();
-    }
-  }
-  document.getElementById('modal-validade-linha').remove();
-  _renderPrepLinhas();
-}
-
-function _verificarValidadesPrep() {
-  return (_prepLinhas||[]).filter(function(l){ return l.lote && !l.validade; });
-}
-
-
-function _mostrarOpcoesSaida(enc) {
-  var old = document.getElementById('modal-opcoes-saida');
-  if (old) old.remove();
-  var panel = document.createElement('div');
-  panel.id = 'modal-opcoes-saida';
-  panel.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  panel.innerHTML = [
-    '<div style="background:white;border-radius:20px;padding:24px;width:100%;max-width:380px">',
-      '<div style="text-align:center;margin-bottom:16px">',
-        '<div style="font-size:40px;margin-bottom:8px">\u2705</div>',
-        '<div style="font-size:17px;font-weight:900;color:#15803d">Encomenda #'+(enc.nr||'?')+' expedida!</div>',
-        '<div style="font-size:13px;color:#6b7280;margin-top:4px">Sa\xedda de c\xe2mara registada</div>',
-      '</div>',
-      '<div style="font-size:12px;font-weight:800;text-transform:uppercase;color:#6b7280;margin-bottom:10px;text-align:center">Enviar Guia</div>',
-      '<button onclick="_imprimirGuia(\''+enc.id+'\')" style="display:block;width:100%;padding:14px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:10px">\ud83d\udda8\ufe0f Imprimir / Guardar PDF</button>',
-      '<button onclick="_enviarEmailPDF(\''+enc.id+'\')" style="display:block;width:100%;padding:14px;background:#0369a1;color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:10px">\ud83d\udce7 Enviar por Email (qualidade@lactoceleiro.pt)</button>',
-      '<button onclick="_fecharOpcoesSaida()" style="display:block;width:100%;padding:12px;background:#f3f4f6;border:none;border-radius:12px;font-size:14px;cursor:pointer;color:#374151">Fechar sem enviar</button>',
-    '</div>'
-  ].join('');
-  document.body.appendChild(panel);
-}
-
-function _fecharOpcoesSaida() {
-  var old = document.getElementById('modal-opcoes-saida');
-  if (old) old.remove();
-  renderizarEncomendas();
-  irPara('screen-enc-lista');
-}
-
-function _imprimirGuia(encId) {
-  var encs = getEncomendas();
-  var enc = encs.find(function(e){ return e.id===encId; });
-  if (!enc) return;
-  _gerarGuiaExpedicaoPDF(enc);
-  setTimeout(_fecharOpcoesSaida, 2000);
-}
-
-function _enviarEmailPDF(encId) {
-  var encs = getEncomendas();
-  var enc = encs.find(function(e){ return e.id===encId; });
-  if (!enc) return;
-  _gerarGuiaExpedicaoPDF(enc);
-  setTimeout(function() {
-    var assunto = encodeURIComponent('Guia Expedicao #'+(enc.nr||'?')+' - '+(enc.cliente||'')+' - LactoCeleiro');
-    var linhas = (enc.prepLinhas||enc.linhas||[]).map(function(l,i){
-      return (i+1)+'. '+(l.artigo||'')+' | '+(l.qtd||0)+' un | '+(l.caixas||0)+' cx | Lote: '+(l.lote||'--')+(l.validade?' | Val: '+l.validade:'')+(l.kg?' | '+Number(l.kg).toFixed(1)+'kg':'');
-    }).join('\n');
-    var corpo = encodeURIComponent(
-      'Guia de Expedicao - LactoCeleiro\n'
-      +'Encomenda: #'+(enc.nr||'?')+'\n'
-      +'Cliente: '+(enc.cliente||'--')+'\n'
-      +(enc.dataEntrega?'Data Entrega: '+enc.dataEntrega+'\n':'')
-      +(enc.dataExpedicao?'Data Expedicao: '+enc.dataExpedicao+'\n':'')
-      +'\nARTIGOS / LOTES:\n'+linhas
-      +(enc.obs?'\n\nObs: '+enc.obs:'')
-      +'\n\n(Imprime o PDF que abriu e anexa a este email)'
-    );
-    var a = document.createElement('a');
-    a.href = 'mailto:qualidade@lactoceleiro.pt?subject='+assunto+'&body='+corpo;
-    a.click();
-    setTimeout(_fecharOpcoesSaida, 1500);
-  }, 800);
-}
-
 
 function _confirmarEnvioExpedicao(fecharDireto) {
   var encs = getEncomendas();
   var enc = encs.find(function(e){ return e.id === _prepEncId; });
   if (!enc) return;
-  var semKg = (_prepLinhas||[]).filter(function(l){ return l.lote && (!l.kg || parseFloat(l.kg)<=0); });
-  if (semKg.length > 0) {
-    alert('\u274c N\xe3o pode fechar sem pesos!\n\n' + semKg.map(function(l){return '\u2022 '+l.artigo;}).join('\n') + '\n\nIntroduza os kg.');
-    return;
-  }
-  var semVal = _verificarValidadesPrep();
-  if (semVal.length > 0) {
-    var listaSemVal = semVal.map(function(l){ return '\u2022 '+l.artigo+' (lote '+l.lote+')'; }).join('\n');
-    alert('\u274c N\xe3o pode fechar sem validades!\n\n'+listaSemVal+'\n\nIntroduza as validades.'); return;
-  }
+
+  // Guardar linhas de preparação na encomenda
   enc.prepLinhas = _prepLinhas.map(function(l){ return Object.assign({}, l); });
   enc.estado = fecharDireto ? 'concluida' : 'em-expedicao';
   if (fecharDireto) enc.dataConclusao = new Date().toISOString();
   salvarEncomendas(encs);
+
+  // Criar registo de expedição
   var exps = getExpedicoes();
-  exps.push({
-    id: 'exp_'+Date.now(), encId: _prepEncId, nr: enc.nr, cliente: enc.cliente,
-    artigo: enc.artigo, obs: enc.obs||'',
-    linhas: _prepLinhas.map(function(l){ return Object.assign({},l); }),
+  var expId = 'exp_' + Date.now();
+  var novaExp = {
+    id: expId,
+    encId: _prepEncId,
+    nr: enc.nr,
+    cliente: enc.cliente,
+    artigo: enc.artigo,
+    obs: enc.obs || '',
+    linhas: _prepLinhas.map(function(l){ return Object.assign({}, l); }),
     estado: fecharDireto ? 'expedida' : 'pronta',
-    dataCriacao: new Date().toISOString(), dataFormatada: dataHoje(),
-    dataEntrega: enc.dataEntrega||'', dataExpedicao: enc.dataExpedicao||''
-  });
+    dataCriacao: new Date().toISOString(),
+    dataFormatada: dataHoje(),
+    dataEntrega: enc.dataEntrega || '',
+    dataExpedicao: enc.dataExpedicao || ''
+  };
+  exps.push(novaExp);
   salvarExpedicoes(exps);
-  _atualizarBadgeExp();
+
+  // Se fechar direto → dar saídas de câmara e enviar email
   if (fecharDireto) {
     _darSaidasCamaraPrep(_prepLinhas);
-    _mostrarOpcoesSaida(enc);
-  } else {
-    mostrarStatus('status-enc-prep','\u2713 Encomenda #'+enc.nr+' enviada para Expedi\xe7\xe3o!','success');
-    setTimeout(function(){ renderizarEncomendas(); irPara('screen-enc-lista'); }, 1800);
+    _enviarEmailQualidade(enc);
   }
+
+  // Atualizar badge
+  _atualizarBadgeExp();
+
+  var msg = fecharDireto
+    ? '✓ Encomenda #' + enc.nr + ' expedida! Email enviado para qualidade@lactoceleiro.pt'
+    : '✓ Encomenda #' + enc.nr + ' enviada para Expedição!';
+  mostrarStatus('status-enc-prep', msg, 'success');
+  setTimeout(function(){
+    renderizarEncomendas();
+    irPara('screen-enc-lista');
+  }, 1800);
 }
 
 // Dar saídas de câmara para todas as linhas de preparação
@@ -14121,28 +13339,8 @@ function _darSaidasCamaraPrep(linhas) {
 }
 
 // Botão "Fechar Encomenda" para utilizador encomendas
-
-function _syncLoteInputs() {
-  (_prepLinhas||[]).forEach(function(l,i){
-    var lotEl = document.getElementById('prep-lote-'+i);
-    if (lotEl && lotEl.value.trim()) l.lote = lotEl.value.trim();
-    if (l.lote && (!l.camara || !l.validade)) {
-      var info = _buscarInfoLote(l.lote);
-      if (!l.camara)   l.camara   = info.camara;
-      if (!l.validade) l.validade = info.validade;
-    }
-  });
-}
-
 function fecharEncDireto() {
-  // Sync lote inputs manuais
-  _syncLoteInputs();
-  var semLote = _prepLinhas.filter(function(l){ return !l.lote; });
-  if (semLote.length) {
-    mostrarStatus('status-enc-prep','\u26a0\ufe0f '+semLote.length+' linha(s) sem lote. Atribua o lote antes de fechar.','error');
-    return;
-  }
-  if (!confirm('Fechar encomenda? Ser\xe1 dada sa\xedda de c\xe2mara e gerado o guia.')) return;
+  if (!confirm('Confirmar fecho da encomenda? Será dada saída de câmara e enviado email.')) return;
   _confirmarEnvioExpedicao(true);
 }
 
@@ -14153,13 +13351,7 @@ function enviarParaExpedicao() {
 
 // Botão "Expedir Agora" para utilizador expedição
 function expedirAgora() {
-  _syncLoteInputs();
-  var semLote = _prepLinhas.filter(function(l){ return !l.lote; });
-  if (semLote.length) {
-    mostrarStatus('status-enc-prep','\u26a0\ufe0f '+semLote.length+' linha(s) sem lote.','error');
-    return;
-  }
-  if (!confirm('Expedir e fechar encomenda? Sa\xedda de c\xe2mara ser\xe1 registada.')) return;
+  if (!confirm('Expedir agora e fechar encomenda? Será dado saída de câmara e enviado email.')) return;
   _confirmarEnvioExpedicao(true);
 }
 
@@ -14913,85 +14105,6 @@ function finalizarExpedicao() {
 }
 
 
-
-// ── Gerar Guia de Expedição como PDF imprimível ──────────────
-function _gerarGuiaExpedicaoPDF(enc) {
-  if (!enc) return;
-  var linhas = enc.prepLinhas || enc.linhas || [];
-  var hoje = new Date();
-  var dStr = ('0'+hoje.getDate()).slice(-2)+'/'+('0'+(hoje.getMonth()+1)).slice(-2)+'/'+hoje.getFullYear();
-  var hStr = ('0'+hoje.getHours()).slice(-2)+':'+('0'+hoje.getMinutes()).slice(-2);
-
-  var rowsHTML = '';
-  linhas.forEach(function(l, i) {
-    var valStyle = l.validade ? 'color:#92400e;font-weight:800' : 'color:#dc2626;font-style:italic';
-    var valTxt   = l.validade || 'SEM VALIDADE';
-    rowsHTML += '<tr style="background:'+(i%2===0?'#f9fafb':'white')+'">'
-      +'<td style="padding:8px 10px;font-size:12px;color:#374151">'+(i+1)+'</td>'
-      +'<td style="padding:8px 10px;font-size:13px;font-weight:700;color:#1e3a5f">'+(l.artigo||'')+'</td>'
-      +'<td style="padding:8px 10px;text-align:center;font-size:13px;font-weight:700">'+(l.qtd||0)+'</td>'
-      +'<td style="padding:8px 10px;text-align:center;font-size:13px">'+(l.caixas||0)+'</td>'
-      +'<td style="padding:8px 10px;font-family:monospace;font-weight:900;font-size:12px;color:#1e3a5f">'+(l.lote||'\u2014')+'</td>'
-      +'<td style="padding:8px 10px;text-align:center;font-size:12px">C'+(l.camara||'?')+'</td>'
-      +'<td style="padding:8px 10px;text-align:center;font-size:12px;'+valStyle+'">'+valTxt+'</td>'
-      +'<td style="padding:8px 10px;text-align:center;font-size:12px">'+(l.kg?Number(l.kg).toFixed(1)+' kg':'\u2014')+'</td>'
-      +'</tr>';
-  });
-
-  var htmlContent = '<!DOCTYPE html><html lang="pt"><head><meta charset="UTF-8">'
-    +'<title>Guia de Expedi\xe7\xe3o #'+enc.nr+'</title>'
-    +'<style>'
-    +'@media print { @page { margin: 12mm; size: A4; } body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .no-print { display:none; } }'
-    +'* { box-sizing: border-box; }'
-    +'body { font-family: Arial, sans-serif; color: #1e293b; margin: 0; padding: 0; font-size: 13px; }'
-    +'.header { background: #1e3a5f; color: white; padding: 18px 24px; }'
-    +'.header h1 { margin: 0 0 4px; font-size: 20px; }'
-    +'.header .sub { font-size: 12px; opacity: 0.8; }'
-    +'.info-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 16px 24px; background: #f8fafc; border-bottom: 2px solid #e5e7eb; }'
-    +'.info-box { background: white; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 12px; }'
-    +'.info-box .lbl { font-size: 9px; font-weight: 800; text-transform: uppercase; color: #6b7280; margin-bottom: 3px; }'
-    +'.info-box .val { font-size: 14px; font-weight: 800; color: #1e3a5f; }'
-    +'.table-wrap { padding: 16px 24px; }'
-    +'table { width: 100%; border-collapse: collapse; border-radius: 8px; overflow: hidden; }'
-    +'th { background: #1e3a5f; color: white; padding: 8px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; text-align: left; }'
-    +'td { border-bottom: 1px solid #f3f4f6; }'
-    +'.footer { margin: 0 24px 16px; padding: 12px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; font-size: 12px; color: #15803d; }'
-    +'</style>'
-    +'</head><body>'
-    +'<div class="header">'
-    +'<h1>&#128666; Guia de Expedi\xe7\xe3o \u2014 LactoCeleiro</h1>'
-    +'<div class="sub">Emitido: '+dStr+' '+hStr+'</div>'
-    +'</div>'
-    +'<div class="info-grid">'
-    +'<div class="info-box"><div class="lbl">Encomenda</div><div class="val">#'+enc.nr+'</div></div>'
-    +'<div class="info-box"><div class="lbl">Cliente</div><div class="val">'+(enc.cliente||'\u2014')+'</div></div>'
-    +'<div class="info-box"><div class="lbl">Data</div><div class="val">'+dStr+'</div></div>'
-    +(enc.dataEntrega ? '<div class="info-box"><div class="lbl">Entrega</div><div class="val">'+enc.dataEntrega+'</div></div>' : '')
-    +(enc.dataExpedicao ? '<div class="info-box"><div class="lbl">Expedi\xe7\xe3o</div><div class="val">'+enc.dataExpedicao+'</div></div>' : '')
-    +(enc.obs ? '<div class="info-box" style="grid-column:1/-1"><div class="lbl">Obs</div><div class="val" style="font-size:12px">'+enc.obs+'</div></div>' : '')
-    +'</div>'
-    +'<div class="table-wrap">'
-    +'<table><thead><tr>'
-    +'<th>#</th><th>Artigo</th><th style="text-align:center">Qtd</th><th style="text-align:center">Cx</th>'
-    +'<th>Lote</th><th style="text-align:center">C\xe2mara</th><th style="text-align:center">Validade</th><th style="text-align:center">Peso</th>'
-    +'</tr></thead><tbody>'+rowsHTML+'</tbody></table>'
-    +'</div>'
-    +'<div class="footer">\u2713 Guia gerado automaticamente. Verificar conte\xfado antes de expedir.</div>'
-    +'<div class="no-print" style="text-align:center;padding:12px;background:#eff6ff">'
-    +'<button onclick="window.print()" style="padding:12px 24px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;margin-right:8px">&#128438; Imprimir / Guardar PDF</button>'
-    +'<button onclick="window.close()" style="padding:12px 20px;background:#f3f4f6;border:none;border-radius:8px;font-size:13px;cursor:pointer">Fechar</button>'
-    +'</div>'
-    +'</body></html>';
-
-  var win = window.open('', '_blank', 'width=820,height=750,scrollbars=yes');
-  if (!win) {
-    alert('Activa os pop-ups para este site para poder imprimir o guia.');
-    return;
-  }
-  win.document.write(htmlContent);
-  win.document.close();
-}
-
 function imprimirEncomenda(encId) {
   var encs = getEncomendas();
   var enc = encs.find(function(e){ return e.id===encId; });
@@ -15087,15 +14200,6 @@ function voltarParaPrepararDoExp() {
 
 // Chamar ao arrancar
 setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
-s();
-  var enc = encs.find(function(x){ return x.id === exp.encId; });
-  if (enc) { enc.estado = 'parcial'; salvarEncomendas(encs); }
-  _atualizarBadgeExp();
-  prepararEncomenda(exp.encId);
-}
-
-// Chamar ao arrancar
-setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
 </script>
 </body>
 </html>
@@ -15143,16 +14247,12 @@ setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
       <div id="admin-panel-config" style="display:none">
         <div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:14px;padding:16px">
           <div style="font-size:15px;font-weight:800;color:#1e40af;margin-bottom:6px">🤖 Gemini AI</div>
-          <div style="font-size:12px;color:#6b7280;margin-bottom:12px">Chave OpenRouter para importar encomendas por foto/PDF.<br><small>Grátis em <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></small></div>
+          <div style="font-size:12px;color:#6b7280;margin-bottom:12px">Chave OpenRouter grátis em <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></div>
           <div id="gemini-key-status" style="font-size:12px;font-weight:700;margin-bottom:12px;padding:10px;border-radius:8px;background:#fef2f2;color:#dc2626">Sem chave configurada</div>
           <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Chave API OpenRouter (sk-or-...)</label>
           <input type="password" id="admin-gemini-key-inp" placeholder="Cole aqui a chave"
             style="width:100%;padding:10px;border:2px solid #bfdbfe;border-radius:8px;font-size:13px;font-family:monospace;box-sizing:border-box;margin-bottom:12px">
           <div style="display:flex;gap:8px">
-            <button onclick="_adminLimparGeminiKey()"
-              style="padding:12px 10px;background:#fef2f2;color:#dc2626;border:2px solid #fca5a5;border-radius:8px;font-weight:800;cursor:pointer;font-size:13px">
-              🗑 Limpar
-            </button>
             <button onclick="_adminGuardarGeminiKey()"
               style="flex:2;padding:12px;background:#1e40af;color:white;border:none;border-radius:8px;font-weight:800;cursor:pointer;font-size:14px">
               💾 Guardar
