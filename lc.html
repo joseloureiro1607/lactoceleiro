@@ -8501,21 +8501,27 @@ async function _importFotoProcessar(input) {
       : [{type:'image', source:{type:'base64', media_type:mediaType, data:base64}},
          {type:'text', text:PROMPT_IMPORT_ENC}];
 
-    var resp = await fetch('https://api.anthropic.com/v1/messages', {
+    var gkey = localStorage.getItem('lc_gemini_key') || '';
+    if (!gkey) {
+      gkey = prompt('Chave OpenRouter (sk-or-...):\n\nopenrouter.ai/keys para obter grátis');
+      if (!gkey) { if(status){status.textContent='\u274c Chave em falta'; status.style.color='#dc2626';} return; }
+      localStorage.setItem('lc_gemini_key', gkey);
+    }
+    var imageUrl = 'data:' + mediaType + ';base64,' + base64;
+    var orContent = isPdf
+      ? [{type:'text', text: PROMPT_IMPORT_ENC + '\n[PDF em base64 — descreve o conteúdo como encomenda]'}]
+      : [{type:'image_url', image_url:{url: imageUrl}}, {type:'text', text: PROMPT_IMPORT_ENC}];
+    var resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: content }]
-      })
+      headers: {'Content-Type':'application/json','Authorization':'Bearer '+gkey},
+      body: JSON.stringify({model:'meta-llama/llama-3.2-11b-vision-instruct:free', messages:[{role:'user',content:orContent}]})
     });
     if (!resp.ok) {
       var errData = await resp.json().catch(function(){ return {}; });
       throw new Error((errData.error && errData.error.message) || 'HTTP ' + resp.status);
     }
     var data = await resp.json();
-    var text = (data.content || []).map(function(b) { return b.text || ''; }).join('');
+    var text = ((data.choices||[])[0]?.message?.content)||'';
     var clean = text.replace(/```json|```/g, '').trim();
     var parsed = JSON.parse(clean);
     window._importEncDados = parsed;
