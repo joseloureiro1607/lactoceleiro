@@ -8787,7 +8787,7 @@ const PERFIS = {
 
 // === GEMINI AI ===
 var GEMINI_API_KEY = localStorage.getItem('lc_gemini_key') || '';
-var GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=';
+var GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=';
 
 function _mostrarGeminiStatus() {
   var el = document.getElementById('gemini-key-status');
@@ -8946,7 +8946,7 @@ async function _importFotoProcessar(input) {
     // Gemini vision API — funciona directamente no browser com chave na URL
     // gemini-1.5-flash: 1500 req/day grátis (vs 15/day do 2.0-flash)
     // gemini-2.0-flash via v1beta — mesmo URL que testarGemini (confirmado a funcionar)
-    var geminiModel = 'gemini-1.5-flash-latest';
+    var geminiModel = 'gemini-2.0-flash';
 
     var parts = [{ text: promptText }];
     if (!isPdf) {
@@ -8955,7 +8955,7 @@ async function _importFotoProcessar(input) {
       parts.unshift({ inline_data: { mime_type: 'application/pdf', data: base64 } });
     }
 
-    var url = 'https://generativelanguage.googleapis.com/v1/models/' + geminiModel + ':generateContent?key=' + gkey;
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/' + geminiModel + ':generateContent?key=' + gkey;
 
     // Retry automático até 3x quando quota excedida (429)
     var resp, tentativa = 0;
