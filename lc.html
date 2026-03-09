@@ -1661,6 +1661,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
       <div class="step-badge enc">📋 Nova Encomenda</div>
 
       <div class="form-group"><label>Cliente</label><input type="text" id="enc-cliente" placeholder="Nome do cliente" autocomplete="off"></div>
+      <div class="form-group"><label>Local de Entrega <small style="color:#9ca3af">(opcional)</small></label><input type="text" id="enc-local-entrega" placeholder="Ex: Loja Lisboa..." autocomplete="off"></div>
       <div class="form-group"><label>Marca</label><input type="text" id="enc-marca" placeholder="Nome da marca (para o rótulo)" autocomplete="off"></div>
       <div class="form-row">
         <div class="form-group" style="margin-bottom:8px">
@@ -1697,6 +1698,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <div class="sl-label">Encomenda</div>
         <div class="sl-lote" id="enc-det-nr" style="color:#5b21b6">—</div>
         <div class="sl-stock" id="enc-det-cliente">—</div>
+      <div id="enc-det-extra" style="margin-top:2px"></div>
       </div>
 
       <div id="enc-det-corpo"></div>
@@ -2121,17 +2123,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
   <div id="print-relatorio" class="print-only" style="padding:0; font-family:'DM Sans',sans-serif;">
     <div class="rel-header">
       <h1>🧀 LactoCeleiro</h1>
-      <div class="rel-sub">Relatório de Lotes por Câmara</div>
-      <div class="rel-data" id="rel-data-hora"></div>
-    </div>
-    <div id="rel-corpo"></div>
-    <div class="rel-rodape">LactoCeleiro · Gerado automaticamente pela app de gestão de câmaras</div>
-  </div>
-
-  </div><!-- /body -->
-</div><!-- /container -->
-
-<script>// ===
+      <div class="rel-sub">Relatório de Lotes por Câmara</d// ===
 // CONSTANTES E ESTADO
 // ===
 const MESES_FULL = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -3503,6 +3495,7 @@ function renderizarLinhasEnc() {
 function criarEncomenda() {
   lerLinhasEnc();
   const cliente = document.getElementById('enc-cliente').value.trim();
+  const localEntrega = ((document.getElementById('enc-local-entrega')||{}).value||'').trim();
   const obs     = document.getElementById('enc-obs').value.trim();
   const marca   = document.getElementById('enc-marca') ? document.getElementById('enc-marca').value.trim() : '';
   const dtEnt   = document.getElementById('enc-data-entrega') ? document.getElementById('enc-data-entrega').value : '';
@@ -3621,6 +3614,13 @@ function abrirEncomenda(id) {
   document.getElementById('bc-enc-det').textContent = `Encomenda #${enc.nr}`;
   document.getElementById('enc-det-nr').textContent = `#${enc.nr} · ${enc.dataFormatada}`;
   document.getElementById('enc-det-cliente').textContent = `${enc.cliente} · ${enc.artigo}${enc.marca ? ' · ' + enc.marca : ''}`;
+  var _detX = document.getElementById('enc-det-extra');
+  if (_detX) {
+    var _xH = '';
+    if (enc.localEntrega) _xH += '<div style="font-size:12px;color:#6b7280;margin-top:2px">\uD83D\uDCCD ' + enc.localEntrega + '</div>';
+    if (enc.obs) _xH += '<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:6px;padding:4px 8px;margin-top:4px">\uD83D\uDCCB Obs: ' + enc.obs + '</div>';
+    _detX.innerHTML = _xH;
+  }
 
   const totalAbatido = (enc.lotes||[]).reduce((a,l) => a+l.qtd, 0);
   const restante = enc.qtd - totalAbatido;
@@ -8847,7 +8847,9 @@ async function testarGemini() {
   }
 }
 
-var PROMPT_IMPORT_ENC = 'Analisa esta imagem ou documento — e uma encomenda de queijo/requeijao. '
+var PROMPT_IMPORT_ENC = 'Analisa esta imagem — e uma encomenda de queijo/requeijao enviada a LactoCeleiro. '
+  + 'IMPORTANTE: LactoCeleiro e o FORNECEDOR (somos nos). O CLIENTE e a empresa que faz o pedido (ex: Cafe Stop, ALDI, etc). NUNCA uses LactoCeleiro como cliente. '
+  + 'EXTRAI: 1) CLIENTE (quem encomenda, nao LactoCeleiro), 2) local de entrega se indicado, 3) data de entrega, 4) artigos/quantidades. '
   + 'EXTRAI: 1) nome do cliente, 2) data de entrega, 3) todos os artigos com quantidades. '
   + 'ARTIGOS LactoCeleiro: Queijo Ovelha Grande (ref G, 4un/cx), Queijo Ovelha Pequeno (ref P, 8un/cx), '
   + 'Queijo Ovelha Apimentado Grande (ref PPP, 5un/cx), Queijo DOP (ref DOP, 4un/cx), '
@@ -8856,7 +8858,7 @@ var PROMPT_IMPORT_ENC = 'Analisa esta imagem ou documento — e uma encomenda de
   + 'Soma quantidades do mesmo artigo/tamanho se aparecerem em multiplas linhas. '
   + 'RESPONDE APENAS com JSON valido, sem markdown, sem texto extra: '
   + '{"linhas":[{"artigo":"nome exacto LactoCeleiro","qtd":numero,"referencia":"G|P|PPP|DOP|cabra","caixas":numero,"obsLinha":""}],'
-  + '"cliente":"nome cliente ou vazio","obs":"obs gerais ou vazio","dataEntrega":"DD/MM/AAAA ou vazio","dataExpedicao":"DD/MM/AAAA ou vazio"}'
+  + '"cliente":"quem encomenda (nao LactoCeleiro)","localEntrega":"local ou vazio","obs":"obs ou vazio","dataEntrega":"DD/MM/AAAA ou vazio","dataExpedicao":"DD/MM/AAAA ou vazio"}'
 
 function _fecharModalImportFoto() {
   var m = document.getElementById('modal-import-foto');
@@ -9079,7 +9081,9 @@ function _confirmarImportEnc() {
 
   var enc = {
     id:'enc_'+Date.now(), nr:(getEncomendas().length||0)+1,
-    cliente: dados.cliente||'Importado', obs: dados.obs||'', estado:'aberta',
+    cliente: dados.cliente||'Importado', obs: dados.obs||'',
+    localEntrega: dados.localEntrega||'',
+    estado:'aberta',
     data: new Date().toISOString(),
     dataFormatada: new Date().toLocaleDateString('pt-PT',{day:'numeric',month:'long'}),
     dataEntrega: dados.dataEntrega||'', dataExpedicao: dados.dataExpedicao||'',
@@ -9090,7 +9094,7 @@ function _confirmarImportEnc() {
   _fecharModalImportFoto();
   renderizarEncomendas();
   irPara('screen-enc');
-  alert('Encomenda importada!\nVerifica artigos, quantidades e datas.\nQueijos do mesmo tamanho foram somados.');
+  setTimeout(function(){ abrirEncomenda(enc.id); }, 150);
 }
 
 
@@ -13250,14 +13254,14 @@ function prepararEncomenda(id) {
     var isAdmin     = temPermissao('admin');
     var isEnc       = temPermissao('encomendas');
     var btns = '';
-    if (isExpedicao || isAdmin) {
+    if (isExpedicao) {
       // User expedicao: apenas "Expedir e Fechar"
       btns += '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px;margin-bottom:8px">'
         +'<div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:6px">\u{1F4E6} EXPEDI\xc7\xc3O \u2014 D\xe1 sa\xedda de c\xe2mara e fecha</div>'
         +'<button onclick="expedirAgora()" style="width:100%;padding:13px;background:#15803d;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">\ud83d\ude9a Expedir e Fechar (sa\xedda + PDF)</button>'
         +'</div>';
-    } else if (isEnc) {
-      // User encomendas: "Fechar" ou "Enviar para Expedicao"
+    } else if (isEnc || isAdmin) {
+      // User encomendas/admin: "Fechar" ou "Enviar para Expedicao"
       btns += '<div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:8px">'
         +'<div style="font-size:11px;font-weight:700;color:#1e40af;margin-bottom:6px">\u{1F4CB} FECHAR \u2014 D\xe1 sa\xedda de c\xe2mara</div>'
         +'<button onclick="fecharEncDireto()" style="width:100%;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">\u2705 Fechar Encomenda (sa\xedda + PDF)</button>'
@@ -14048,10 +14052,15 @@ function _confirmarEnvioExpedicao(fecharDireto) {
   var encs = getEncomendas();
   var enc = encs.find(function(e){ return e.id === _prepEncId; });
   if (!enc) return;
+  var semKg = (_prepLinhas||[]).filter(function(l){ return l.lote && (!l.kg || parseFloat(l.kg)<=0); });
+  if (semKg.length > 0) {
+    alert('\u274c N\xe3o pode fechar sem pesos!\n\n' + semKg.map(function(l){return '\u2022 '+l.artigo;}).join('\n') + '\n\nIntroduza os kg.');
+    return;
+  }
   var semVal = _verificarValidadesPrep();
   if (semVal.length > 0) {
     var listaSemVal = semVal.map(function(l){ return '\u2022 '+l.artigo+' (lote '+l.lote+')'; }).join('\n');
-    if (!confirm('\u26a0\ufe0f Artigos sem validade:\n\n'+listaSemVal+'\n\nContinuar?')) return;
+    alert('\u274c N\xe3o pode fechar sem validades!\n\n'+listaSemVal+'\n\nIntroduza as validades.'); return;
   }
   enc.prepLinhas = _prepLinhas.map(function(l){ return Object.assign({}, l); });
   enc.estado = fecharDireto ? 'concluida' : 'em-expedicao';
@@ -15070,6 +15079,15 @@ function voltarParaPrepararDoExp() {
   exps.splice(exps.indexOf(exp), 1);
   salvarExpedicoes(exps);
   var encs = getEncomendas();
+  var enc = encs.find(function(x){ return x.id === exp.encId; });
+  if (enc) { enc.estado = 'parcial'; salvarEncomendas(encs); }
+  _atualizarBadgeExp();
+  prepararEncomenda(exp.encId);
+}
+
+// Chamar ao arrancar
+setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
+s();
   var enc = encs.find(function(x){ return x.id === exp.encId; });
   if (enc) { enc.estado = 'parcial'; salvarEncomendas(encs); }
   _atualizarBadgeExp();
