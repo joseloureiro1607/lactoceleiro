@@ -1455,7 +1455,12 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         Expedidas <span id="exp-toggle-icon">&#9660;</span>
       </div>
       <div id="exp-lista-expedida" style="display:none"></div>
-      <div style="margin-top:12px"><button class="btn-back" onclick="irPara('screen-enc-hub')">&#8592; Voltar</button></div>
+      <div style="margin-top:12px">
+        <button id="btn-exp-rotulos" onclick="abrirResumoRotulosGeral()" style="width:100%;padding:13px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+          <span>🏷️</span><span>RESUMO DE RÓTULOS</span>
+        </button>
+      </div>
+      <div style="margin-top:8px"><button class="btn-back" onclick="irPara('screen-enc-hub')">&#8592; Voltar</button></div>
     </div>
 
     <!-- ══════════════════════════════ -->
@@ -1528,6 +1533,11 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <button class="main-btn" onclick="abrirImportarFotoEnc()"
           style="width:100%;padding:16px 12px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
           <span>📷</span> IMPORTAR FOTO / PDF ENCOMENDA
+        </button>
+      </div>
+      <div style="margin-top:8px">
+        <button id="btn-enc-rotulos" onclick="abrirResumoRotulosGeral()" style="width:100%;padding:16px 12px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
+          <span style="font-size:20px">🏷️</span><span>RESUMO DE RÓTULOS</span>
         </button>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px">
@@ -9602,6 +9612,10 @@ function aplicarPermissoesHome() {
   // Exportar enc no hub (encomendas/expedicao/admin/gestor)
   const btnEncExp = document.getElementById('btn-enc-export');
   if (btnEncExp) btnEncExp.style.display = temPermissao('exportar-enc') ? '' : 'none';
+  const btnEncRotulos = document.getElementById('btn-enc-rotulos');
+  if (btnEncRotulos) btnEncRotulos.style.display = (temPermissao('resumo-rotulos') || temPermissao('admin')) ? '' : 'none';
+  const btnExpRotulos = document.getElementById('btn-exp-rotulos');
+  if (btnExpRotulos) btnExpRotulos.style.display = (temPermissao('resumo-rotulos') || temPermissao('admin')) ? '' : 'none';
 
   // Mostrar/ocultar criar encomenda
   const btnNova = document.getElementById('btn-enc-nova');
@@ -9756,6 +9770,7 @@ var PERMISSOES_TREE = [
       { key:'saidas-expedicao', label:'Enviar para Expedi\xe7\xe3o' }
     ]},
     { key:'ver-enc-expedidas', label:'Expedi\xe7\xe3o' },
+    { key:'resumo-rotulos', label:'Resumo de R\xf3tulos' },
     { key:'ver-relatorios', label:'Relat\xf3rios' }
   ]},
   { key:'stock-tipo', label:'\uD83D\uDCCA Ver Stock por Tipo' },
@@ -15053,83 +15068,102 @@ function _renderExpDet(exp) {
   document.getElementById('exp-det-botoes').innerHTML = btns;
 }
 
-function abrirResumoRotulos(expId) {
+function abrirResumoRotulosGeral() {
   var exps = getExpedicoes();
-  var exp = exps.find(function(e){ return e.id === expId; });
-  if (!exp) return;
+  var prontas = exps.filter(function(e){ return e.estado === 'pronta'; });
+  // Também incluir encomendas em expedição que não têm ainda expedição criada
+  var encs = getEncomendas().filter(function(e){ return e.estado === 'em-expedicao'; });
 
-  var linhasHtml = exp.linhas.map(function(l, i) {
-    var valISO = '';
-    if (l.validade) {
-      var pts = l.validade.split('/');
-      if (pts.length === 3) valISO = pts[2] + '-' + pts[1] + '-' + pts[0];
-    }
-    var va = _vaInfo(l.validade);
-    var semVal = !l.validade;
+  // Juntar todas as linhas numa só tabela
+  var linhas = [];
+  prontas.forEach(function(exp) {
+    (exp.linhas || []).forEach(function(l) {
+      linhas.push({ encNr: exp.nr, encId: exp.id, cliente: exp.cliente, artigo: l.artigo || exp.artigo, lote: l.lote || '—', validade: l.validade || '', qtd: l.qtd || 0, caixas: l.caixas || 0 });
+    });
+  });
+  encs.forEach(function(enc) {
+    // só adicionar se não tiver já expedição criada
+    var jatem = prontas.find(function(e){ return e.encId === enc.id; });
+    if (jatem) return;
+    (enc.lotes || []).forEach(function(l, i) {
+      var linha = (enc.linhas || [])[i] || {};
+      linhas.push({ encNr: enc.nr, encId: enc.id, cliente: enc.cliente, artigo: linha.artigo || enc.artigo, lote: l.lote || '—', validade: l.validade || '', qtd: l.qtd || 0, caixas: linha.caixas || 0 });
+    });
+  });
 
-    return '<div style="background:white;border:2px solid ' + (semVal ? '#fca5a5' : '#e5e7eb') + ';border-radius:14px;padding:14px;margin-bottom:10px">'
-
-      // Cliente + Artigo
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
-      + '<div><div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:2px">Cliente</div>'
-      + '<div style="font-size:14px;font-weight:800;color:#1e3a5f">' + (exp.cliente || '—') + '</div></div>'
-      + '<div><div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:2px">Artigo</div>'
-      + '<div style="font-size:13px;font-weight:700;color:#1e293b">' + (l.artigo || exp.artigo || '—') + '</div></div>'
-      + '</div>'
-
-      // Lote + Quantidade
-      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
-      + '<div><div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:2px">Lote</div>'
-      + '<div style="font-size:15px;font-weight:900;color:#0369a1;font-family:monospace">' + (l.lote || '—') + '</div></div>'
-      + '<div><div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:2px">Quantidade</div>'
-      + '<div style="font-size:15px;font-weight:900;color:#1e3a5f">' + (l.qtd || 0) + ' un &nbsp;<span style="font-size:11px;color:#9ca3af;font-weight:500">· ' + (l.caixas || 0) + ' cx</span></div></div>'
-      + '</div>'
-
-      // Validade
-      + '<div style="margin-bottom:10px">'
-      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
-      + '<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase">Validade</div>'
-      + (semVal ? '<span style="font-size:10px;background:#fee2e2;color:#dc2626;border-radius:4px;padding:1px 6px;font-weight:700">⚠️ Atribuir aqui</span>' : '')
-      + '</div>'
-      + (semVal
-          ? '<input type="date" id="rr-val-' + i + '" value="" onchange="_rrValChange(this,' + i + ',\'' + expId + '\')" '
-            + 'style="width:100%;padding:10px;border:2px solid #ef4444;border-radius:10px;font-size:16px;font-weight:700;color:#1e293b;box-sizing:border-box">'
-          : '<div style="font-size:18px;font-weight:900;color:' + va.color + '">' + l.validade + va.badge + '</div>'
-        )
-      + '</div>'
-
-      // Ligação à encomenda
-      + '<div style="border-top:1px solid #f3f4f6;padding-top:8px;display:flex;justify-content:space-between;align-items:center">'
-      + '<span style="font-size:11px;color:#9ca3af">Enc. #' + exp.nr + '</span>'
-      + '<button onclick="document.getElementById(\'modal-resumo-rotulos\').remove();abrirExpDetalhe(\'' + expId + '\')" '
-      + 'style="font-size:11px;padding:4px 10px;background:#eff6ff;color:#1e40af;border:none;border-radius:6px;font-weight:700;cursor:pointer">🔗 Abrir Encomenda</button>'
-      + '</div>'
-
-      + '</div>';
-  }).join('');
+  var tbody = linhas.length === 0
+    ? '<tr><td colspan="6" style="padding:20px;text-align:center;color:#9ca3af">Sem encomendas em expedição</td></tr>'
+    : linhas.map(function(l) {
+        var va = _vaInfo(l.validade);
+        var valHtml = l.validade
+          ? '<span style="font-weight:700;color:' + va.color + '">' + l.validade + va.badge + '</span>'
+          : '<span style="color:#dc2626;font-size:11px;font-weight:700">⚠️ —</span>';
+        return '<tr>'
+          + '<td style="padding:9px 10px;border-bottom:1px solid #f3f4f6">'
+          + '<button onclick="document.getElementById(\'modal-rot-geral\').remove();abrirExpDetalhe(\'' + l.encId + '\')" style="background:none;border:none;color:#1e40af;font-weight:700;font-size:12px;cursor:pointer;padding:0;text-decoration:underline">#' + l.encNr + '</button>'
+          + '</td>'
+          + '<td style="padding:9px 10px;border-bottom:1px solid #f3f4f6;font-weight:700;font-size:13px;color:#1e3a5f">' + l.cliente + '</td>'
+          + '<td style="padding:9px 10px;border-bottom:1px solid #f3f4f6;font-size:12px;color:#374151">' + l.artigo + '</td>'
+          + '<td style="padding:9px 10px;border-bottom:1px solid #f3f4f6;font-family:monospace;font-weight:800;font-size:12px;color:#0369a1">' + l.lote + '</td>'
+          + '<td style="padding:9px 10px;border-bottom:1px solid #f3f4f6">' + valHtml + '</td>'
+          + '<td style="padding:9px 10px;border-bottom:1px solid #f3f4f6;font-weight:800;text-align:center;color:#1e3a5f">' + l.qtd + '<span style="font-size:10px;color:#9ca3af;font-weight:400"> un</span></td>'
+          + '</tr>';
+      }).join('');
 
   var modal = document.createElement('div');
-  modal.id = 'modal-resumo-rotulos';
+  modal.id = 'modal-rot-geral';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
-  modal.innerHTML = '<div style="background:#f8fafc;border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding:0 0 20px">'
-    // Cabeçalho
-    + '<div style="background:#7c3aed;border-radius:20px 20px 0 0;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1">'
-    + '<div>'
-    + '<div style="color:white;font-size:16px;font-weight:800">🏷️ Resumo de Rótulos</div>'
-    + '<div style="color:rgba(255,255,255,.75);font-size:12px;margin-top:2px">Enc. #' + exp.nr + ' — ' + exp.cliente + '</div>'
+  modal.innerHTML = '<div style="background:white;border-radius:20px 20px 0 0;width:100%;max-width:560px;max-height:88vh;display:flex;flex-direction:column">'
+    // Header fixo
+    + '<div style="background:linear-gradient(135deg,#7c3aed,#6d28d9);border-radius:20px 20px 0 0;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;flex-shrink:0">'
+    + '<div><div style="color:white;font-size:16px;font-weight:800">🏷️ Resumo de Rótulos</div>'
+    + '<div style="color:rgba(255,255,255,.7);font-size:12px;margin-top:2px">' + linhas.length + ' linha(s) em expedição</div></div>'
+    + '<button onclick="document.getElementById(\'modal-rot-geral\').remove()" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:34px;height:34px;font-size:18px;color:white;cursor:pointer">✕</button>'
     + '</div>'
-    + '<button onclick="document.getElementById(\'modal-resumo-rotulos\').remove()" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:34px;height:34px;font-size:18px;color:white;cursor:pointer">✕</button>'
-    + '</div>'
-    // Linhas
-    + '<div style="padding:14px 14px 0">' + linhasHtml + '</div>'
-    // Botão imprimir
-    + '<div style="padding:0 14px">'
-    + '<button onclick="_imprimirRotulos(\'' + expId + '\')" style="width:100%;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">🖨️ Imprimir / PDF</button>'
+    // Tabela scrollável
+    + '<div style="overflow-y:auto;flex:1">'
+    + '<table style="width:100%;border-collapse:collapse">'
+    + '<thead><tr style="background:#f8fafc;position:sticky;top:0">'
+    + '<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:#6b7280;text-transform:uppercase;border-bottom:2px solid #e5e7eb">Enc.</th>'
+    + '<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:#6b7280;text-transform:uppercase;border-bottom:2px solid #e5e7eb">Cliente</th>'
+    + '<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:#6b7280;text-transform:uppercase;border-bottom:2px solid #e5e7eb">Artigo</th>'
+    + '<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:#6b7280;text-transform:uppercase;border-bottom:2px solid #e5e7eb">Lote</th>'
+    + '<th style="padding:8px 10px;text-align:left;font-size:10px;font-weight:800;color:#6b7280;text-transform:uppercase;border-bottom:2px solid #e5e7eb">Validade</th>'
+    + '<th style="padding:8px 10px;text-align:center;font-size:10px;font-weight:800;color:#6b7280;text-transform:uppercase;border-bottom:2px solid #e5e7eb">Qtd</th>'
+    + '</tr></thead>'
+    + '<tbody>' + tbody + '</tbody>'
+    + '</table>'
     + '</div>'
     + '</div>';
 
   document.body.appendChild(modal);
   modal.addEventListener('click', function(e){ if (e.target === modal) modal.remove(); });
+}
+
+function _imprimirRotulos(expId) {
+  var exps = getExpedicoes();
+  var exp = exps.find(function(e){ return e.id === expId; });
+  if (!exp) return;
+  var w = window.open('', '_blank');
+  if (!w) { alert('Permite popups para imprimir.'); return; }
+  var rows = (exp.linhas || []).map(function(l) {
+    var va = _vaInfo(l.validade);
+    return '<tr>'
+      + '<td>' + exp.cliente + '</td>'
+      + '<td>' + (l.artigo || exp.artigo || '—') + '</td>'
+      + '<td style="color:#7c3aed;font-weight:700">' + (l.marca || '—') + '</td>'
+      + '<td style="font-family:monospace;font-weight:800;color:#0369a1">' + (l.lote || '—') + '</td>'
+      + '<td style="font-weight:700;color:' + (l.validade ? va.color : '#dc2626') + '">' + (l.validade || '⚠️ —') + '</td>'
+      + '<td style="text-align:center;font-weight:900">' + (l.qtd || 0) + ' un</td>'
+      + '</tr>';
+  }).join('');
+  w.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Rótulos Enc.#' + exp.nr + '</title>'
+    + '<style>body{font-family:sans-serif;padding:20px}table{width:100%;border-collapse:collapse}th,td{padding:8px 12px;border:1px solid #e5e7eb;font-size:13px}th{background:#1e3a5f;color:white;text-align:left}tr:nth-child(even){background:#f8fafc}@media print{button{display:none}}</style>'
+    + '</head><body><h2 style="color:#1e3a5f">🏷️ Rótulos — Enc. #' + exp.nr + ' — ' + exp.cliente + '</h2>'
+    + '<table><thead><tr><th>Cliente</th><th>Artigo</th><th>Marca</th><th>Lote</th><th>Validade</th><th>Qtd</th></tr></thead><tbody>' + rows + '</tbody></table>'
+    + '<br><button onclick="window.print()" style="padding:10px 24px;background:#1e3a5f;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer">🖨️ Imprimir</button>'
+    + '</body></html>');
+  w.document.close();
 }
 
 function _rrValChange(input, idx, expId) {
