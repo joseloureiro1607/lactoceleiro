@@ -8410,9 +8410,16 @@ function _adminGuardarGeminiKey() {
 
 async function testarGemini() {
   var key = localStorage.getItem('lc_gemini_key') || '';
-  if (!key) { alert('Configura a chave OpenRouter primeiro.'); return; }
+  if (!key) {
+    key = prompt('Cola a chave OpenRouter (sk-or-...):\nopenrouter.ai/keys');
+    if (!key || !key.trim()) { alert('Chave em falta.'); return; }
+    key = key.trim();
+    localStorage.setItem('lc_gemini_key', key);
+    GEMINI_API_KEY = key;
+    _mostrarGeminiStatus();
+  }
   var el = document.getElementById('gemini-key-status');
-  if (el) { el.textContent = 'A testar...'; el.style.color='#1e40af'; }
+  if (el) { el.textContent = 'A testar...'; el.style.color='#1e40af'; el.style.background='#eff6ff'; }
   try {
     var resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method:'POST',
@@ -8422,11 +8429,11 @@ async function testarGemini() {
     var data = await resp.json();
     if (!resp.ok) {
       var m=(data.error&&data.error.message)||('HTTP '+resp.status);
-      if(el){el.textContent='Erro: '+m;el.style.color='#dc2626';} return;
+      if(el){el.textContent='\u274c Erro: '+m;el.style.color='#dc2626';el.style.background='#fef2f2';} return;
     }
-    var txt=((data.choices||[])[0]||{message:{content:''}}).message.content||'sem resposta';
-    if(el){el.textContent='OK: '+txt.trim();el.style.color='#15803d';}
-  } catch(e) { if(el){el.textContent='Erro: '+e.message;el.style.color='#dc2626';} }
+    var txt=(((data.choices||[])[0])||{message:{content:''}}).message.content||'OK';
+    if(el){el.textContent='\u2705 OpenRouter OK: '+txt.trim();el.style.color='#15803d';el.style.background='#f0fdf4';}
+  } catch(e) { if(el){el.textContent='\u274c Erro: '+e.message;el.style.color='#dc2626';el.style.background='#fef2f2';} }
 }
 
 var PROMPT_IMPORT_ENC = 'Analisa esta imagem ou documento — e uma encomenda de queijo/requeijao. '
