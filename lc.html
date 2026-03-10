@@ -1646,7 +1646,6 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
       <div class="step-badge enc">📋 Nova Encomenda</div>
 
       <div class="form-group"><label>Cliente</label><input type="text" id="enc-cliente" placeholder="Nome do cliente" autocomplete="off"></div>
-      <div class="form-group"><label>Local de Entrega <small style="color:#9ca3af">(opcional)</small></label><input type="text" id="enc-local-entrega" placeholder="Ex: Loja Lisboa..." autocomplete="off"></div>
       <div class="form-group"><label>Marca</label><input type="text" id="enc-marca" placeholder="Nome da marca (para o rótulo)" autocomplete="off"></div>
       <div class="form-row">
         <div class="form-group" style="margin-bottom:8px">
@@ -1683,7 +1682,6 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <div class="sl-label">Encomenda</div>
         <div class="sl-lote" id="enc-det-nr" style="color:#5b21b6">—</div>
         <div class="sl-stock" id="enc-det-cliente">—</div>
-      <div id="enc-det-extra" style="margin-top:2px"></div>
       </div>
 
       <div id="enc-det-corpo"></div>
@@ -2031,11 +2029,16 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
     <div class="rel-header">
       <h1>🧀 LactoCeleiro</h1>
       <div class="rel-sub">Relatório de Lotes por Câmara</div>
+      <div class="rel-data" id="rel-data-hora"></div>
     </div>
+    <div id="rel-corpo"></div>
+    <div class="rel-rodape">LactoCeleiro · Gerado automaticamente pela app de gestão de câmaras</div>
   </div>
 
-<script>
-// ===
+  </div><!-- /body -->
+</div><!-- /container -->
+
+<script>// ===
 // CONSTANTES E ESTADO
 // ===
 const MESES_FULL = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
@@ -2949,38 +2952,34 @@ function confirmarSaida() {
     const isExpUser = temPermissao('expedicao') || temPermissao('admin');
     const isEncUser = temPermissao('encomendas');
 
-    if (isExpUser) {
-      // Expedição: esconde botão confirmar, mostra só "Mais saídas" e "Fechar+Email"
-      const btnConf = document.getElementById('btn-confirmar-saida');
-      if (btnConf) btnConf.style.display = 'none';
-      const posDiv = document.getElementById('saida-pos-opcoes');
-      if (posDiv) {
-        posDiv.innerHTML = '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px;margin-bottom:6px">'
-          + '<div style="font-size:12px;font-weight:800;color:#15803d;margin-bottom:8px">✅ Saída registada!</div>'
-          + '<button onclick="voltarSaidaLotes()" style="width:100%;padding:11px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">📤 + Mais Saídas desta Encomenda</button>'
-          + '<button onclick="_fecharEncExpedicaoEmail()" style="width:100%;padding:12px;background:#15803d;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">🚚 Fechar Encomenda + Email</button>'
+    if (isExpUser || isEncUser) {
+      var _btnC2 = document.getElementById('btn-confirmar-saida');
+      if (_btnC2) _btnC2.style.display = 'none';
+      var _posD2 = document.getElementById('saida-pos-opcoes');
+      if (_posD2) {
+        _posD2.innerHTML = '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px">'
+          + '<div style="font-size:12px;font-weight:800;color:#15803d;margin-bottom:8px">Saida registada!</div>'
+          + '<button onclick="voltarSaidaLotes()" style="width:100%;padding:11px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">+ Mais Saidas</button>'
+          + '<button onclick="_fecharEncExpedicaoEmail()" style="width:100%;padding:12px;background:#15803d;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:6px">Fechar Encomenda</button>'
+          + '<button onclick="_enviarSaidaParaExpedicao()" style="width:100%;padding:11px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">Enviar para Expedicao</button>'
           + '</div>';
-        posDiv.style.display = 'block';
-      }
-    } else if (isEncUser) {
-      // Encomendas: esconde botão confirmar, mostra opções
-      const btnConf = document.getElementById('btn-confirmar-saida');
-      if (btnConf) btnConf.style.display = 'none';
-      const posDiv = document.getElementById('saida-pos-opcoes');
-      if (posDiv) {
-        posDiv.innerHTML = '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px;margin-bottom:6px">'
-          + '<div style="font-size:12px;font-weight:800;color:#15803d;margin-bottom:8px">✅ Saída registada! O que fazer?</div>'
-          + '<button onclick="voltarSaidaLotes()" style="width:100%;padding:11px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">📤 + Mais Saídas desta Encomenda</button>'
-          + '<button onclick="_fecharEncSemExpedicao()" style="width:100%;padding:11px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">✅ Fechar Encomenda + Email</button>'
-          + '<button onclick="_enviarEncParaExpedicaoFlow()" style="width:100%;padding:11px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">🚚 Enviar para Expedição</button>'
-          + '</div>';
-        posDiv.style.display = 'block';
+        _posD2.style.display = 'block';
       }
     } else {
       setTimeout(() => { abrirEncomenda(encAtualId); }, 2200);
     }
   } else {
-    setTimeout(() => { voltarSaidaLotes(); }, 2200);
+    var _btnC = document.getElementById('btn-confirmar-saida');
+    if (_btnC) _btnC.style.display = 'none';
+    var _posD = document.getElementById('saida-pos-opcoes');
+    if (_posD) {
+      _posD.innerHTML = '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px">'
+        + '<div style="font-size:12px;font-weight:800;color:#15803d;margin-bottom:8px">Saida registada!</div>'
+        + '<button onclick="voltarSaidaLotes()" style="width:100%;padding:11px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">Nova Saida</button>'
+        + '<button onclick="voltarPagina()" style="width:100%;padding:11px;background:#6b7280;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">Voltar</button>'
+        + '</div>';
+      _posD.style.display = 'block';
+    }
   }
 }
 
@@ -3185,7 +3184,6 @@ function renderizarLinhasEnc() {
 function criarEncomenda() {
   lerLinhasEnc();
   const cliente = document.getElementById('enc-cliente').value.trim();
-  const localEntrega = ((document.getElementById('enc-local-entrega')||{}).value||'').trim();
   const obs     = document.getElementById('enc-obs').value.trim();
   const marca   = document.getElementById('enc-marca') ? document.getElementById('enc-marca').value.trim() : '';
   const dtEnt   = document.getElementById('enc-data-entrega') ? document.getElementById('enc-data-entrega').value : '';
@@ -3248,8 +3246,6 @@ function abrirEncomenda(id) {
   document.getElementById('bc-enc-det').textContent = `Encomenda #${enc.nr}`;
   document.getElementById('enc-det-nr').textContent = `#${enc.nr} · ${enc.dataFormatada}`;
   document.getElementById('enc-det-cliente').textContent = `${enc.cliente} · ${enc.artigo}${enc.marca ? ' · ' + enc.marca : ''}`;
-  var _xEl = document.getElementById('enc-det-extra');
-  if (_xEl) { var _xH=''; if(enc.localEntrega)_xH+='<div style="font-size:12px;color:#6b7280">\uD83D\uDCCD '+enc.localEntrega+'</div>'; if(enc.obs)_xH+='<div style="font-size:12px;color:#92400e;background:#fef3c7;border-radius:6px;padding:4px 8px;margin-top:4px">\uD83D\uDCCB Obs: '+enc.obs+'</div>'; _xEl.innerHTML=_xH; }
 
   const totalAbatido = (enc.lotes||[]).reduce((a,l) => a+l.qtd, 0);
   const restante = enc.qtd - totalAbatido;
@@ -8380,7 +8376,7 @@ const PERFIS = {
 
 // === GEMINI AI ===
 var GEMINI_API_KEY = localStorage.getItem('lc_gemini_key') || '';
-var GEMINI_URL_BASE = 'https://openrouter.ai/api/v1/chat/completions';
+var GEMINI_URL_BASE = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=';
 
 function _mostrarGeminiStatus() {
   var el = document.getElementById('gemini-key-status');
@@ -8399,7 +8395,7 @@ function _adminGuardarGeminiKey() {
   var inp = document.getElementById('admin-gemini-key-inp');
   if (!inp) return;
   var key = inp.value.trim();
-  if (!key || !key.startsWith('sk-or-')) { alert('Chave invalida — deve comecar por AIza...'); return; }
+  if (!key || !key.startsWith('AIza')) { alert('Chave invalida — deve comecar por AIza...'); return; }
   localStorage.setItem('lc_gemini_key', key);
   GEMINI_API_KEY = key;
   inp.value = '';
@@ -8413,19 +8409,19 @@ async function testarGemini() {
   var el = document.getElementById('gemini-key-status');
   if (el) { el.textContent = 'A testar...'; el.style.background='#eff6ff'; el.style.color='#1e40af'; }
   try {
-    var resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model:'meta-llama/llama-3.2-11b-vision-instruct:free',messages:[{role:'user',content:'Responde apenas: OK'}]})
+    var resp = await fetch(GEMINI_URL_BASE + key, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({contents:[{parts:[{text:'Responde apenas: OK'}]}]})
     });
     var data = await resp.json();
-    if (!resp.ok) { var msg=(data.error&&data.error.message)||('HTTP '+resp.status); if(el){el.textContent='\u274c '+msg;el.style.background='#fef2f2';el.style.color='#dc2626';} return; }
-    var txt = (data.choices||[])[0]?.message?.content||'sem resposta';
-    if(el){el.textContent='\u2705 OK: '+txt.trim();el.style.background='#f0fdf4';el.style.color='#15803d';}
-  } catch(e) { if(el){el.textContent='\u274c '+e.message;el.style.background='#fef2f2';el.style.color='#dc2626';} }
+    var txt = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'sem resposta';
+    if (el) { el.textContent = 'Gemini OK: ' + txt; el.style.background='#f0fdf4'; el.style.color='#15803d'; }
+  } catch(e) {
+    if (el) { el.textContent = 'Erro: ' + e.message; el.style.background='#fef2f2'; el.style.color='#dc2626'; }
+  }
 }
 
-var PROMPT_IMPORT_ENC = 'Analisa esta imagem — encomenda de queijo/requeijao. LactoCeleiro e o FORNECEDOR, nao o cliente. O CLIENTE e quem encomenda (ex: Cafe Stop, ALDI). NUNCA uses LactoCeleiro como cliente. '
+var PROMPT_IMPORT_ENC = 'Analisa esta imagem ou documento — e uma encomenda de queijo/requeijao. '
   + 'EXTRAI: 1) nome do cliente, 2) data de entrega, 3) todos os artigos com quantidades. '
   + 'ARTIGOS LactoCeleiro: Queijo Ovelha Grande (ref G, 4un/cx), Queijo Ovelha Pequeno (ref P, 8un/cx), '
   + 'Queijo Ovelha Apimentado Grande (ref PPP, 5un/cx), Queijo DOP (ref DOP, 4un/cx), '
@@ -8501,27 +8497,21 @@ async function _importFotoProcessar(input) {
       : [{type:'image', source:{type:'base64', media_type:mediaType, data:base64}},
          {type:'text', text:PROMPT_IMPORT_ENC}];
 
-    var gkey = localStorage.getItem('lc_gemini_key') || '';
-    if (!gkey) {
-      gkey = prompt('Chave OpenRouter (sk-or-...):\n\nopenrouter.ai/keys para obter grátis');
-      if (!gkey) { if(status){status.textContent='\u274c Chave em falta'; status.style.color='#dc2626';} return; }
-      localStorage.setItem('lc_gemini_key', gkey);
-    }
-    var imageUrl = 'data:' + mediaType + ';base64,' + base64;
-    var orContent = isPdf
-      ? [{type:'text', text: PROMPT_IMPORT_ENC + '\n[PDF em base64 — descreve o conteúdo como encomenda]'}]
-      : [{type:'image_url', image_url:{url: imageUrl}}, {type:'text', text: PROMPT_IMPORT_ENC}];
-    var resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    var resp = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {'Content-Type':'application/json','Authorization':'Bearer '+gkey},
-      body: JSON.stringify({model:'meta-llama/llama-3.2-11b-vision-instruct:free', messages:[{role:'user',content:orContent}]})
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: content }]
+      })
     });
     if (!resp.ok) {
       var errData = await resp.json().catch(function(){ return {}; });
       throw new Error((errData.error && errData.error.message) || 'HTTP ' + resp.status);
     }
     var data = await resp.json();
-    var text = ((data.choices||[])[0]?.message?.content)||'';
+    var text = (data.content || []).map(function(b) { return b.text || ''; }).join('');
     var clean = text.replace(/```json|```/g, '').trim();
     var parsed = JSON.parse(clean);
     window._importEncDados = parsed;
@@ -8593,7 +8583,7 @@ function _confirmarImportEnc() {
 
   var enc = {
     id:'enc_'+Date.now(), nr:(getEncomendas().length||0)+1,
-    cliente: dados.cliente||'Importado', obs: dados.obs||'', localEntrega: dados.localEntrega||'', estado:'aberta',
+    cliente: dados.cliente||'Importado', obs: dados.obs||'', estado:'aberta',
     data: new Date().toISOString(),
     dataFormatada: new Date().toLocaleDateString('pt-PT',{day:'numeric',month:'long'}),
     dataEntrega: dados.dataEntrega||'', dataExpedicao: dados.dataExpedicao||'',
@@ -8604,7 +8594,7 @@ function _confirmarImportEnc() {
   _fecharModalImportFoto();
   renderizarEncomendas();
   irPara('screen-enc');
-  setTimeout(function(){ abrirEncomenda(enc.id); }, 150);
+  alert('Encomenda importada!\nVerifica artigos, quantidades e datas.\nQueijos do mesmo tamanho foram somados.');
 }
 
 
@@ -9270,6 +9260,262 @@ function _guardarEdicaoUtilizador(id) {
   document.getElementById('modal-edit-user')?.remove();
   abrirGestaoUtilizadores();
 }
+
+function eliminarUtilizador(id) {
+  if (!confirm('Tens a certeza que queres eliminar este utilizador?')) return;
+  let lista = getUtilizadores();
+  lista = lista.filter(u => u.id !== id);
+  salvarUtilizadores(lista);
+  document.getElementById('modal-users')?.remove();
+  abrirGestaoUtilizadores();
+}
+
+
+var PERM_TREE = [
+  { id:'queijo', label:'Producao de Queijo', subs:[
+    { id:'queijo-ver', label:'Ver producoes' },
+    { id:'queijo-novo', label:'Novo lote' },
+    { id:'queijo-editar', label:'Editar producao' },
+    { id:'queijo-eliminar', label:'Eliminar producao' },
+  ]},
+  { id:'requeijao', label:'Producao de Requeijao', subs:[
+    { id:'rq-ver', label:'Ver producoes' },
+    { id:'rq-novo', label:'Nova producao' },
+    { id:'rq-editar', label:'Editar' },
+  ]},
+  { id:'cura', label:'Cura e Lavagem', subs:[
+    { id:'cura-ver', label:'Ver camaras' },
+    { id:'cura-transfer', label:'Transferencia' },
+    { id:'cura-lavagem', label:'Lavagem' },
+    { id:'cura-congelacao', label:'Congelacao' },
+    { id:'cura-descongelacao', label:'Descongelacao' },
+  ]},
+  { id:'saidas', label:'Saidas de Camara', subs:[
+    { id:'saidas-reg', label:'Registar saida' },
+    { id:'saidas-fechar', label:'Fechar encomenda apos saida' },
+    { id:'saidas-expedir', label:'Enviar para Expedicao apos saida' },
+  ]},
+  { id:'enc', label:'Encomendas', grupos:[
+    { label:'Encomendas', subs:[
+      { id:'enc-ver', label:'Ver lista' },
+      { id:'enc-nova', label:'Nova encomenda' },
+      { id:'enc-editar', label:'Editar encomenda' },
+      { id:'enc-eliminar', label:'Eliminar encomenda' },
+      { id:'enc-preparar', label:'Preparar / Atribuir Lotes' },
+      { id:'enc-fechar', label:'Fechar encomenda' },
+      { id:'enc-reabrir', label:'Reabrir encomenda' },
+      { id:'enc-ver-exp', label:'Ver expedidas / concluidas' },
+    ]},
+    { label:'Importar', subs:[
+      { id:'enc-imp-foto', label:'Importar por Foto / PDF' },
+      { id:'enc-imp-excel', label:'Importar por Excel' },
+    ]},
+    { label:'Accoes de envio', subs:[
+      { id:'enc-expedicao', label:'Enviar para Expedicao' },
+      { id:'enc-email', label:'Enviar Email' },
+      { id:'enc-imprimir', label:'Imprimir Guia' },
+    ]},
+  ]},
+  { id:'expedicao', label:'Expedicao', subs:[
+    { id:'exp-ver', label:'Ver lista' },
+    { id:'exp-fechar', label:'Fechar / Expedir' },
+    { id:'exp-email', label:'Enviar email' },
+  ]},
+  { id:'leite', label:'Stock de Leite', subs:[
+    { id:'leite-ver', label:'Ver entradas / saidas' },
+    { id:'leite-entrada', label:'Registar entrada' },
+    { id:'leite-saida', label:'Registar saida' },
+    { id:'leite-editar', label:'Editar registo' },
+  ]},
+  { id:'relatorios', label:'Relatorios', subs:[
+    { id:'rel-camaras', label:'Relatorio camaras' },
+    { id:'rel-historico', label:'Historico / Lotes' },
+    { id:'rel-encomendas', label:'Relatorio encomendas e saidas' },
+    { id:'rel-rendimentos', label:'Rendimentos' },
+    { id:'rel-exportar', label:'Exportar dados (Excel)' },
+  ]},
+  { id:'admin', label:'Administracao', subs:[
+    { id:'admin-users', label:'Gerir utilizadores' },
+    { id:'admin-config', label:'Configuracoes / API key' },
+    { id:'admin-sync', label:'Sync / Google Sheets' },
+    { id:'admin-del', label:'Eliminar qualquer registo' },
+    { id:'admin-datas', label:'Corrigir datas' },
+    { id:'admin-excel', label:'Importar Excel global' },
+  ]},
+];
+
+function _ptAllIds(mod) {
+  var ids = [];
+  if (mod.subs) mod.subs.forEach(function(s){ ids.push(s.id); });
+  if (mod.grupos) mod.grupos.forEach(function(g){ g.subs.forEach(function(s){ ids.push(s.id); }); });
+  return ids;
+}
+
+function _buildPermHtml(prefix, activePerms) {
+  activePerms = activePerms || [];
+  var html = '';
+  PERM_TREE.forEach(function(mod) {
+    var mId = prefix+'_m_'+mod.id;
+    var allIds = _ptAllIds(mod);
+    var allCk = allIds.every(function(id){ return activePerms.indexOf(id)>=0; });
+    html += '<div style="border:2px solid #e2e8f0;border-radius:10px;margin-bottom:8px;overflow:hidden">';
+    html += '<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f1f5f9;cursor:pointer;user-select:none" onclick="_ptToggle(\'' + mId + '\')">';
+    html += '<input type="checkbox" id="' + mId + '_all"' + (allCk?' checked':'') + ' onclick="event.stopPropagation();_ptSetAll(\'' + mId + '\',this.checked)" style="width:18px;height:18px;accent-color:#1e3a5f;flex-shrink:0;cursor:pointer">';
+    html += '<span style="font-size:13px;font-weight:800;color:#1e3a5f;flex:1">' + mod.label + '</span>';
+    html += '<span id="' + mId + '_arr" style="font-size:11px;color:#94a3b8;font-weight:700">Expandir</span>';
+    html += '</div>';
+    html += '<div id="' + mId + '_body" style="display:none">';
+    if (mod.subs) {
+      mod.subs.forEach(function(sub) {
+        var ck = activePerms.indexOf(sub.id)>=0;
+        html += '<label style="display:flex;align-items:center;gap:10px;padding:8px 14px 8px 42px;border-top:1px solid #f1f5f9;cursor:pointer;background:' + (ck?'#eff6ff':'white') + '">';
+        html += '<input type="checkbox" id="' + prefix + '_p_' + sub.id + '"' + (ck?' checked':'') + ' onchange="_ptOnChange(\'' + mId + '\')" style="width:16px;height:16px;accent-color:#1e3a5f;cursor:pointer">';
+        html += '<span style="font-size:13px;color:#374151">' + sub.label + '</span></label>';
+      });
+    }
+    if (mod.grupos) {
+      mod.grupos.forEach(function(grp, gi) {
+        var gId = mId + '_g' + gi;
+        var gIds = grp.subs.map(function(s){ return s.id; });
+        var gCk = gIds.every(function(id){ return activePerms.indexOf(id)>=0; });
+        html += '<div style="display:flex;align-items:center;gap:8px;padding:7px 14px;background:#f8fafc;border-top:2px solid #e2e8f0">';
+        html += '<input type="checkbox" id="' + gId + '_all"' + (gCk?' checked':'') + ' onclick="_ptSetGrp(\'' + gId + '\',this.checked,\'' + mId + '\')" style="width:16px;height:16px;accent-color:#0369a1;cursor:pointer">';
+        html += '<span style="font-size:11px;font-weight:800;color:#0369a1;text-transform:uppercase;letter-spacing:.05em">' + grp.label + '</span></div>';
+        grp.subs.forEach(function(sub) {
+          var ck = activePerms.indexOf(sub.id)>=0;
+          html += '<label style="display:flex;align-items:center;gap:10px;padding:8px 14px 8px 32px;border-top:1px solid #f1f5f9;cursor:pointer;background:' + (ck?'#eff6ff':'white') + '">';
+          html += '<input type="checkbox" id="' + prefix + '_p_' + sub.id + '"' + (ck?' checked':'') + ' onchange="_ptOnChange(\'' + mId + '\');_ptOnChangeGrp(\'' + gId + '\',\'' + mId + '\')" style="width:16px;height:16px;accent-color:#1e3a5f;cursor:pointer">';
+          html += '<span style="font-size:13px;color:#374151">' + sub.label + '</span></label>';
+        });
+      });
+    }
+    html += '</div></div>';
+  });
+  return html;
+}
+
+function _ptToggle(mId) {
+  var b=document.getElementById(mId+'_body'), a=document.getElementById(mId+'_arr');
+  if(!b) return;
+  var open=b.style.display==='block';
+  b.style.display=open?'none':'block';
+  if(a) a.textContent=open?'Expandir':'Colapsar';
+}
+function _ptSetAll(mId,checked) {
+  var b=document.getElementById(mId+'_body'); if(!b) return;
+  b.querySelectorAll('input[type=checkbox]').forEach(function(c){c.checked=checked;});
+}
+function _ptSetGrp(gId,checked,mId) {
+  var a=document.getElementById(gId+'_all'); if(!a) return;
+  var parent=a.closest('div').parentElement; if(!parent) return;
+  var children=Array.from(parent.children), inGrp=false, hdr=a.closest('div');
+  children.forEach(function(child){
+    if(child===hdr){inGrp=true;return;}
+    if(inGrp){
+      var nx=child.querySelector&&child.querySelector('[id$="_all"]');
+      if(nx&&nx.id!==gId+'_all'){inGrp=false;return;}
+      child.querySelectorAll('input[type=checkbox]').forEach(function(c){c.checked=checked;});
+    }
+  });
+  _ptOnChange(mId);
+}
+function _ptOnChange(mId) {
+  var b=document.getElementById(mId+'_body'), a=document.getElementById(mId+'_all');
+  if(!b||!a) return;
+  var boxes=Array.from(b.querySelectorAll('input[type=checkbox]:not([id$="_all"])'));
+  a.checked=boxes.length>0&&boxes.every(function(c){return c.checked;});
+}
+function _ptOnChangeGrp(gId,mId) {
+  var a=document.getElementById(gId+'_all'); if(!a) return;
+  var parent=a.closest('div').parentElement; if(!parent) return;
+  var children=Array.from(parent.children), inGrp=false, hdr=a.closest('div'), boxes=[];
+  children.forEach(function(child){
+    if(child===hdr){inGrp=true;return;}
+    if(inGrp){
+      var nx=child.querySelector&&child.querySelector('[id$="_all"]');
+      if(nx&&nx.id!==gId+'_all'){inGrp=false;return;}
+      child.querySelectorAll('input[type=checkbox]').forEach(function(c){boxes.push(c);});
+    }
+  });
+  a.checked=boxes.length>0&&boxes.every(function(c){return c.checked;});
+}
+function _ptGetPerms(prefix) {
+  var perms=[];
+  PERM_TREE.forEach(function(mod){
+    _ptAllIds(mod).forEach(function(id){
+      var el=document.getElementById(prefix+'_p_'+id);
+      if(el&&el.checked) perms.push(id);
+    });
+  });
+  return perms;
+}
+
+function novoUtilizador() { _abrirModalUtil(null); }
+function abrirEditarUtilizador(id) { _abrirModalUtil(id); }
+
+function _abrirModalUtil(id) {
+  var lista=getUtilizadores();
+  var u=id?lista.find(function(x){return x.id===id;}):null;
+  var permsActivas=u?(u.areas||[]):[];
+  var titulo=u?('Editar: '+u.nome):'+ Novo Utilizador';
+  var btnLabel=u?'Guardar':'Criar Utilizador';
+  var btnClick=u?("_guardarUtil('"+id+"')"):'_criarUtil()';
+  var treeHtml=_buildPermHtml('mu',permsActivas);
+  var modal=document.createElement('div');
+  modal.id='modal-util';
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;display:flex;align-items:flex-end;justify-content:center';
+  var closeBtn = '<button onclick="document.getElementById(\'modal-util\').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">X</button>';
+  modal.innerHTML=''
+    +'<div style="background:white;border-radius:20px 20px 0 0;width:100%;max-width:520px;max-height:92vh;display:flex;flex-direction:column">'
+    +'<div style="display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:2px solid #f1f5f9;flex-shrink:0">'
+    +'<div style="font-size:16px;font-weight:800;color:#1e3a5f">'+titulo+'</div>'
+    +closeBtn
+    +'</div>'
+    +'<div style="padding:14px 20px 10px;flex-shrink:0;display:flex;gap:10px">'
+    +'<div style="flex:2"><label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase">Nome</label><br>'
+    +'<input id="mu_nome" value="'+(u?u.nome:'')+'" placeholder="Nome completo" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:8px;box-sizing:border-box;margin-top:4px;font-size:14px"></div>'
+    +'<div style="flex:1"><label style="font-size:11px;font-weight:700;color:#6b7280;text-transform:uppercase">PIN</label><br>'
+    +'<input id="mu_pin" value="'+(u?u.pin:'')+'" maxlength="4" inputmode="numeric" placeholder="1234" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:8px;box-sizing:border-box;margin-top:4px;font-size:16px;font-family:monospace"></div>'
+    +'</div>'
+    +'<div style="padding:0 20px 8px;flex-shrink:0;font-size:11px;font-weight:800;color:#1e3a5f;text-transform:uppercase;letter-spacing:.06em">Permissoes</div>'
+    +'<div style="overflow-y:auto;flex:1;padding:0 20px 8px">'+treeHtml+'</div>'
+    +'<div style="padding:12px 20px;border-top:2px solid #f1f5f9;flex-shrink:0">'
+    +'<button onclick="'+btnClick+'" style="width:100%;padding:14px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer">'+btnLabel+'</button>'
+    +'</div></div>';
+  var old=document.getElementById('modal-util'); if(old) old.remove();
+  var oldU=document.getElementById('modal-users'); if(oldU) oldU.remove();
+  document.body.appendChild(modal);
+}
+
+function _criarUtil() {
+  var nome=(document.getElementById('mu_nome')||{value:''}).value.trim();
+  var pin=(document.getElementById('mu_pin')||{value:''}).value.trim();
+  if(!nome){alert('Introduza um nome.');return;}
+  if(!/^\d{4}$/.test(pin)){alert('PIN tem de ter 4 digitos.');return;}
+  var lista=getUtilizadores();
+  if(lista.some(function(u){return u.pin===pin;})){alert('PIN ja existe.');return;}
+  lista.push({id:'u_'+Date.now(),nome:nome,pin:pin,perfil:'custom',areas:_ptGetPerms('mu'),cor:'#6b7280',icon:'U'});
+  salvarUtilizadores(lista);
+  document.getElementById('modal-util').remove();
+  abrirGestaoUtilizadores();
+}
+
+function _guardarUtil(id) {
+  var nome=(document.getElementById('mu_nome')||{value:''}).value.trim();
+  var pin=(document.getElementById('mu_pin')||{value:''}).value.trim();
+  if(!nome){alert('Introduza um nome.');return;}
+  if(!/^\d{4}$/.test(pin)){alert('PIN tem de ter 4 digitos.');return;}
+  var lista=getUtilizadores();
+  var u=lista.find(function(x){return x.id===id;});
+  if(!u) return;
+  if(lista.some(function(x){return x.pin===pin&&x.id!==id;})){alert('PIN ja existe.');return;}
+  u.nome=nome; u.pin=pin; u.areas=_ptGetPerms('mu');
+  salvarUtilizadores(lista);
+  document.getElementById('modal-util').remove();
+  abrirGestaoUtilizadores();
+}
+
+
 
 function eliminarUtilizador(id) {
   if (!confirm('Tens a certeza que queres eliminar este utilizador?')) return;
@@ -14253,9 +14499,9 @@ setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
       <div id="admin-panel-config" style="display:none">
         <div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:14px;padding:16px">
           <div style="font-size:15px;font-weight:800;color:#1e40af;margin-bottom:6px">🤖 Gemini AI</div>
-          <div style="font-size:12px;color:#6b7280;margin-bottom:12px">Chave OpenRouter grátis em <a href="https://openrouter.ai/keys" target="_blank">openrouter.ai/keys</a></div>
+          <div style="font-size:12px;color:#6b7280;margin-bottom:12px">Chave para importar encomendas por foto/PDF.</div>
           <div id="gemini-key-status" style="font-size:12px;font-weight:700;margin-bottom:12px;padding:10px;border-radius:8px;background:#fef2f2;color:#dc2626">Sem chave configurada</div>
-          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Chave API OpenRouter (sk-or-...)</label>
+          <label style="font-size:11px;font-weight:700;color:#374151;display:block;margin-bottom:6px">Chave API Gemini (AIzaSy...)</label>
           <input type="password" id="admin-gemini-key-inp" placeholder="Cole aqui a chave"
             style="width:100%;padding:10px;border:2px solid #bfdbfe;border-radius:8px;font-size:13px;font-family:monospace;box-sizing:border-box;margin-bottom:12px">
           <div style="display:flex;gap:8px">
