@@ -9650,38 +9650,60 @@ function sair() {
 
 // --- GESTÃO DE UTILIZADORES (Admin) --
 function abrirGestaoUtilizadores() {
-  const lista = getUtilizadores();
-  const html = `
-    <div id="modal-users" style="position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center">
-      <div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <div style="font-size:17px;font-weight:800;color:#1e3a5f">👥 Gerir Utilizadores</div>
-          <button onclick="document.getElementById('modal-users').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">✕</button>
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
-          ${lista.map(u => `
-            <div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:10px 12px">
-              <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
-                <div style="width:32px;height:32px;border-radius:50%;background:${u.cor};display:flex;align-items:center;justify-content:center;font-size:15px">${u.icon}</div>
-                <div style="flex:1">
-                  <div style="font-weight:700;font-size:13px">${u.nome}</div>
-                  <div style="font-size:11px;color:var(--texto-suave)">${PERFIS[u.perfil]?.label||u.perfil} · PIN: ${u.pin}</div>
-                </div>
-                <button onclick="editarUtilizador('${u.id}')" style="padding:6px 10px;background:#eff6ff;color:#1e40af;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">✏️ Editar</button>
-                ${u.id!=='jose'&&temPermissao('admin')?`<button onclick="eliminarUtilizador('${u.id}')" style="padding:6px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">🗑️</button>`:''}
-              </div>
-              <div style="display:flex;flex-wrap:wrap;gap:4px">
-                ${(u.areas||PERFIS[u.perfil]?.areas||[]).map(a=>`<span style="font-size:10px;background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 6px">${a}</span>`).join('')}
-              </div>
-            </div>
-          `).join('')}
-        </div>
-        <button onclick="novoUtilizador()" style="width:100%;padding:14px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">+ Novo Utilizador</button>
-      </div>
-    </div>
-  `;
-  document.body.insertAdjacentHTML('beforeend', html);
+  var lista = getUtilizadores();
+
+  // Remover modal anterior
+  var old = document.getElementById('modal-users');
+  if (old) old.remove();
+
+  // Construir lista de utilizadores
+  var listaHtml = '';
+  lista.forEach(function(u) {
+    var areasArr = u.areas || (PERFIS[u.perfil] ? PERFIS[u.perfil].areas : []) || [];
+    var tags = areasArr.map(function(a){ return '<span style="font-size:10px;background:#dbeafe;color:#1e40af;border-radius:4px;padding:2px 6px">' + a + '</span>'; }).join('');
+    var btnElim = (u.id !== 'jose' && temPermissao('admin'))
+      ? '<button data-elim="' + u.id + '" style="padding:6px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">&#x1F5D1;</button>'
+      : '';
+    listaHtml += '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:10px 12px;margin-bottom:8px">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">'
+      + '<div style="width:32px;height:32px;border-radius:50%;background:' + u.cor + ';display:flex;align-items:center;justify-content:center;font-size:15px">' + u.icon + '</div>'
+      + '<div style="flex:1"><div style="font-weight:700;font-size:13px">' + u.nome + '</div>'
+      + '<div style="font-size:11px;color:#9ca3af">' + (PERFIS[u.perfil] ? PERFIS[u.perfil].label : u.perfil) + ' &middot; PIN: ' + u.pin + '</div></div>'
+      + '<button data-editar="' + u.id + '" style="padding:6px 10px;background:#eff6ff;color:#1e40af;border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer">&#x270F;&#xFE0F; Editar</button>'
+      + btnElim
+      + '</div>'
+      + '<div style="display:flex;flex-wrap:wrap;gap:4px">' + tags + '</div>'
+      + '</div>';
+  });
+
+  var d = document.createElement('div');
+  d.id = 'modal-users';
+  d.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+
+  var inner = document.createElement('div');
+  inner.id = 'modal-users-inner';
+  inner.style.cssText = 'background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto';
+  inner.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
+    + '<div style="font-size:17px;font-weight:800;color:#1e3a5f">&#x1F465; Gerir Utilizadores</div>'
+    + '<button id="btn-fechar-modal-users" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">&#x2715;</button>'
+    + '</div>'
+    + '<div id="modal-users-lista">' + listaHtml + '</div>'
+    + '<button id="btn-novo-user" style="width:100%;padding:14px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">+ Novo Utilizador</button>';
+
+  d.appendChild(inner);
+  document.body.appendChild(d);
+
+  // Event listeners
+  d.querySelector('#btn-fechar-modal-users').addEventListener('click', function(){ d.remove(); });
+  d.querySelector('#btn-novo-user').addEventListener('click', function(){ novoUtilizador(); });
+  d.querySelectorAll('[data-editar]').forEach(function(btn){
+    btn.addEventListener('click', function(){ editarUtilizador(btn.getAttribute('data-editar')); });
+  });
+  d.querySelectorAll('[data-elim]').forEach(function(btn){
+    btn.addEventListener('click', function(){ eliminarUtilizador(btn.getAttribute('data-elim')); });
+  });
 }
+
 
 function editarUtilizador(id) {
   var lista = getUtilizadores();
@@ -9691,35 +9713,61 @@ function editarUtilizador(id) {
   var readonly = u.readonly || false;
 
   var TREE = [
-    { key:'queijo', label:'&#x1F9C0; Prod. Queijo', subs:[
-      { key:'queijo-iniciar', label:'Iniciar Produ&#xe7;&#xe3;o' },
-      { key:'queijo-historico', label:'Hist&#xf3;rico Produ&#xe7;&#xf5;es' },
-      { key:'queijo-leite', label:'Entradas de Leite' }
+    { key:'queijo', label:'\uD83E\uDDC0 Prod. Queijo', subs:[
+      { key:'queijo-iniciar', label:'Iniciar Produ\xe7\xe3o' },
+      { key:'queijo-historico', label:'Hist\xf3rico Produ\xe7\xf5es', subs:[
+        { key:'queijo-historico-export', label:'Exportar Relat\xf3rio' }
+      ]},
+      { key:'queijo-leite', label:'Entradas de Leite', subs:[
+        { key:'queijo-leite-movimentos', label:'Movimentos' },
+        { key:'queijo-leite-nova', label:'Nova Entrada' },
+        { key:'queijo-leite-vba', label:'Importar VBA' },
+        { key:'queijo-leite-export', label:'Exportar Relat\xf3rio' }
+      ]}
     ]},
-    { key:'requeijao', label:'&#x1F95B; Prod. Requeij&#xe3;o', subs:[
-      { key:'requeijao-iniciar', label:'Iniciar Produ&#xe7;&#xe3;o' },
-      { key:'requeijao-historico', label:'Hist&#xf3;rico' },
-      { key:'requeijao-manual', label:'Produ&#xe7;&#xe3;o Manual' }
+    { key:'requeijao', label:'\uD83E\uDD5B Prod. Requeij\xe3o', subs:[
+      { key:'requeijao-iniciar', label:'Iniciar Produ\xe7\xe3o' },
+      { key:'requeijao-historico', label:'Hist\xf3rico Produ\xe7\xf5es' },
+      { key:'requeijao-manual', label:'Produ\xe7\xe3o Manual' }
     ]},
-    { key:'cura', label:'&#x1F3E0; Cura e Lavagem', subs:[
-      { key:'cura-transferencia', label:'Transfer&#xea;ncia' },
+    { key:'cura', label:'\uD83C\uDFE0 Cura e Lavagem', subs:[
+      { key:'cura-transferencia', label:'Transfer\xeancia' },
       { key:'cura-lavagem', label:'Lavagem' },
-      { key:'cura-congelacao', label:'Congela&#xe7;&#xe3;o' },
-      { key:'cura-camaras', label:'Ver C&#xe2;maras' }
+      { key:'cura-congelacao', label:'Congela\xe7\xe3o', subs:[
+        { key:'cura-descongelacao', label:'Registar Descongela\xe7\xe3o' }
+      ]},
+      { key:'cura-camaras', label:'Ver C\xe2maras' }
     ]},
-    { key:'encomendas', label:'&#x1F4E6; Encomendas', subs:[
-      { key:'criar-enc', label:'Nova Encomenda' },
-      { key:'importar-foto', label:'Importar Foto/PDF' },
-      { key:'enc-fechar', label:'Fechar Encomenda' },
-      { key:'expedicao', label:'Enviar para Expedi&#xe7;&#xe3;o' },
-      { key:'saidas-camara', label:'Sa&#xed;das de C&#xe2;mara' },
-      { key:'ver-enc-expedidas', label:'Expedi&#xe7;&#xe3;o' },
-      { key:'ver-relatorios', label:'Relat&#xf3;rios' }
+    { key:'encomendas', label:'\uD83D\uDCE6 Encomendas', subs:[
+      { key:'enc-lista', label:'Encomendas', subs:[
+        { key:'criar-enc', label:'Nova Encomenda' },
+        { key:'importar-foto', label:'Importar Foto/PDF' },
+        { key:'enc-fechar', label:'Fechar Encomenda' },
+        { key:'expedicao', label:'Enviar para Expedi\xe7\xe3o' }
+      ]},
+      { key:'saidas-camara', label:'Sa\xeddas de C\xe2mara', subs:[
+        { key:'saidas-fechar', label:'Fechar Encomenda' },
+        { key:'saidas-expedicao', label:'Enviar para Expedi\xe7\xe3o' }
+      ]},
+      { key:'ver-enc-expedidas', label:'Expedi\xe7\xe3o' },
+      { key:'ver-relatorios', label:'Relat\xf3rios' }
     ]},
-    { key:'stock-tipo', label:'&#x1F4CA; Ver Stock por Tipo' },
-    { key:'exportar-enc', label:'&#x1F4C8; Exportar Relat&#xf3;rios' },
-    { key:'rendimentos', label:'&#x1F4B0; Rendimentos' },
-    { key:'producao-manual', label:'&#x1F527; Produ&#xe7;&#xe3;o Manual' }
+    { key:'stock-tipo', label:'\uD83D\uDCCA Ver Stock por Tipo' },
+    { key:'exportar-enc', label:'\uD83D\uDCC8 Exportar Relat\xf3rios', subs:[
+      { key:'export-entradas-pdf', label:'Entradas C\xe2maras \u2014 PDF' },
+      { key:'export-entradas-excel', label:'Entradas C\xe2maras \u2014 Excel' },
+      { key:'export-entradas-word', label:'Entradas C\xe2maras \u2014 Word' },
+      { key:'export-entradas-ver', label:'Entradas C\xe2maras \u2014 Ver' },
+      { key:'export-saidas-pdf', label:'Sa\xeddas C\xe2maras \u2014 PDF' },
+      { key:'export-saidas-excel', label:'Sa\xeddas C\xe2maras \u2014 Excel' },
+      { key:'export-saidas-word', label:'Sa\xeddas C\xe2maras \u2014 Word' },
+      { key:'export-saidas-ver', label:'Sa\xeddas C\xe2maras \u2014 Ver' },
+      { key:'export-enc-pdf', label:'Encomendas \u2014 PDF' },
+      { key:'export-enc-excel', label:'Encomendas \u2014 Excel' },
+      { key:'export-enc-word', label:'Encomendas \u2014 Word' }
+    ]},
+    { key:'rendimentos', label:'\uD83D\uDCB0 Rendimentos' },
+    { key:'producao-manual', label:'\uD83D\uDD27 Produ\xe7\xe3o Manual' }
   ];
 
   function buildRows(items, depth) {
@@ -9731,12 +9779,9 @@ function editarUtilizador(id) {
       var bg = depth === 0 ? '#dbeafe' : depth === 1 ? '#eff6ff' : '#f0fdf4';
       var fw = depth === 0 ? '800' : '600';
       var fs = depth === 0 ? '13px' : '12px';
-      var border = depth === 0 ? '2px solid #93c5fd' : '1px solid #e5e7eb';
-      html += '<label style="display:flex;align-items:center;gap:10px;'
-           +  'padding:10px 12px 10px '+pad+'px;background:'+bg+';'
-           +  'border-bottom:'+border+';cursor:pointer;user-select:none">'
-           +  '<input type="checkbox" data-perm="'+item.key+'"'+chk
-           +  ' style="width:'+(depth===0?'18':'15')+'px;height:'+(depth===0?'18':'15')+'px;accent-color:#1e3a5f;flex-shrink:0;cursor:pointer">'
+      var sz = depth === 0 ? '18' : '15';
+      html += '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px 10px '+pad+'px;background:'+bg+';border-bottom:1px solid #e5e7eb;cursor:pointer">'
+           +  '<input type="checkbox" data-perm="'+item.key+'"'+chk+' style="width:'+sz+'px;height:'+sz+'px;accent-color:#1e3a5f;flex-shrink:0;cursor:pointer">'
            +  '<span style="font-size:'+fs+';font-weight:'+fw+';color:#1e293b">'+item.label+'</span>'
            +  '</label>';
       if (item.subs) html += buildRows(item.subs, depth + 1);
@@ -9745,38 +9790,31 @@ function editarUtilizador(id) {
   }
 
   var innerHtml = '<div style="padding:16px 20px 8px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center">'
-    + '<span style="font-size:16px;font-weight:800;color:#1e3a5f">&#x270F;&#xfe0f; ' + u.nome + '</span>'
-    + '<button onclick="abrirGestaoUtilizadores()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer">&#x2190;</button>'
+    + '<span style="font-size:16px;font-weight:800;color:#1e3a5f">&#x270F;&#xFE0F; ' + u.nome + '</span>'
+    + '<button id="btn-voltar-lista" style="background:#f3f4f6;border:none;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">&#x2190; Voltar</button>'
     + '</div>'
     + '<div style="padding:16px 20px">'
     + '<label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">NOME</label>'
     + '<input id="eu-nome" value="' + u.nome + '" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:8px;margin-bottom:12px;box-sizing:border-box;font-size:14px">'
-    + '<label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">PIN (4 d&#xed;gitos)</label>'
+    + '<label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">PIN (4 d&#xED;gitos)</label>'
     + '<input id="eu-pin" value="' + u.pin + '" maxlength="4" inputmode="numeric" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:8px;margin-bottom:12px;box-sizing:border-box;font-family:monospace;font-size:20px;letter-spacing:8px">'
     + '<label style="display:flex;align-items:center;gap:10px;padding:12px;background:#fef3c7;border-radius:10px;margin-bottom:4px;cursor:pointer">'
     + '<input type="checkbox" id="eu-readonly"' + (readonly ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:#d97706">'
     + '<span style="font-size:13px;font-weight:700;color:#92400e">Modo leitura apenas</span>'
     + '</label>'
     + '</div>'
-    + '<div style="background:#1e3a5f;color:white;padding:8px 20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em">Permiss&#xf5;es</div>'
+    + '<div style="background:#1e3a5f;color:white;padding:8px 20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em">Permiss&#xF5;es</div>'
     + buildRows(TREE, 0)
     + '<div style="padding:16px 20px">'
-    + '<button onclick="_guardarEdicaoUtilizador(\'' + id + '\')" style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">&#x2713; Guardar</button>'
+    + '<button id="btn-guardar-eu" style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">&#x2713; Guardar</button>'
     + '</div>';
 
-  // Reutilizar o modal-users existente ou criar novo
   var modal = document.getElementById('modal-users');
-  if (modal) {
-    modal.querySelector('div').innerHTML = innerHtml;
-  } else {
-    var d = document.createElement('div');
-    d.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
-    d.id = 'modal-users';
-    var inner = document.createElement('div');
-    inner.style.cssText = 'background:white;border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:90vh;overflow-y:auto';
+  var inner = document.getElementById('modal-users-inner');
+  if (modal && inner) {
     inner.innerHTML = innerHtml;
-    d.appendChild(inner);
-    document.body.appendChild(d);
+    inner.querySelector('#btn-voltar-lista').addEventListener('click', function(){ abrirGestaoUtilizadores(); });
+    inner.querySelector('#btn-guardar-eu').addEventListener('click', function(){ _guardarEdicaoUtilizador(id); });
   }
 }
 
@@ -9788,8 +9826,8 @@ function _guardarEdicaoUtilizador(id) {
   var pin  = (document.getElementById('eu-pin')  || {}).value || '';
   var ro   = (document.getElementById('eu-readonly') || {}).checked || false;
   nome = nome.trim(); pin = pin.trim();
-  if (!nome) { alert('Nome obrigat&#xf3;rio.'); return; }
-  if (!/^\d{4}$/.test(pin)) { alert('PIN tem de ter 4 d&#xed;gitos.'); return; }
+  if (!nome) { alert('Nome obrigat\xf3rio.'); return; }
+  if (!/^\d{4}$/.test(pin)) { alert('PIN tem de ter 4 d\xedgitos.'); return; }
   var areas = [];
   document.querySelectorAll('#modal-users [data-perm]:checked').forEach(function(cb) {
     var k = cb.getAttribute('data-perm');
@@ -9797,9 +9835,10 @@ function _guardarEdicaoUtilizador(id) {
   });
   u.nome = nome; u.pin = pin; u.areas = areas; u.readonly = ro; u.perfil = 'custom';
   salvarUtilizadores(lista);
-  document.getElementById('modal-users')?.remove();
+  document.getElementById('modal-users').remove();
   abrirGestaoUtilizadores();
 }
+
 
 
 
