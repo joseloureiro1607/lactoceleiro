@@ -43,6 +43,7 @@ function lcPin(d) {
   lcDots();
   if (lcBuf.length === 4) {
     document.getElementById("lc-ok").style.display = "block";
+    setTimeout(lcConfirmar, 300);
   }
 }
 
@@ -434,7 +435,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
 .pin-dot.filled { background:#1e3a5f;border-color:#1e3a5f; }
 .pin-btn { padding:16px;border:none;border-radius:12px;font-size:20px;font-weight:700;background:#f1f5f9;color:#1e3a5f;cursor:pointer;transition:all 0.1s; }
 .pin-btn:active { transform:scale(0.93);background:#e2e8f0; }
-.login-user-btn { display:flex;align-items:center;gap:12px;padding:12px 16px;border:2px solid #e5e7eb;border-radius:12px;background:white;cursor:pointer;transition:all 0.15s;width:100%; }
+.login-user-btn { display:flex;align-items:center;gap:12px;padding:12px 16px;border:2px solid #bfdbfe;border-radius:12px;background:linear-gradient(135deg,#eff6ff,#dbeafe);cursor:pointer;transition:all 0.15s;width:100%;box-shadow:0 2px 6px rgba(30,58,95,0.10); }
 .login-user-btn:hover { border-color:#2d5282;background:#eff6ff; }
 .login-user-avatar { width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;color:white;flex-shrink:0; }
 
@@ -449,8 +450,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
       <div style="display:flex;align-items:center;gap:12px">
         <svg style="height:46px;width:auto" xmlns="http://www.w3.org/2000/svg" id="Layer_1" version="1.1" viewBox="0 0 402.82 234.95"><!-- Generator: Adobe Illustrator 30.1.0, SVG Export Plug-In . SVG Version: 2.1.1 Build 136) --><defs><style> .st0 { fill-rule: evenodd; } .st0, .st1 { fill: #cbb06d; } </style></defs><path class="st0" d="M176.97,92.41c-8.76,2.1-16.14,6.62-22.15,13.54-10.63,12.49-15.95,24.8-15.95,36.93,0,6.31,1.87,10.76,5.63,13.36,1.63,1.24,3.44,1.85,5.44,1.85,7.26,0,15.89-7.97,25.9-23.93-1.25,4.45-1.87,8.22-1.87,11.32s.56,5.57,1.69,7.42c2.25,3.46,5.19,5.2,8.82,5.2,7.88,0,17.58-11.49,29.08-34.51.38-.86.57-1.61.57-2.23,0-1.12-.5-1.49-1.5-1.12-.63.13-1.19.74-1.69,1.86-5.01,10.15-10.08,18.38-15.21,24.67-3.5,4.33-6.44,6.5-8.82,6.5-1.87,0-2.81-1.22-2.81-3.62s.4-5.57,1.22-9.46c.81-3.9,3.28-9.77,7.41-17.63,4.13-7.85,7.32-12.89,9.57-15.12-1.01.25-2.53.18-4.6-.18-2.06-.37-3.35-.55-3.85-.55-2.5,0-4.57.83-6.19,2.5-1.63,1.67-3.63,4.79-6.01,9.37-12.14,22.77-21.96,34.14-29.46,34.14-3.13,0-4.69-2.41-4.69-7.23s2.44-11.25,7.32-19.3c3.87-6.68,8.07-12.49,12.57-17.44,7.89-8.41,14.52-12.62,19.89-12.62,4.63,0,7.63,2.23,9.01,6.68,1.62.25,2.69-.24,3.19-1.48.5-1.24.12-2.54-1.13-3.9-4.01-3.95-8.88-5.94-14.63-5.94-2.13,0-4.38.31-6.76.93"></path><path class="st0" d="M9.29,171c-3.57-2.04-5.35-4.68-5.35-7.89,0-1.11.25-2.29.75-3.53,2.5-6.8,10.95-12.06,25.33-15.77,6.88-1.85,13.58-2.78,20.08-2.78s12.82.68,18.96,2.05c-8.89,12.49-18.52,21.22-28.9,26.17-6.88,3.21-13.26,4.82-19.14,4.82-4.25,0-8.16-1.02-11.73-3.06M122.64,58.17c6.57-12.43,13.42-23.04,20.55-31.82,9.13-11.01,16.89-16.52,23.27-16.52,4.38,0,6.57,2.36,6.57,7.06,0,16.58-6.98,32.38-20.93,47.41-13.95,15.03-29.62,24.46-47.01,28.3,5.13-10.51,10.98-22,17.55-34.43ZM152.57,2.42c-15.27,6.43-28.4,23.63-39.41,51.59l-15.95,39.71c-3.12.37-6.54.55-10.23.55s-8.01-.67-12.95-2.04c-4.94-1.36-8.85-3.74-11.73-7.15-2.88-3.4-4.75-6.71-5.63-9.93-.88-3.22-1.32-5.97-1.32-8.26s.38-4.67,1.13-7.15c3.13-10.51,8.69-18.3,16.7-23.38,4.63-2.96,9.63-4.76,15.01-5.38,1.63-.25,3.07-.62,4.32-1.11,1.25-.49,1.75-1.05,1.5-1.67-.25-.62-.94-.93-2.07-.93s-2.5.19-4.12.56c-10.26,2.35-18.74,5.82-25.44,10.39-6.69,4.57-11,9.09-12.94,13.54-1.95,4.45-2.91,8.6-2.91,12.43,0,7.3,2.63,13.86,7.88,19.67,4,4.45,9.38,7.97,16.14,10.57,6.76,2.6,14.07,3.9,21.95,3.9h2.07c-7.51,15.21-14.08,27.15-19.7,35.81-5.26-.99-11.14-1.48-17.64-1.48-18.14,0-32.53,3.1-43.16,9.28-9.38,5.32-14.07,11.5-14.07,18.55s3.57,12.3,10.7,15.77c4.13,2.1,8.85,3.16,14.17,3.16s11.41-1.67,18.3-5.01c11.51-5.44,22.58-15.52,33.21-30.24,10.39,1.98,18.67,3.74,24.87,5.29,6.19,1.55,13.51,4.14,21.95,7.79,8.45,3.64,15.04,7.55,19.8,11.69,4.75,4.14,8,8.69,9.76,13.63,1.75,4.94,2.62,9.46,2.62,13.55s-.72,7.63-2.15,10.67c-1.44,3.03-2.16,4.86-2.16,5.47s.37.93,1.12.93,2.01-.44,3.76-1.3c1.75-.87,3.28-2.44,4.6-4.73,1.31-2.3,1.97-5.1,1.97-8.44s-.76-7.37-2.26-12.07c-2.88-9.16-8.45-16.88-16.7-23.19-16.26-12.37-36.78-21.59-61.55-27.65l3.94-6.31c3.38-6.06,8.88-16.69,16.51-31.91,13.26-2.23,26.12-7.7,38.56-16.42,12.45-8.72,22.21-18.96,29.28-30.71,7.07-11.75,10.61-23,10.61-33.77,0-1.36-.07-2.78-.19-4.27-.26-3.46-2.1-6.4-5.54-8.81-3.44-2.41-7.07-3.62-10.88-3.62s-7.73.81-11.73,2.42Z"></path><path class="st0" d="M261.04,122.47c-2.63,5.2-4.69,9.09-6.19,11.69-1.51,2.6-3.72,5.85-6.66,9.74-2.94,3.9-6.04,6.74-9.29,8.54-1.38.76-2.82,1.35-4.3,1.79.05.38.08.76.08,1.16,0,.75-.1,1.48-.27,2.17,6.02-1.44,11.03-4.59,15-9.48,3.12-3.84,5.54-7.3,7.23-10.39,1.68-3.09,3.38-6.41,5.06-9.93,1.69-3.53,2.53-5.57,2.53-6.12s-.31-.99-.94-1.3c-.09-.05-.19-.07-.29-.07-.56,0-1.22.74-1.96,2.2"></path><path class="st0" d="M219.93,107.07c-3.5,4.7-6.6,10.27-9.28,16.7-2.7,6.43-4.04,12.37-4.04,17.81,0,4.45,1.53,8.39,4.6,11.78,1.29,1.44,2.96,2.55,4.96,3.38-.07-.44-.12-.89-.12-1.36,0-2.5,1.02-4.76,2.65-6.42-1.05-2.38-1.59-5.24-1.59-8.59,0-4.38,1.13-9.3,3.38-14.75,2.25-5.44,4.56-9.83,6.94-13.18,7.51-10.63,14.2-15.96,20.08-15.96,3,0,4.5,1.8,4.5,5.38s-2.19,7.97-6.57,13.17c.87.87,1.91,1.3,3.1,1.3s2.65-.8,4.41-2.41c3.5-2.97,5.25-6.56,5.25-10.76,0-2.85-1.03-5.35-3.09-7.52-2.07-2.16-5.41-3.24-10.04-3.24-9.51,0-17.89,4.89-25.15,14.66"></path><path class="st0" d="M281.49,91.3h8.82c-5.89,9.53-12.2,17.76-18.96,24.68,5.26-12.99,8.63-21.21,10.14-24.68M297.54,59.01c2.81-3.96,4.91-5.94,6.28-5.94.87,0,1.32,1.24,1.32,3.72,0,5.69-4.13,15.83-12.39,30.43h-9.38c6.63-14.85,11.35-24.24,14.17-28.21ZM295.19,49.45c-3.25,2.29-6.82,6.71-10.7,13.26-3.88,6.56-8.08,14.73-12.58,24.5h-11.25c-.63,0-1.1.34-1.41,1.02-.31.67-.37,1.35-.18,2.04.18.68.59,1.02,1.22,1.02h9.76c-10.01,24.12-15.01,41.32-15.01,51.59,0,4.33,1.25,7.92,3.75,10.76,2.5,2.84,5.69,4.27,9.57,4.27,7.63,0,14.83-5.39,21.58-16.14,2.38-3.59,5.63-9.66,9.76-18.19.5-1.24.69-2.13.56-2.69-.12-.56-.54-.71-1.22-.47-.69.25-1.28.93-1.78,2.05-7.26,14.23-13.89,23.57-19.89,28.02-2.63,1.48-5,2.22-7.14,2.22-1.87,0-3.25-.8-4.13-2.41-.87-1.61-1.31-3.19-1.31-4.73s.19-3.12.57-4.73l4.31-18.93c9.76-8.91,18.08-19.12,24.96-30.62h10.88c.63,0,1.1-.34,1.41-1.02.32-.69.38-1.37.19-2.04-.19-.68-.59-1.02-1.22-1.02h-9.01c2.75-5.2,5.57-10.82,8.45-16.89,2.88-6.06,4.32-11.23,4.32-15.5s-1.44-7.08-4.32-8.45c-.63-.24-1.66-.37-3.1-.37s-3.79,1.15-7.04,3.43Z"></path><path class="st0" d="M302.51,145.3c0-5.69,2.19-12.99,6.56-21.9,3.63-7.67,7.76-13.73,12.4-18.19,4.62-4.45,8.63-6.68,12.01-6.68,4.62,0,6.93,3.03,6.93,9.09s-1.56,12.24-4.69,18.56c-2.75,5.69-5.19,10.08-7.32,13.17.25-.99.38-1.95.38-2.88s-.54-1.95-1.6-3.06c-1.07-1.11-2.41-1.67-4.04-1.67-4.13,0-6.32,2.67-6.57,7.98,0,3.22,1,6.24,3,9.09-3.88,3.35-7.38,5.01-10.51,5.01-4.38,0-6.56-2.84-6.56-8.53M311.98,101.87c-6.82,6.06-12.1,13.42-15.86,22.08-2.75,5.94-4.13,11.51-4.13,16.7,0,11.38,4.56,17.07,13.7,17.07,4.88,0,10.19-2.1,15.95-6.31,2.87,3.23,6.87,4.83,12.01,4.83,2.75,0,5.69-.93,8.82-2.78,1.24-.75,2.56-1.79,3.94-3.15,1.38-1.37,2.54-2.6,3.48-3.71.94-1.12,2-2.6,3.19-4.46,1.19-1.85,2.13-3.34,2.81-4.45.69-1.11,1.5-2.62,2.44-4.54.94-1.92,1.59-3.25,1.97-3.99.37-.75.94-1.98,1.68-3.71l1.13-2.6c.25-.49.38-.92.38-1.3,0-.98-.63-1.41-1.88-1.3-.63,0-1.07.28-1.31.84-.25.56-.97,2.11-2.16,4.64-1.19,2.53-2.16,4.48-2.91,5.84-.75,1.36-1.94,3.5-3.56,6.4-1.63,2.91-4.32,6.27-8.07,10.11-3,3.34-6.19,5.01-9.57,5.01-4.25,0-7.2-1.55-8.82-4.64,7-6.56,12.25-13.85,15.76-21.9,2.74-5.94,4.13-11.51,4.13-16.71,0-11.38-4.57-17.06-13.7-17.06-6.13,0-12.6,3.03-19.42,9.09Z"></path><polygon class="st1" points="90.36 182.33 90.36 195.81 112.36 195.81 112.36 207.56 90.36 207.56 90.36 221.84 115.12 221.84 115.12 234.31 74.62 234.31 74.62 169.96 115.12 169.96 115.12 182.33 90.36 182.33"></polygon><polygon class="st1" points="139.79 222.39 160.78 222.39 160.78 234.31 124.05 234.31 124.05 169.96 139.79 169.96 139.79 222.39"></polygon><polygon class="st1" points="183.8 182.33 183.8 195.81 205.8 195.81 205.8 207.56 183.8 207.56 183.8 221.84 208.56 221.84 208.56 234.31 168.06 234.31 168.06 169.96 208.56 169.96 208.56 182.33 183.8 182.33"></polygon><rect class="st1" x="217.49" y="169.96" width="15.75" height="64.35"></rect><path class="st1" d="M277.51,234.31l-14.08-24.3h-3.59v24.3h-15.74v-64.35h26.88c5.16,0,9.52.88,13.07,2.63,3.56,1.76,6.23,4.18,8.01,7.24,1.78,3.06,2.67,6.57,2.67,10.51,0,4.67-1.31,8.65-3.91,11.93-2.61,3.28-6.4,5.53-11.37,6.74l15.46,25.3h-17.4ZM259.84,199.36h9.76c3.13,0,5.43-.67,6.9-2.04,1.47-1.37,2.21-3.38,2.21-6.05s-.76-4.55-2.26-6.01c-1.5-1.46-3.79-2.19-6.86-2.19h-9.76v16.29Z"></path><path class="st1" d="M36.19,169.37c-.51-.01-1.01-.05-1.53-.05-5.61,0-10.61,1.09-15.01,3.26.45.02.9.04,1.36.04,4.68,0,9.78-1.1,15.18-3.25"></path><path class="st1" d="M34.39,183.7c3.5,0,6.52.85,9.07,2.55,2.55,1.7,4.44,4.03,5.66,7.01h16.66c-1.59-7.34-5.11-13.17-10.54-17.48-1.68-1.33-3.51-2.43-5.47-3.35-1.98,1.23-3.98,2.33-5.98,3.28-7.04,3.41-13.41,5.14-18.92,5.14-4.82,0-9.22-.84-13.13-2.52-1.89,1.96-3.5,4.2-4.83,6.73-2.61,4.98-3.91,10.65-3.91,17.02s1.3,12.05,3.91,17.02c2.61,4.98,6.31,8.84,11.09,11.61,4.79,2.76,10.35,4.14,16.67,4.14,8.28,0,15.14-2.17,20.58-6.51,5.43-4.33,8.95-10.15,10.54-17.43h-16.66c-1.23,2.91-3.11,5.22-5.66,6.92-2.55,1.69-5.57,2.55-9.07,2.55-4.6,0-8.32-1.65-11.14-4.96-2.82-3.31-4.24-7.75-4.24-13.33s1.41-10.05,4.24-13.38c2.82-3.34,6.53-5.01,11.14-5.01"></path><path class="st1" d="M233.23,155.39c0,4.29-3.52,7.77-7.87,7.77s-7.86-3.48-7.86-7.77,3.52-7.78,7.86-7.78,7.87,3.48,7.87,7.78"></path><path class="st1" d="M402.82,177.44c-.01-.47-.23-.9-.61-1.17-.37-.28-.85-.38-1.3-.25-18.62,4.78-28.3,17.75-33.13,27.75-.26,5.82-1.78,11.14-4.5,15.85-1.14,1.98-2.49,3.74-3.96,5.39,3.35-2.65,5.31-5.11,6.21-6.45.09-.19.19-.34.32-.49.32-.4.53-.56.71-.75l1.18-1.17,2.39-2.31c1.59-1.55,3.2-3.1,4.7-4.76,3.03-3.28,5.87-6.76,8.56-10.35,2.73-3.56,5.34-7.23,7.72-11.05.04-.07.14-.09.21-.05.07.04.1.13.06.2-4.07,8.06-8.96,15.72-14.64,22.85-1.43,1.78-2.85,3.58-4.4,5.26-.26.28-.54.54-.81.82,31.57-9.3,31.27-39.02,31.26-39.33"></path><path class="st1" d="M364.57,200.83c-2.24-2.43-3.99-5.22-5.68-8.01-3.4-5.58-6.21-11.46-8.37-17.56-.02-.05.01-.12.07-.13.04-.02.1,0,.13.05,1.32,2.94,2.83,5.81,4.43,8.59,1.58,2.8,3.28,5.54,5.12,8.18,1.84,2.63,3.91,5.07,5.87,7.58.48.63,1,1.23,1.5,1.84.07-.2.12-.4.11-.62-2.21-33.66-20.4-35.51-21.18-35.57-.82-.07-1.57.55-1.64,1.38-2.46,27.23,20.55,35.64,20.79,35.72.11.04.22.04.34.05-.5-.48-1-.98-1.47-1.5"></path><path class="st1" d="M387.08,158.58c0-.52-.3-1.01-.75-1.27-.46-.26-1.02-.28-1.49-.03-17.41,9.1-15.36,27.03-15.34,27.21.04.27.17.51.33.72.28-.36.58-.7.85-1.06,1.34-1.77,2.7-3.55,3.91-5.41,2.4-3.76,4.48-7.74,6.2-11.88,0-.03.04-.05.06-.03.03.01.03.04.03.06-1.43,4.26-3.32,8.37-5.59,12.27-1.14,1.95-2.34,3.89-3.81,5.62-.3.33-.6.65-.9.98.14.04.28.06.43.06.17,0,.35-.03.51-.09,15.88-5.47,15.58-26.25,15.56-27.14"></path><path class="st1" d="M366.21,203.73c-.33,0-.65-.05-.98-.17-.23-.08-22-8.13-21.87-33.26-3.09-.88-6.34-1.35-9.78-1.35-6.08,0-11.61,1.42-16.62,4.24-5.01,2.82-8.96,6.73-11.88,11.74-2.92,5-4.38,10.67-4.38,16.97s1.46,11.99,4.38,17.03c2.91,5.04,6.87,8.97,11.88,11.79,5,2.82,10.54,4.23,16.62,4.23s11.61-1.41,16.61-4.23c5-2.82,8.96-6.75,11.88-11.79,2.64-4.55,4.07-9.63,4.32-15.23-.06,0-.12.03-.18.03M345.82,215.38c-3.07,3.34-7.15,5.01-12.24,5.01s-9.25-1.67-12.3-5.01c-3.04-3.33-4.55-7.82-4.55-13.47s1.52-10.21,4.55-13.52c3.04-3.3,7.14-4.96,12.3-4.96s9.25,1.66,12.29,5.01c3.04,3.34,4.55,7.83,4.55,13.47s-1.54,10.14-4.6,13.47Z"></path></svg>
         <div>
-          <h1 style="font-size:15px;font-weight:700;letter-spacing:-0.01em;line-height:1.2">APP<br>Produção</h1>
-          <div class="header-sub">LactoCeleiro</div>
+          <h1 style="font-size:15px;font-weight:700;letter-spacing:-0.01em;line-height:1.2;color:#b91c1c">APP Produção</h1>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px">
@@ -484,7 +484,7 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
     <!-- ECRÃ DE LOGIN -->
     <div class="screen active" id="screen-login">
   <div style="display:flex;flex-direction:column;align-items:center;padding:20px 20px 40px">
-    <img src="data:image/jpeg;base64,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TgPyDg9QTUNNmpYj3lCzcKeMEfypZoto3dj3pu5tuY+BSGSRH2sgJPPJ4qLahcYYOO+fzpsRKvhsD0zVkS+Zw/DdPaoLiAq3mHn0JNUnfRhdFyTatvh+XfoCelVbmRo228fLwAKhM0qts35/CnNECAxPzHr7UKNtwWgRKNvzAgk5NP2l3U5yfQUqKBIoPIFTLAQwfoM4yKTepQRJlyDgL611ln4fN3o1vPG4iuGBbnOGGeM/hWZpGnNqV0IVVhAv+sfsB6Z9TXfRosUaxxjaiAKo9AK68HR5rzlseXj69rQW5xbxz2UvkXSFW7HsasxOCOO9dRcW0NzHsnjVx7jpWFdaRNbyFrYGSLqB3H+NdU6TjqjhjUUtyLdUMq72wKVSehHPoaePlBY5wOSa556rU1jo9DnLoBZZFQE4bHHc5rv9HtDZaXb27feVct9Tya5rw3pxvtQa/mXMMTHaD/E//wBauyqsBR5Y876mmPrXaprpuFFFFegecFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFADJoY54mimRXjYYZWGQa4HxJ4YlsX+1WCtLbZ5XGTH/AIivQaKzqUo1FqbUa8qTujxh5CACV57EHiolfccoV9wTXqGq+FtN1Elwht5T/FFwCfcdK4/U/CN9YlmRDcR9niHP4iuCdCUPM9eli6dTS9mY8R2A9c+x4pHlLEDJ3UwF432g4YdQw5pWkkJG6NPqBiufl1OsnQgR/Mf/AK9TlfkyCcY5FVWEwQAhfoBmn7nUAEg/hWbVwFd4wQ4UEj9alHzKDgKCMjNQhZZWxEmOxOK0dP0e5u5AIY3kOeW/hH40ct9FuJyjFXbKQiDdTg+1a+kaPPqUwRFMcK/fkPb6e9dFp3hSCFhLeSGV/wC4vC/4mugiijhjEcSKiL0VRgCuyjgpN3qfcefXx8UrU9+4y0tYbK3WC3QJGvb19zU1FFekkkrI8ltt3YUUUUxEU1vFNG6SICHGDxzWIPD0wbb9qDR56kEHFdBRUTpxnuXCpKGxHbwR20CQwqFRBgAVJRRVpW0RLd9WFFFFAgooooAKKKKACiiigAooooAKKKKACiiigAooooAKKKKACiiigCtc6dZXX/HxawyH1ZBn86z5/DGmSrhImhx02H/GtmiolShP4kaRqzj8LOaPhCHeCLpsd8oM1Zi8LafHy29j68Ctyis1haS+yW8VWf2ilBpNhAQUtkJHduauKoUYUAD0FLRWsYxjsjKUnLdhRRRVEhRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAFFFFABRRRQAUUUUAf//Z" style="width:260px;height:220px;object-fit:contain;margin-bottom:8px">
+    
     <div style="font-size:26px;font-weight:800;color:#1e3a5f;margin-bottom:2px">LactoCeleiro</div>
     <div style="font-size:13px;color:#6b7280;margin-bottom:20px">APP Produção</div>
     <div style="background:#fff;border-radius:20px;padding:20px;width:100%;max-width:340px;box-shadow:0 4px 20px rgba(0,0,0,0.1)">
@@ -9685,162 +9685,135 @@ function abrirGestaoUtilizadores() {
 }
 
 function editarUtilizador(id) {
-  var lista = getUtilizadores();
-  var u = lista.find(function(x){ return x.id === id; });
+  const lista = getUtilizadores();
+  const u = lista.find(x => x.id === id);
   if (!u) return;
-  var areas = u.areas || PERFIS[u.perfil]?.areas || [];
-  var readonly = u.readonly || false;
+  const areas = u.areas || PERFIS[u.perfil]?.areas || [];
+  const readonly = u.readonly || false;
 
-  var TREE = [
+  const TREE = [
     { key:'queijo', label:'🧀 Produção Queijo', subs:[
-      { key:'queijo-iniciar', label:'Iniciar Produção' },
-      { key:'queijo-historico', label:'Histórico Produções', subs:[
-        { key:'queijo-historico-export', label:'Exportar Relatório' }
-      ]},
-      { key:'queijo-leite', label:'Entradas de Leite', subs:[
-        { key:'queijo-leite-movimentos', label:'Movimentos' },
-        { key:'queijo-leite-nova', label:'Nova Entrada' },
-        { key:'queijo-leite-vba', label:'Importar VBA' },
-        { key:'queijo-leite-export', label:'Exportar Relatório' }
-      ]}
+      { key:'queijo-ver',    label:'Ver Lotes' },
+      { key:'queijo-criar',  label:'Criar / Editar Lote' },
+      { key:'eliminar-prod', label:'Eliminar Produções' }
     ]},
     { key:'requeijao', label:'🥛 Produção Requeijão', subs:[
-      { key:'requeijao-iniciar', label:'Iniciar Produção' },
-      { key:'requeijao-historico', label:'Histórico Produções' },
-      { key:'requeijao-manual', label:'Produção Manual' }
+      { key:'requeijao-ver',   label:'Ver Lotes' },
+      { key:'requeijao-criar', label:'Criar / Editar Lote' }
     ]},
     { key:'cura', label:'🏠 Cura e Lavagem', subs:[
-      { key:'cura-transferencia', label:'Transferência' },
-      { key:'cura-lavagem', label:'Lavagem' },
-      { key:'cura-congelacao', label:'Congelação', subs:[
-        { key:'cura-descongelacao', label:'Registar Descongelação' }
-      ]},
-      { key:'cura-camaras', label:'Ver Câmaras' }
+      { key:'cura-ver',        label:'Ver Câmaras' },
+      { key:'cura-transferir', label:'Transferir' },
+      { key:'cura-lavar',      label:'Lavagem' }
     ]},
     { key:'encomendas', label:'📦 Encomendas', subs:[
-      { key:'enc-lista', label:'Encomendas', subs:[
-        { key:'criar-enc', label:'Nova Encomenda' },
-        { key:'importar-foto', label:'Importar Foto/PDF' },
-        { key:'enc-fechar', label:'Fechar Encomenda' },
-        { key:'expedicao', label:'Enviar para Expedição' }
-      ]},
-      { key:'saidas-camara', label:'Saídas de Câmara', subs:[
-        { key:'saidas-fechar', label:'Fechar Encomenda' },
-        { key:'saidas-expedicao', label:'Enviar para Expedição' }
-      ]},
-      { key:'ver-enc-expedidas', label:'Expedição' },
-      { key:'ver-relatorios', label:'Relatórios' }
+      { key:'criar-enc',         label:'Ver / Criar Encomendas' },
+      { key:'saidas-camara',     label:'Saídas de Câmara' },
+      { key:'expedicao',         label:'Expedição' },
+      { key:'ver-enc-expedidas', label:'Ver Expedições' },
+      { key:'ver-relatorios',    label:'Relatórios' },
+      { key:'exportar-enc',      label:'Exportar Excel' },
+      { key:'importar-foto',     label:'Importar Foto / PDF' }
     ]},
-    { key:'stock-tipo', label:'📊 Ver Stock por Tipo' },
-    { key:'exportar-enc', label:'📈 Exportar Relatórios', subs:[
-      { key:'export-entradas-pdf', label:'Entradas Câmaras — PDF' },
-      { key:'export-entradas-excel', label:'Entradas Câmaras — Excel' },
-      { key:'export-saidas-pdf', label:'Saídas Câmaras — PDF' },
-      { key:'export-saidas-excel', label:'Saídas Câmaras — Excel' },
-      { key:'export-enc-pdf', label:'Encomendas — PDF' },
-      { key:'export-enc-excel', label:'Encomendas — Excel' }
-    ]},
-    { key:'rendimentos', label:'💰 Rendimentos' },
-    { key:'producao-manual', label:'🔧 Produção Manual' }
+    { key:'admin', label:'⚙️ Administração', subs:[
+      { key:'eliminar', label:'Eliminar Registos' }
+    ]}
   ];
 
-  function buildLevel(items, depth) {
-    var indent = depth * 16;
-    var html = '';
-    items.forEach(function(item) {
-      var checked = areas.includes(item.key);
-      var hasSubs = item.subs && item.subs.length > 0;
-      var bgColor = depth === 0 ? '#eff6ff' : depth === 1 ? '#f8fafc' : '#f0fdf4';
-      var borderColor = depth === 0 ? '#bfdbfe' : depth === 1 ? '#e5e7eb' : '#bbf7d0';
-      var fontSize = depth === 0 ? '13px' : depth === 1 ? '12px' : '11px';
-      var fontWeight = depth === 0 ? '800' : '600';
-      // Nível 0 começa expandido, sub-níveis fechados
-      var subsDisplay = depth === 0 ? 'block' : 'none';
-      var arrow = depth === 0 ? '▼' : '▶';
+  function buildTree() {
+    return TREE.map(m => {
+      const mOn = areas.includes(m.key);
+      const subsHtml = m.subs.map(s => {
+        const sOn = areas.includes(s.key);
+        return `<label style="display:flex;align-items:center;gap:10px;padding:8px 12px 8px 36px;background:#f8fafc;border-top:1px solid #f0f4f8;cursor:pointer">
+          <input type="checkbox" data-perm="${s.key}" ${sOn?'checked':''} style="width:16px;height:16px;accent-color:#1e40af;flex-shrink:0;cursor:pointer">
+          <span style="font-size:12px;color:#374151">${s.label}</span>
+        </label>`;
+      }).join('');
 
-      html += '<div style="margin-bottom:4px">'
-        + '<div style="display:flex;align-items:center;background:'+bgColor+';border:1.5px solid '+borderColor+';border-radius:8px;padding:8px 10px 8px '+(10+indent)+'px;gap:8px">'
-        + '<input type="checkbox" data-perm="'+item.key+'" '+(checked?'checked':'')+' onchange="_euToggle(this)" style="width:'+(depth===0?'18':'16')+'px;height:'+(depth===0?'18':'16')+'px;accent-color:#1e3a5f;flex-shrink:0;cursor:pointer">'
-        + '<span style="font-size:'+fontSize+';font-weight:'+fontWeight+';color:#1e3a5f;flex:1">'+item.label+'</span>';
-
-      if (hasSubs) {
-        html += '<button type="button" onclick="_euExpand(this)" style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:12px;padding:2px 4px">'+arrow+'</button>';
-      }
-      html += '</div>';
-
-      if (hasSubs) {
-        html += '<div class="eu-children" style="display:'+subsDisplay+';margin-left:8px">'+buildLevel(item.subs, depth+1)+'</div>';
-      }
-      html += '</div>';
-    });
-    return html;
+      return `<div style="border:2px solid ${mOn?'#93c5fd':'#e5e7eb'};border-radius:12px;margin-bottom:8px;overflow:hidden">
+        <div style="display:flex;align-items:center;background:${mOn?'#eff6ff':'#f8fafc'};padding:10px 14px;gap:10px">
+          <input type="checkbox" data-perm="${m.key}" ${mOn?'checked':''} onchange="euSyncSubs(this)" style="width:18px;height:18px;accent-color:#1e3a5f;flex-shrink:0;cursor:pointer">
+          <span style="font-size:13px;font-weight:800;color:#1e3a5f;flex:1">${m.label}</span>
+          <button type="button" onclick="euExpandir(this)" style="background:none;border:none;font-size:14px;cursor:pointer;color:#6b7280;padding:2px 6px">▶</button>
+        </div>
+        <div class="eu-sub-bloco" style="display:none">${subsHtml}</div>
+      </div>`;
+    }).join('');
   }
 
-  var treeHtml = buildLevel(TREE, 0);
-
-  var html = '<div id="modal-edit-user" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;display:flex;align-items:flex-end;justify-content:center">'
-    + '<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
-    + '<div style="font-size:16px;font-weight:800;color:#1e3a5f">✏️ ' + u.nome + '</div>'
-    + '<button onclick="document.getElementById(\'modal-edit-user\').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">✕</button></div>'
-    + '<div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:#6b7280">Nome</label>'
-    + '<input id="eu-nome" value="' + u.nome + '" style="padding:10px;border:2px solid #e5e7eb;border-radius:8px;width:100%;box-sizing:border-box;margin-top:4px"></div>'
-    + '<div style="margin-bottom:14px"><label style="font-size:12px;font-weight:600;color:#6b7280">PIN (4 dígitos)</label>'
-    + '<input id="eu-pin" value="' + u.pin + '" maxlength="4" inputmode="numeric" style="padding:10px;border:2px solid #e5e7eb;border-radius:8px;width:100%;box-sizing:border-box;font-family:monospace;font-size:16px;margin-top:4px"></div>'
-    + '<label style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fef3c7;border-radius:10px;margin-bottom:16px;cursor:pointer">'
-    + '<input type="checkbox" id="eu-readonly" ' + (readonly?'checked':'') + ' style="width:20px;height:20px;accent-color:#d97706;flex-shrink:0">'
-    + '<div><div style="font-size:13px;font-weight:700;color:#92400e">Modo leitura apenas</div>'
-    + '<div style="font-size:11px;color:#b45309;margin-top:2px">Vê tudo mas não pode editar</div></div></label>'
-    + '<div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Menus e botões — clica ▶ para expandir</div>'
-    + '<div id="eu-tree" style="margin-bottom:16px">' + treeHtml + '</div>'
-    + '<button onclick="_guardarEdicaoUtilizador(\'' + id + '\')" style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">✓ Guardar</button>'
-    + '</div></div>';
+  const html = `<div id="modal-edit-user" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;display:flex;align-items:flex-end;justify-content:center">
+    <div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:16px;font-weight:800;color:#1e3a5f">✏️ ${u.nome}</div>
+        <button onclick="document.getElementById('modal-edit-user').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">✕</button>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:600;color:#6b7280">Nome</label>
+        <input id="eu-nome" value="${u.nome}" style="padding:10px;border:2px solid #e5e7eb;border-radius:8px;width:100%;box-sizing:border-box;margin-top:4px">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:600;color:#6b7280">PIN (4 dígitos)</label>
+        <input id="eu-pin" value="${u.pin}" maxlength="4" inputmode="numeric" style="padding:10px;border:2px solid #e5e7eb;border-radius:8px;width:100%;box-sizing:border-box;font-family:monospace;font-size:16px;margin-top:4px">
+      </div>
+      <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fef3c7;border-radius:10px;margin-bottom:16px;cursor:pointer">
+        <input type="checkbox" id="eu-readonly" ${readonly?'checked':''} style="width:20px;height:20px;accent-color:#d97706;flex-shrink:0">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#92400e">Modo leitura apenas</div>
+          <div style="font-size:11px;color:#b45309;margin-top:2px">Vê tudo mas não pode editar</div>
+        </div>
+      </label>
+      <div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Menus e botões — clica ▶ para expandir</div>
+      ${buildTree()}
+      <button onclick="_guardarEdicaoUtilizador('${id}')" style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px">✓ Guardar</button>
+    </div>
+  </div>`;
 
   document.getElementById('modal-users')?.remove();
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
-function _euExpand(btn) {
-  var children = btn.closest('div').parentElement.nextElementSibling;
-  if (!children) return;
-  var open = children.style.display !== 'none';
-  children.style.display = open ? 'none' : 'block';
-  btn.textContent = open ? '▶' : '▼';
+function euExpandir(btn) {
+  const bloco = btn.closest('div').nextElementSibling;
+  if (!bloco) return;
+  const aberto = bloco.style.display !== 'none';
+  bloco.style.display = aberto ? 'none' : 'block';
+  btn.textContent = aberto ? '▶' : '▼';
 }
 
-function _euToggle(cb) {
-  // Se marcar, expandir filhos; se desmarcar, desmarcar todos os filhos
-  var children = cb.closest('div').parentElement.nextElementSibling;
-  if (children && cb.checked) {
-    children.style.display = 'block';
-    var btn = cb.parentElement.querySelector('button');
-    if (btn) btn.textContent = '▼';
-  }
-  if (children && !cb.checked) {
-    children.querySelectorAll('[data-perm]').forEach(function(c){ c.checked = false; });
-  }
+function euSyncSubs(cb) {
+  const bloco = cb.closest('div').parentElement.querySelector('.eu-sub-bloco');
+  if (bloco) bloco.querySelectorAll('[data-perm]').forEach(s => s.checked = cb.checked);
 }
 
 function _guardarEdicaoUtilizador(id) {
-  var lista = getUtilizadores();
-  var u = lista.find(function(x){ return x.id === id; });
+  const lista = getUtilizadores();
+  const u = lista.find(x => x.id === id);
   if (!u) return;
-  var nome = document.getElementById('eu-nome')?.value.trim();
-  var pin  = document.getElementById('eu-pin')?.value.trim();
-  var readonly = document.getElementById('eu-readonly')?.checked || false;
+
+  const nome = document.getElementById('eu-nome')?.value.trim();
+  const pin  = document.getElementById('eu-pin')?.value.trim();
+  const readonly = document.getElementById('eu-readonly')?.checked || false;
+
   if (!nome) { alert('Nome obrigatório.'); return; }
   if (!/^\d{4}$/.test(pin)) { alert('PIN tem de ter 4 dígitos.'); return; }
-  var areas = [];
-  document.querySelectorAll('#modal-edit-user [data-perm]:checked').forEach(function(cb) {
-    var k = cb.getAttribute('data-perm');
+
+  const areas = [];
+  document.querySelectorAll('#modal-edit-user [data-perm]:checked').forEach(cb => {
+    const k = cb.getAttribute('data-perm');
     if (k && !areas.includes(k)) areas.push(k);
   });
-  u.nome = nome; u.pin = pin; u.areas = areas; u.readonly = readonly; u.perfil = 'custom';
+
+  u.nome = nome;
+  u.pin  = pin;
+  u.areas = areas;
+  u.readonly = readonly;
+  u.perfil = 'custom';
+
   salvarUtilizadores(lista);
   document.getElementById('modal-edit-user')?.remove();
   abrirGestaoUtilizadores();
 }
-
 
 
 
@@ -13336,11 +13309,20 @@ function prepararEncomenda(id) {
     var isAdmin     = temPermissao('admin');
     var isEnc       = temPermissao('encomendas');
     var btns = '';
-    // Todos os perfis veem sempre os dois botões
-    btns += '<div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:8px">'
-      +'<button onclick="fecharEncDireto()" style="width:100%;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">\u2705 Fechar Encomenda</button>'
-      +'<button onclick="enviarParaExpedicao()" style="width:100%;padding:13px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">\ud83d\ude9a Enviar para Expedi\xe7\xe3o</button>'
-      +'</div>';
+    if (isExpedicao || isAdmin) {
+      // User expedicao: apenas "Expedir e Fechar"
+      btns += '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px;margin-bottom:8px">'
+        +'<div style="font-size:11px;font-weight:700;color:#15803d;margin-bottom:6px">\u{1F4E6} EXPEDI\xc7\xc3O \u2014 D\xe1 sa\xedda de c\xe2mara e fecha</div>'
+        +'<button onclick="expedirAgora()" style="width:100%;padding:13px;background:#15803d;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">\ud83d\ude9a Expedir e Fechar (sa\xedda + PDF)</button>'
+        +'</div>';
+    } else if (isEnc) {
+      // User encomendas: "Fechar" ou "Enviar para Expedicao"
+      btns += '<div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:8px">'
+        +'<div style="font-size:11px;font-weight:700;color:#1e40af;margin-bottom:6px">\u{1F4CB} FECHAR \u2014 D\xe1 sa\xedda de c\xe2mara</div>'
+        +'<button onclick="fecharEncDireto()" style="width:100%;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">\u2705 Fechar Encomenda (sa\xedda + PDF)</button>'
+        +'<button onclick="enviarParaExpedicao()" style="width:100%;padding:12px;background:#92400e;color:white;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer">\ud83d\udce6 Enviar para Expedi\xe7\xe3o (sem sa\xedda)</button>'
+        +'</div>';
+    }
     extraDiv.innerHTML = btns;
   }
 
