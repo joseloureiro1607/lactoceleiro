@@ -8466,7 +8466,9 @@ function abrirImportarFotoEnc() {
   document.body.appendChild(modal);
 }
 
-async function _importFotoProcessar(file) {
+async function _importFotoProcessar(inputOrFile) {
+  var file = (inputOrFile && inputOrFile.files) ? inputOrFile.files[0] : inputOrFile;
+  if (!file) return;
   var status = document.getElementById('import-foto-status');
   if (status) { status.textContent = 'A processar...'; status.style.color='#1e40af'; }
 
