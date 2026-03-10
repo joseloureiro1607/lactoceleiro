@@ -15090,7 +15090,36 @@ function voltarParaPrepararDoExp() {
 }
 
 // Chamar ao arrancar
-setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
+setTimeout(function(){ _atualizarBadgeExp(); }, 1200);var MENU_TREE = [
+  { key:'queijo', label:'🧀 Produção Queijo', subs:[
+    {key:'queijo-criar', label:'Criar Lote'},
+    {key:'queijo-ver', label:'Ver Lotes'},
+    {key:'eliminar-prod', label:'Eliminar Produções'}
+  ]},
+  { key:'requeijao', label:'🥛 Produção Requeijão', subs:[
+    {key:'requeijao-criar', label:'Criar Lote'},
+    {key:'requeijao-ver', label:'Ver Lotes'}
+  ]},
+  { key:'cura', label:'🏠 Cura e Lavagem', subs:[
+    {key:'cura-ver', label:'Ver Câmaras'},
+    {key:'cura-transferir', label:'Transferir'},
+    {key:'cura-lavar', label:'Lavagem'}
+  ]},
+  { key:'encomendas', label:'📦 Encomendas', subs:[
+    {key:'criar-enc', label:'Criar/Editar Encomendas'},
+    {key:'saidas-camara', label:'Saídas de Câmara'},
+    {key:'exportar-enc', label:'Exportar Excel'},
+    {key:'importar-foto', label:'Importar Foto/PDF'},
+    {key:'expedicao', label:'Expedição'},
+    {key:'ver-enc-expedidas', label:'Ver Expedições'},
+    {key:'ver-relatorios', label:'Relatórios'}
+  ]},
+  { key:'admin', label:'⚙️ Administração', subs:[
+    {key:'eliminar', label:'Eliminar Registos'}
+  ]}
+];
+
+
 </script>
 </body>
 </html>
