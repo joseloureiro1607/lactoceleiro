@@ -3178,12 +3178,22 @@ function confirmarSaida() {
 
   const nomeLote = lote.lote;
   const kgSaida = parseFloat((document.getElementById('saida-kg')||{value:''}).value) || null;
+  // Peso obrigatório
+  if (!kgSaida || kgSaida <= 0) {
+    mostrarStatus('status-saida','\u26a0\ufe0f Peso (kg) obrigatório — introduz o peso antes de confirmar','error');
+    return;
+  }
   // Validade: usar existente ou ler do input e guardar permanentemente no lote
   var validadeExistente = lote.validade || '';
   var validadeInput = '';
   var _vinpEl = document.getElementById('saida-validade-inp');
   if (_vinpEl && _vinpEl.value.trim()) validadeInput = _vinpEl.value.trim();
   var validade = validadeExistente || validadeInput || null;
+  // Validade obrigatória
+  if (!validade) {
+    mostrarStatus('status-saida','\u26a0\ufe0f Validade obrigatória — introduz a validade antes de confirmar','error');
+    return;
+  }
   // Guardar validade introduzida de volta no lote (persistente para futuras saídas)
   if (!validadeExistente && validade) {
     lote.validade = validade;
@@ -3288,8 +3298,8 @@ function confirmarSaida() {
         + '<button onclick="_imprimirGuiaSaidaAvulsa()" style="display:block;width:100%;padding:12px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\udda8\ufe0f Imprimir / Guardar PDF</button>'
         + '<button onclick="_emailGuiaSaidaAvulsa()" style="display:block;width:100%;padding:12px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\udce7 Enviar por Email (qualidade@lactoceleiro.pt)</button>';
 
-      if (isEncUser && !isExpUser) {
-        // Utilizador encomendas: pode enviar para expedição
+      // Todos os utilizadores com acesso a encomendas podem enviar para expedição
+      if (temPermissao('encomendas') || temPermissao('expedicao')) {
         btns += '<button onclick="_enviarSaidaAvulsaParaExpedicao()" style="display:block;width:100%;padding:12px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\ude9a Enviar para Expedi\xe7\xe3o</button>';
       }
 
@@ -9359,8 +9369,8 @@ function renderizarListaUtilizadores() {
     var onclk = 'onclick="selecionarUtilizador(' + String.fromCharCode(39) + u.id + String.fromCharCode(39) + ')"';
     html += '<button type="button" ' + onclk
       + ' style="display:flex;align-items:center;gap:12px;padding:12px 16px;'
-      + 'border:2px solid #e5e7eb;border-radius:12px;background:white;cursor:pointer;'
-      + 'width:100%;box-sizing:border-box;margin-bottom:8px;font-family:inherit">'
+      + 'border:2px solid #bfdbfe;border-radius:12px;background:linear-gradient(135deg,#eff6ff,#dbeafe);cursor:pointer;'
+      + 'width:100%;box-sizing:border-box;margin-bottom:8px;font-family:inherit;box-shadow:0 1px 4px rgba(30,58,95,.10)">'
       + '<div style="width:40px;height:40px;border-radius:50%;background:' + u.cor + ';'
       + 'display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">'
       + u.icon + '</div>'
@@ -9736,27 +9746,30 @@ function _guardarEdicaoUtilizador(id) {
   const u = lista.find(x => x.id === id);
   if (!u) return;
 
-  const ALL_AREAS = ['queijo','requeijao','cura','encomendas','criar-enc','exportar-enc',
-    'ver-enc-expedidas','ver-relatorios','eliminar','eliminar-prod','admin'];
+  const nome = document.getElementById('eu-nome')?.value.trim();
+  const pin = document.getElementById('eu-pin')?.value.trim();
+  const readonly = document.getElementById('eu-readonly')?.checked || false;
 
-  const nomeEl = document.getElementById('eu-nome');
-  const pinEl  = document.getElementById('eu-pin');
-  const nome = nomeEl ? nomeEl.value.trim() : u.nome;
-  const pin  = pinEl  ? pinEl.value.trim()  : u.pin;
+  if (!nome) { alert('Nome é obrigatório.'); return; }
+  if (!pin || pin.length !== 4 || !/^\d+$/.test(pin)) { alert('PIN deve ter 4 dígitos.'); return; }
 
-  if (!nome) { alert('Nome obrigatório.'); return; }
-  if (!/^\d{4}$/.test(pin)) { alert('PIN tem de ter 4 dígitos.'); return; }
+  // Recolher todas as checkboxes seleccionadas (menus + submenus)
+  var areas = [];
+  document.querySelectorAll('.eu-menu-perm:checked, .eu-sub-perm:checked').forEach(function(cb) {
+    var k = cb.getAttribute('data-key');
+    if (k && !areas.includes(k)) areas.push(k);
+  });
 
   u.nome = nome;
-  u.pin  = pin;
-  u.areas = ALL_AREAS.filter(a => {
-    const el = document.getElementById('eu-perm-'+a);
-    return el && el.checked;
-  });
+  u.pin = pin;
+  u.areas = areas;
+  u.readonly = readonly;
+  u.perfil = 'custom';
 
   salvarUtilizadores(lista);
   document.getElementById('modal-edit-user')?.remove();
-  abrirGestaoUtilizadores();
+  renderizarUtilizadores();
+  alert('✓ Utilizador actualizado!');
 }
 
 function eliminarUtilizador(id) {
