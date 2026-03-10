@@ -15031,12 +15031,15 @@ function _renderExpDet(exp) {
   document.getElementById('exp-det-corpo').innerHTML = html;
 
   var btns = '';
+  // Botão Resumo de Rótulos — sempre visível
+  btns += '<button onclick="abrirResumoRotulos(\'' + exp.id + '\')" style="width:100%;padding:13px;background:#7c3aed;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:10px">🏷️ Resumo de Rótulos</button>';
+
   if (editable) {
-    btns = '<button class="btn-primary" style="background:#15803d;font-size:15px;padding:16px;margin-bottom:8px" onclick="finalizarExpedicao()">\u2713 Finalizar e Expedir</button>'
+    btns += '<button class="btn-primary" style="background:#15803d;font-size:15px;padding:16px;margin-bottom:8px" onclick="finalizarExpedicao()">\u2713 Finalizar e Expedir</button>'
           +'<button class="btn-primary" style="background:#6d28d9" onclick="voltarParaPrepararDoExp()">\u270e Reeditar Lotes</button>';
   } else {
     var eId=exp.encId, xId=exp.id;
-    btns = '<button class="btn-primary" style="background:#0369a1" onclick="emailEncomenda(\''+eId+'\')">📧 Enviar por Email</button>'
+    btns += '<button class="btn-primary" style="background:#0369a1" onclick="emailEncomenda(\''+eId+'\')">📧 Enviar por Email</button>'
           +'<button class="btn-primary" style="background:#7c3aed;margin-top:6px" onclick="imprimirExpedicao(\''+xId+'\')">🖨️ Imprimir / PDF</button>'
           +'<button class="btn-primary" style="background:#15803d;margin-top:6px" onclick="expXLSX(\''+xId+'\')">📊 Exportar Excel</button>';
   }
@@ -15048,6 +15051,120 @@ function _renderExpDet(exp) {
     }
   }
   document.getElementById('exp-det-botoes').innerHTML = btns;
+}
+
+function abrirResumoRotulos(expId) {
+  var exps = getExpedicoes();
+  var exp = exps.find(function(e){ return e.id === expId; });
+  if (!exp) return;
+
+  var linhasHtml = exp.linhas.map(function(l, i) {
+    var valISO = '';
+    if (l.validade) {
+      var pts = l.validade.split('/');
+      if (pts.length === 3) valISO = pts[2] + '-' + pts[1] + '-' + pts[0];
+    }
+    var va = _vaInfo(l.validade);
+    var semVal = !l.validade;
+
+    return '<div style="background:white;border:2px solid ' + (semVal ? '#fca5a5' : '#e5e7eb') + ';border-radius:14px;padding:14px;margin-bottom:10px">'
+
+      // Cliente + Artigo
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
+      + '<div><div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:2px">Cliente</div>'
+      + '<div style="font-size:14px;font-weight:800;color:#1e3a5f">' + (exp.cliente || '—') + '</div></div>'
+      + '<div><div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:2px">Artigo</div>'
+      + '<div style="font-size:13px;font-weight:700;color:#1e293b">' + (l.artigo || exp.artigo || '—') + '</div></div>'
+      + '</div>'
+
+      // Lote + Quantidade
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">'
+      + '<div><div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:2px">Lote</div>'
+      + '<div style="font-size:15px;font-weight:900;color:#0369a1;font-family:monospace">' + (l.lote || '—') + '</div></div>'
+      + '<div><div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;margin-bottom:2px">Quantidade</div>'
+      + '<div style="font-size:15px;font-weight:900;color:#1e3a5f">' + (l.qtd || 0) + ' un &nbsp;<span style="font-size:11px;color:#9ca3af;font-weight:500">· ' + (l.caixas || 0) + ' cx</span></div></div>'
+      + '</div>'
+
+      // Validade
+      + '<div style="margin-bottom:10px">'
+      + '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'
+      + '<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase">Validade</div>'
+      + (semVal ? '<span style="font-size:10px;background:#fee2e2;color:#dc2626;border-radius:4px;padding:1px 6px;font-weight:700">⚠️ Atribuir aqui</span>' : '')
+      + '</div>'
+      + (semVal
+          ? '<input type="date" id="rr-val-' + i + '" value="" onchange="_rrValChange(this,' + i + ',\'' + expId + '\')" '
+            + 'style="width:100%;padding:10px;border:2px solid #ef4444;border-radius:10px;font-size:16px;font-weight:700;color:#1e293b;box-sizing:border-box">'
+          : '<div style="font-size:18px;font-weight:900;color:' + va.color + '">' + l.validade + va.badge + '</div>'
+        )
+      + '</div>'
+
+      // Ligação à encomenda
+      + '<div style="border-top:1px solid #f3f4f6;padding-top:8px;display:flex;justify-content:space-between;align-items:center">'
+      + '<span style="font-size:11px;color:#9ca3af">Enc. #' + exp.nr + '</span>'
+      + '<button onclick="document.getElementById(\'modal-resumo-rotulos\').remove();abrirExpDetalhe(\'' + expId + '\')" '
+      + 'style="font-size:11px;padding:4px 10px;background:#eff6ff;color:#1e40af;border:none;border-radius:6px;font-weight:700;cursor:pointer">🔗 Abrir Encomenda</button>'
+      + '</div>'
+
+      + '</div>';
+  }).join('');
+
+  var modal = document.createElement('div');
+  modal.id = 'modal-resumo-rotulos';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:flex-end;justify-content:center';
+  modal.innerHTML = '<div style="background:#f8fafc;border-radius:20px 20px 0 0;width:100%;max-width:480px;max-height:92vh;overflow-y:auto;padding:0 0 20px">'
+    // Cabeçalho
+    + '<div style="background:#7c3aed;border-radius:20px 20px 0 0;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:1">'
+    + '<div>'
+    + '<div style="color:white;font-size:16px;font-weight:800">🏷️ Resumo de Rótulos</div>'
+    + '<div style="color:rgba(255,255,255,.75);font-size:12px;margin-top:2px">Enc. #' + exp.nr + ' — ' + exp.cliente + '</div>'
+    + '</div>'
+    + '<button onclick="document.getElementById(\'modal-resumo-rotulos\').remove()" style="background:rgba(255,255,255,.2);border:none;border-radius:50%;width:34px;height:34px;font-size:18px;color:white;cursor:pointer">✕</button>'
+    + '</div>'
+    // Linhas
+    + '<div style="padding:14px 14px 0">' + linhasHtml + '</div>'
+    // Botão imprimir
+    + '<div style="padding:0 14px">'
+    + '<button onclick="_imprimirRotulos(\'' + expId + '\')" style="width:100%;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">🖨️ Imprimir / PDF</button>'
+    + '</div>'
+    + '</div>';
+
+  document.body.appendChild(modal);
+  modal.addEventListener('click', function(e){ if (e.target === modal) modal.remove(); });
+}
+
+function _rrValChange(input, idx, expId) {
+  var val = input.value;
+  if (!val) return;
+  var pts = val.split('-');
+  var valPT = pts[2] + '/' + pts[1] + '/' + pts[0];
+  input.style.border = '2px solid #86efac';
+
+  // Guardar na expedição
+  var exps = getExpedicoes();
+  var exp = exps.find(function(e){ return e.id === expId; });
+  if (!exp || !exp.linhas[idx]) return;
+  exp.linhas[idx].validade = valPT;
+  salvarExpedicoes(exps);
+
+  // Mostrar valor guardado
+  input.insertAdjacentHTML('afterend', '<div style="font-size:16px;font-weight:900;color:#15803d;margin-top:4px">' + valPT + ' ✓</div>');
+  input.style.display = 'none';
+
+  // Propagar ao lote na câmara e histórico
+  var loteNome = exp.linhas[idx].lote;
+  if (loteNome) {
+    var estado = getEstado();
+    [1,2,3,4,5,6].forEach(function(cam) {
+      if (!estado[cam]) return;
+      estado[cam].forEach(function(l) { if (l.lote === loteNome && !l.validade) l.validade = valPT; });
+    });
+    salvarEstado(estado);
+    try {
+      var hist = JSON.parse(localStorage.getItem('lc_historico_v1')||'[]');
+      hist.forEach(function(h) { if (h.lote === loteNome && !h.validade) h.validade = valPT; });
+      localStorage.setItem('lc_historico_v1', JSON.stringify(hist));
+    } catch(e) {}
+  }
 }
 
 function expToggleUn(idx) {
