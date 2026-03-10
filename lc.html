@@ -8424,7 +8424,7 @@ async function testarGemini() {
     var resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model:'openrouter/auto',max_tokens:10,messages:[{role:'user',content:'Reply: OK'}]})
+      body:JSON.stringify({model:'openrouter/free',max_tokens:10,messages:[{role:'user',content:'Reply: OK'}]})
     });
     var data = await resp.json();
     if (!resp.ok) {
@@ -8436,16 +8436,20 @@ async function testarGemini() {
   } catch(e) { if(el){el.textContent='\u274c Erro: '+e.message;el.style.color='#dc2626';el.style.background='#fef2f2';} }
 }
 
-var PROMPT_IMPORT_ENC = 'Analisa esta imagem ou documento — e uma encomenda de queijo/requeijao. '
-  + 'EXTRAI: 1) nome do cliente, 2) data de entrega, 3) todos os artigos com quantidades. '
-  + 'ARTIGOS LactoCeleiro: Queijo Ovelha Grande (ref G, 4un/cx), Queijo Ovelha Pequeno (ref P, 8un/cx), '
-  + 'Queijo Ovelha Apimentado Grande (ref PPP, 5un/cx), Queijo DOP (ref DOP, 4un/cx), '
-  + 'Queijo de Cabra (ref cabra, 8un/cx), Requeijao Embalado (9un/cx), Requeijao Embrulhado (9un/cx). '
-  + 'Se tiver marcas de distribuidores (PrimeBreands, etc) extrai os artigos equivalentes. '
-  + 'Soma quantidades do mesmo artigo/tamanho se aparecerem em multiplas linhas. '
-  + 'RESPONDE APENAS com JSON valido, sem markdown, sem texto extra: '
-  + '{"linhas":[{"artigo":"nome exacto LactoCeleiro","qtd":numero,"referencia":"G|P|PPP|DOP|cabra","caixas":numero,"obsLinha":""}],'
-  + '"cliente":"nome cliente ou vazio","obs":"obs gerais ou vazio","dataEntrega":"DD/MM/AAAA ou vazio","dataExpedicao":"DD/MM/AAAA ou vazio"}'
+var PROMPT_IMPORT_ENC = 'You are analyzing an order document for LactoCeleiro cheese company. '
+  + 'LactoCeleiro is the SUPPLIER. The CLIENT is the other company/person named in the document (NOT LactoCeleiro). '
+  + 'Extract: client name, delivery date, expedition date, items ordered with quantities. '
+  + 'Map items to LactoCeleiro products: '
+  + 'Queijo Ovelha Amanteigado Grande (G, 4/box), Queijo Ovelha Amanteigado Pequeno (P, 8/box), '
+  + 'Queijo Ovelha Curado Grande (G, 4/box), Queijo Ovelha Curado Pequeno (P, 8/box), '
+  + 'Queijo Ovelha Curado Apimentado Grande (PPP, 5/box), '
+  + 'Queijo DOP (DOP, 4/box), Queijo de Cabra (cabra, 8/box), '
+  + 'Requeijao Embalado (9/box), Requeijao Embrulhado (9/box). '
+  + 'IMPORTANT: If document has Aldi logo or mentions Aldi, client = Aldi. '
+  + 'IMPORTANT: Never set client = LactoCeleiro. LactoCeleiro is always the supplier. '
+  + 'Respond ONLY with valid JSON, no markdown, no extra text: '
+  + '{"cliente":"client name","localEntrega":"delivery location if mentioned","dataEntrega":"DD/MM/YYYY or empty","dataExpedicao":"DD/MM/YYYY or empty","obs":"general notes or empty",'
+  + '"linhas":[{"artigo":"exact LactoCeleiro product name","qtd":number,"referencia":"G|P|PPP|DOP|cabra","caixas":number,"obsLinha":""}]}'
 
 function _fecharModalImportFoto() {
   var m = document.getElementById('modal-import-foto');
@@ -8503,7 +8507,7 @@ async function _importFotoProcessar(inputOrFile) {
     var resp = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model:'openrouter/auto', max_tokens:1000, messages:[{role:'user',content:orContent}]})
+      body:JSON.stringify({model:'openrouter/free', max_tokens:1000, messages:[{role:'user',content:orContent}]})
     });
 
     if (!resp.ok) {
