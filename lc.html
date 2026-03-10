@@ -9754,6 +9754,9 @@ function editarUtilizador(id) {
       var borderColor = depth === 0 ? '#bfdbfe' : depth === 1 ? '#e5e7eb' : '#bbf7d0';
       var fontSize = depth === 0 ? '13px' : depth === 1 ? '12px' : '11px';
       var fontWeight = depth === 0 ? '800' : '600';
+      // Nível 0 começa expandido, sub-níveis fechados
+      var subsDisplay = depth === 0 ? 'block' : 'none';
+      var arrow = depth === 0 ? '▼' : '▶';
 
       html += '<div style="margin-bottom:4px">'
         + '<div style="display:flex;align-items:center;background:'+bgColor+';border:1.5px solid '+borderColor+';border-radius:8px;padding:8px 10px 8px '+(10+indent)+'px;gap:8px">'
@@ -9761,12 +9764,12 @@ function editarUtilizador(id) {
         + '<span style="font-size:'+fontSize+';font-weight:'+fontWeight+';color:#1e3a5f;flex:1">'+item.label+'</span>';
 
       if (hasSubs) {
-        html += '<button type="button" onclick="_euExpand(this)" style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:12px;padding:2px 4px">▶</button>';
+        html += '<button type="button" onclick="_euExpand(this)" style="background:none;border:none;cursor:pointer;color:#6b7280;font-size:12px;padding:2px 4px">'+arrow+'</button>';
       }
       html += '</div>';
 
       if (hasSubs) {
-        html += '<div class="eu-children" style="display:none;margin-left:8px">'+buildLevel(item.subs, depth+1)+'</div>';
+        html += '<div class="eu-children" style="display:'+subsDisplay+';margin-left:8px">'+buildLevel(item.subs, depth+1)+'</div>';
       }
       html += '</div>';
     });
