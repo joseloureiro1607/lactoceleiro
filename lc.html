@@ -1631,7 +1631,11 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         </div>
       </div>
 
-      <button class="btn-primary laranja" id="btn-confirmar-saida" onclick="confirmarSaida()">✓ Confirmar Saída</button>
+      <button class="btn-primary laranja" id="btn-confirmar-saida" onclick="confirmarSaida()" style="display:none">✓ Confirmar Saída</button>
+      <div id="saida-btns-fechar" style="display:none;margin-top:4px">
+        <button onclick="_saidaEFechar()" style="width:100%;padding:14px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">✅ Fechar Encomenda</button>
+        <button onclick="_saidaEExpedir()" style="width:100%;padding:14px;background:#7c3aed;color:white;border:none;border-radius:12px;font-size:14px;font-weight:800;cursor:pointer">🚚 Enviar para Expedição</button>
+      </div>
       <div id="saida-pos-opcoes" style="margin-top:8px;display:none"></div>
       <button class="btn-back" onclick="voltarSaidaLotes()">← Voltar</button>
       <div class="status" id="status-saida"></div>
@@ -3009,10 +3013,16 @@ function abrirFormSaida(idx, l) {
 
   encAtualId = null;
   irPara('screen-saida-form');
+  var _bf = document.getElementById('saida-btns-fechar'); if (_bf) _bf.style.display = 'block';
+  var _bc = document.getElementById('btn-confirmar-saida'); if (_bc) _bc.style.display = 'none';
   setTimeout(() => document.getElementById('saida-qtd').focus(), 200);
 }
 
 function selecionarEncSistema() {
+  var _bf = document.getElementById('saida-btns-fechar');
+  if (_bf) _bf.style.display = 'none';
+  var _bc = document.getElementById('btn-confirmar-saida');
+  if (_bc) _bc.style.display = 'block';
   const id = document.getElementById('saida-enc-sistema').value;
   if (!id) { encAtualId = null; return; }
   // Limpar outros campos
@@ -3150,6 +3160,40 @@ function _enviarSaidaAvulsaParaExpedicao() {
   }
 }
 
+
+function _saidaEFechar() {
+  // Validar campos
+  var qtd = parseInt((document.getElementById('saida-qtd')||{}).value);
+  if (!qtd || qtd <= 0) { mostrarStatus('status-saida','⚠️ Introduz a quantidade','error'); return; }
+  var valEl = document.getElementById('saida-validade-inp');
+  var e = getEstado();
+  var lote = e[camaraAtual] && e[camaraAtual][loteSaidaIdx];
+  var valExist = lote ? (lote.validade || '') : '';
+  var valInput = valEl ? valEl.value.trim() : '';
+  var validade = valExist || valInput;
+  if (!validade) { mostrarStatus('status-saida','⚠️ Validade obrigatória — introduz a validade','error'); var vb=document.getElementById('saida-validade-input-box'); if(vb) vb.style.display='block'; return; }
+  // Fazer saída e depois fechar
+  _modoFechoAposConfirmar = 'fechar';
+  confirmarSaida();
+}
+
+function _saidaEExpedir() {
+  // Validar campos
+  var qtd = parseInt((document.getElementById('saida-qtd')||{}).value);
+  if (!qtd || qtd <= 0) { mostrarStatus('status-saida','⚠️ Introduz a quantidade','error'); return; }
+  var valEl = document.getElementById('saida-validade-inp');
+  var e = getEstado();
+  var lote = e[camaraAtual] && e[camaraAtual][loteSaidaIdx];
+  var valExist = lote ? (lote.validade || '') : '';
+  var valInput = valEl ? valEl.value.trim() : '';
+  var validade = valExist || valInput;
+  if (!validade) { mostrarStatus('status-saida','⚠️ Validade obrigatória — introduz a validade','error'); var vb=document.getElementById('saida-validade-input-box'); if(vb) vb.style.display='block'; return; }
+  // Fazer saída e depois enviar para expedição
+  _modoFechoAposConfirmar = 'expedir';
+  confirmarSaida();
+}
+
+var _modoFechoAposConfirmar = null;
 function confirmarSaida() {
   const qtd = parseInt(document.getElementById('saida-qtd').value);
   if (!qtd || qtd <= 0) { mostrarStatus('status-saida','⚠️ Introduza a quantidade','error'); return; }
@@ -3263,10 +3307,19 @@ function confirmarSaida() {
       setTimeout(() => { abrirEncomenda(encAtualId); }, 2200);
     }
   } else {
-    // Saída avulsa (sem encomenda do sistema) — mostrar opções pós-saída por perfil
+    // Saída avulsa — fechar ou expedir conforme botão premido
     var _posDiv = document.getElementById('saida-pos-opcoes');
-    var _btnConf = document.getElementById('btn-confirmar-saida');
-    if (_btnConf) _btnConf.style.display = 'none';
+    var _bf2 = document.getElementById('saida-btns-fechar');
+    if (_bf2) _bf2.style.display = 'none';
+    if (_modoFechoAposConfirmar === 'fechar') {
+      _modoFechoAposConfirmar = null;
+      fecharEncDireto();
+      return;
+    } else if (_modoFechoAposConfirmar === 'expedir') {
+      _modoFechoAposConfirmar = null;
+      enviarParaExpedicao();
+      return;
+    }
     if (_posDiv) {
       var isEncUser = temPermissao('encomendas') || temPermissao('admin');
       var isExpUser = temPermissao('expedicao') || temPermissao('admin');
