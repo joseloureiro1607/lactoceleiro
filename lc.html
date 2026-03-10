@@ -9483,22 +9483,34 @@ function salvarUtilizadores(lista) {
 
 function getUtilizadorAtual() { return _utilizadorAtual; }
 
+function _getAreasUtilizador(u) {
+  if (!u) return [];
+  if (u.areas && Array.isArray(u.areas)) return u.areas;
+  if (u.areasCustum && Array.isArray(u.areasCustum)) return u.areasCustum;
+  var perfil = PERFIS[u.perfil];
+  return perfil ? (perfil.areas || []) : [];
+}
+
 function temPermissao(area) {
   var u = _utilizadorAtual;
   if (!u) {
-    // Fallback: tentar ler da sessão guardada
     try { u = JSON.parse(localStorage.getItem('lc_sessao_v1')||'null'); } catch(e) {}
   }
   if (!u) return false;
-  var areas;
-  if (u.areasCustum && Array.isArray(u.areasCustum)) {
-    areas = u.areasCustum;
-  } else {
-    var perfil = PERFIS[u.perfil];
-    if (!perfil) return false;
-    areas = perfil.areas || [];
+  return _getAreasUtilizador(u).indexOf(area) >= 0;
+}
+
+// Verifica se o utilizador pode EDITAR uma área (tem a key-edit)
+function temPermissaoEditar(area) {
+  var u = _utilizadorAtual;
+  if (!u) {
+    try { u = JSON.parse(localStorage.getItem('lc_sessao_v1')||'null'); } catch(e) {}
   }
-  return areas.includes(area);
+  if (!u) return false;
+  var areas = _getAreasUtilizador(u);
+  // admin tem sempre permissão de editar
+  if (areas.indexOf('admin') >= 0) return true;
+  return areas.indexOf(area + '-edit') >= 0;
 }
 
 // --- LOGIN --
@@ -9705,89 +9717,198 @@ function abrirGestaoUtilizadores() {
 }
 
 
+// ── Constantes globais partilhadas ────────────────────────────────────────────
+var PERMISSOES_TREE = [
+  { key:'queijo', label:'\uD83E\uDDC0 Prod. Queijo', subs:[
+    { key:'queijo-iniciar', label:'Iniciar Produ\xe7\xe3o' },
+    { key:'queijo-historico', label:'Hist\xf3rico Produ\xe7\xf5es', subs:[
+      { key:'queijo-historico-export', label:'Exportar Relat\xf3rio' }
+    ]},
+    { key:'queijo-leite', label:'Entradas de Leite', subs:[
+      { key:'queijo-leite-movimentos', label:'Movimentos' },
+      { key:'queijo-leite-nova', label:'Nova Entrada' },
+      { key:'queijo-leite-vba', label:'Importar VBA' },
+      { key:'queijo-leite-export', label:'Exportar Relat\xf3rio' }
+    ]}
+  ]},
+  { key:'requeijao', label:'\uD83E\uDD5B Prod. Requeij\xe3o', subs:[
+    { key:'requeijao-iniciar', label:'Iniciar Produ\xe7\xe3o' },
+    { key:'requeijao-historico', label:'Hist\xf3rico Produ\xe7\xf5es' },
+    { key:'requeijao-manual', label:'Produ\xe7\xe3o Manual' }
+  ]},
+  { key:'cura', label:'\uD83C\uDFE0 Cura e Lavagem', subs:[
+    { key:'cura-transferencia', label:'Transfer\xeancia' },
+    { key:'cura-lavagem', label:'Lavagem' },
+    { key:'cura-congelacao', label:'Congela\xe7\xe3o', subs:[
+      { key:'cura-descongelacao', label:'Registar Descongela\xe7\xe3o' }
+    ]},
+    { key:'cura-camaras', label:'Ver C\xe2maras' }
+  ]},
+  { key:'encomendas', label:'\uD83D\uDCE6 Encomendas', subs:[
+    { key:'enc-lista', label:'Encomendas', subs:[
+      { key:'criar-enc', label:'Nova Encomenda' },
+      { key:'importar-foto', label:'Importar Foto/PDF' },
+      { key:'enc-fechar', label:'Fechar Encomenda' },
+      { key:'expedicao', label:'Enviar para Expedi\xe7\xe3o' }
+    ]},
+    { key:'saidas-camara', label:'Sa\xeddas de C\xe2mara', subs:[
+      { key:'saidas-fechar', label:'Fechar Encomenda' },
+      { key:'saidas-expedicao', label:'Enviar para Expedi\xe7\xe3o' }
+    ]},
+    { key:'ver-enc-expedidas', label:'Expedi\xe7\xe3o' },
+    { key:'ver-relatorios', label:'Relat\xf3rios' }
+  ]},
+  { key:'stock-tipo', label:'\uD83D\uDCCA Ver Stock por Tipo' },
+  { key:'exportar-enc', label:'\uD83D\uDCC8 Exportar Relat\xf3rios', subs:[
+    { key:'export-entradas-pdf', label:'Entradas C\xe2maras \u2014 PDF' },
+    { key:'export-entradas-excel', label:'Entradas C\xe2maras \u2014 Excel' },
+    { key:'export-entradas-word', label:'Entradas C\xe2maras \u2014 Word' },
+    { key:'export-entradas-ver', label:'Entradas C\xe2maras \u2014 Ver' },
+    { key:'export-saidas-pdf', label:'Sa\xeddas C\xe2maras \u2014 PDF' },
+    { key:'export-saidas-excel', label:'Sa\xeddas C\xe2maras \u2014 Excel' },
+    { key:'export-saidas-word', label:'Sa\xeddas C\xe2maras \u2014 Word' },
+    { key:'export-saidas-ver', label:'Sa\xeddas C\xe2maras \u2014 Ver' },
+    { key:'export-enc-pdf', label:'Encomendas \u2014 PDF' },
+    { key:'export-enc-excel', label:'Encomendas \u2014 Excel' },
+    { key:'export-enc-word', label:'Encomendas \u2014 Word' }
+  ]},
+  { key:'rendimentos', label:'\uD83D\uDCB0 Rendimentos' },
+  { key:'producao-manual', label:'\uD83D\uDD27 Produ\xe7\xe3o Manual' },
+  { key:'eliminar', label:'\uD83D\uDDD1\uFE0F Eliminar Registos' },
+  { key:'eliminar-prod', label:'\uD83D\uDDD1\uFE0F Eliminar Produ\xe7\xf5es' },
+  { key:'admin', label:'\u2699\uFE0F Painel Admin' }
+];
+
+var CORES_DISPONIVEIS = ['#1e3a5f','#2563eb','#16a34a','#7c3aed','#ea580c','#dc2626','#0891b2','#db2777'];
+var ICONS_DISPONIVEIS = ['\uD83D\uDC64','\uD83D\uDC51','\uD83C\uDFED','\uD83D\uDCE6','\uD83D\uDE9A','\uD83D\uDC77','\uD83D\uDC68\u200D\uD83D\uDCBC','\uD83D\uDC6B'];
+
+function _buildTreeRows(items, areas, depth) {
+  var html = '';
+  for (var i = 0; i < items.length; i++) {
+    var item = items[i];
+    var chkVer  = areas.indexOf(item.key) >= 0 ? ' checked' : '';
+    var chkEdit = areas.indexOf(item.key + '-edit') >= 0 ? ' checked' : '';
+    var pad = 10 + depth * 20;
+    var bg  = depth === 0 ? '#dbeafe' : depth === 1 ? '#eff6ff' : '#f0fdf4';
+    var fw  = depth === 0 ? '800' : '600';
+    var fs  = depth === 0 ? '13px' : '12px';
+    var hasSubs = item.subs && item.subs.length > 0;
+    var subsId  = 'tree-subs-' + item.key.replace(/[^a-z0-9]/g,'_');
+
+    // Linha principal
+    html += '<div style="display:flex;align-items:center;gap:6px;padding:9px 10px 9px ' + pad + 'px;background:' + bg + ';border-bottom:1px solid #e5e7eb;">';
+
+    // Seta colapsável (só se tiver filhos)
+    if (hasSubs) {
+      html += '<span onclick="_treeToggle(\'' + subsId + '\',this)" style="cursor:pointer;font-size:11px;color:#64748b;width:16px;flex-shrink:0;user-select:none">▶</span>';
+    } else {
+      html += '<span style="width:16px;flex-shrink:0"></span>';
+    }
+
+    // Label
+    html += '<span style="flex:1;font-size:' + fs + ';font-weight:' + fw + ';color:#1e293b">' + item.label + '</span>';
+
+    // Checkbox Ver
+    html += '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;flex-shrink:0">'
+         +  '<input type="checkbox" data-perm="' + item.key + '"' + chkVer
+         +  ' onchange="_treeVerChange(this)"'
+         +  ' style="width:15px;height:15px;accent-color:#0369a1;cursor:pointer">'
+         +  '<span style="font-size:10px;color:#0369a1;font-weight:700">Ver</span>'
+         +  '</label>';
+
+    // Checkbox Editar
+    html += '<label style="display:flex;align-items:center;gap:4px;cursor:pointer;flex-shrink:0;margin-left:6px">'
+         +  '<input type="checkbox" data-perm="' + item.key + '-edit"' + chkEdit
+         +  ' onchange="_treeEditChange(this)"'
+         +  ' style="width:15px;height:15px;accent-color:#15803d;cursor:pointer">'
+         +  '<span style="font-size:10px;color:#15803d;font-weight:700">Editar</span>'
+         +  '</label>';
+
+    html += '</div>';
+
+    // Filhos (colapsados por defeito nos níveis > 0)
+    if (hasSubs) {
+      html += '<div id="' + subsId + '" style="display:' + (depth === 0 ? 'none' : 'none') + '">';
+      html += _buildTreeRows(item.subs, areas, depth + 1);
+      html += '</div>';
+    }
+  }
+  return html;
+}
+
+function _treeToggle(subsId, arrow) {
+  var el = document.getElementById(subsId);
+  if (!el) return;
+  var open = el.style.display !== 'none';
+  el.style.display = open ? 'none' : 'block';
+  arrow.textContent = open ? '▶' : '▼';
+}
+
+function _treeVerChange(cb) {
+  // Se desmarcar Ver, desmarca Editar também
+  if (!cb.checked) {
+    var key = cb.getAttribute('data-perm');
+    var editCb = document.querySelector('[data-perm="' + key + '-edit"]');
+    if (editCb) editCb.checked = false;
+  }
+}
+
+function _treeEditChange(cb) {
+  // Se marcar Editar, marca Ver automaticamente
+  if (cb.checked) {
+    var key = cb.getAttribute('data-perm').replace(/-edit$/, '');
+    var verCb = document.querySelector('[data-perm="' + key + '"]');
+    if (verCb) verCb.checked = true;
+  }
+}
+
+function _buildCorSelector(corAtual, prefix) {
+  var html = '<label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:6px">COR</label>'
+    + '<div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">';
+  CORES_DISPONIVEIS.forEach(function(c) {
+    var sel = c === corAtual ? 'border:3px solid #1e293b;transform:scale(1.15)' : 'border:3px solid transparent';
+    html += '<div data-cor="' + c + '" onclick="_selecionarCor(this,\'' + prefix + '\')" style="width:32px;height:32px;border-radius:50%;background:' + c + ';cursor:pointer;transition:all .15s;' + sel + '"></div>';
+  });
+  html += '</div><input type="hidden" id="' + prefix + '-cor" value="' + (corAtual || '#6b7280') + '">';
+  return html;
+}
+
+function _buildIconSelector(iconAtual, prefix) {
+  var html = '<label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:6px">\xcdCONE</label>'
+    + '<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">';
+  ICONS_DISPONIVEIS.forEach(function(ic) {
+    var sel = ic === iconAtual ? 'background:#dbeafe;border:2px solid #1e3a5f' : 'background:#f3f4f6;border:2px solid transparent';
+    html += '<div data-icon="' + ic + '" onclick="_selecionarIcon(this,\'' + prefix + '\')" style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;' + sel + '">' + ic + '</div>';
+  });
+  html += '</div><input type="hidden" id="' + prefix + '-icon" value="' + (iconAtual || '\uD83D\uDC64') + '">';
+  return html;
+}
+
+function _selecionarCor(el, prefix) {
+  var cor = el.getAttribute('data-cor');
+  el.closest('div').querySelectorAll('[data-cor]').forEach(function(d) {
+    d.style.border = '3px solid transparent'; d.style.transform = '';
+  });
+  el.style.border = '3px solid #1e293b'; el.style.transform = 'scale(1.15)';
+  document.getElementById(prefix + '-cor').value = cor;
+}
+
+function _selecionarIcon(el, prefix) {
+  var icon = el.getAttribute('data-icon');
+  el.closest('div').querySelectorAll('[data-icon]').forEach(function(d) {
+    d.style.background = '#f3f4f6'; d.style.border = '2px solid transparent';
+  });
+  el.style.background = '#dbeafe'; el.style.border = '2px solid #1e3a5f';
+  document.getElementById(prefix + '-icon').value = icon;
+}
+// ── Fim constantes globais ────────────────────────────────────────────────────
+
 function editarUtilizador(id) {
   var lista = getUtilizadores();
   var u = lista.find(function(x){ return x.id === id; });
   if (!u) return;
   var areas = u.areas || (PERFIS[u.perfil] ? PERFIS[u.perfil].areas : []) || [];
   var readonly = u.readonly || false;
-
-  var TREE = [
-    { key:'queijo', label:'\uD83E\uDDC0 Prod. Queijo', subs:[
-      { key:'queijo-iniciar', label:'Iniciar Produ\xe7\xe3o' },
-      { key:'queijo-historico', label:'Hist\xf3rico Produ\xe7\xf5es', subs:[
-        { key:'queijo-historico-export', label:'Exportar Relat\xf3rio' }
-      ]},
-      { key:'queijo-leite', label:'Entradas de Leite', subs:[
-        { key:'queijo-leite-movimentos', label:'Movimentos' },
-        { key:'queijo-leite-nova', label:'Nova Entrada' },
-        { key:'queijo-leite-vba', label:'Importar VBA' },
-        { key:'queijo-leite-export', label:'Exportar Relat\xf3rio' }
-      ]}
-    ]},
-    { key:'requeijao', label:'\uD83E\uDD5B Prod. Requeij\xe3o', subs:[
-      { key:'requeijao-iniciar', label:'Iniciar Produ\xe7\xe3o' },
-      { key:'requeijao-historico', label:'Hist\xf3rico Produ\xe7\xf5es' },
-      { key:'requeijao-manual', label:'Produ\xe7\xe3o Manual' }
-    ]},
-    { key:'cura', label:'\uD83C\uDFE0 Cura e Lavagem', subs:[
-      { key:'cura-transferencia', label:'Transfer\xeancia' },
-      { key:'cura-lavagem', label:'Lavagem' },
-      { key:'cura-congelacao', label:'Congela\xe7\xe3o', subs:[
-        { key:'cura-descongelacao', label:'Registar Descongela\xe7\xe3o' }
-      ]},
-      { key:'cura-camaras', label:'Ver C\xe2maras' }
-    ]},
-    { key:'encomendas', label:'\uD83D\uDCE6 Encomendas', subs:[
-      { key:'enc-lista', label:'Encomendas', subs:[
-        { key:'criar-enc', label:'Nova Encomenda' },
-        { key:'importar-foto', label:'Importar Foto/PDF' },
-        { key:'enc-fechar', label:'Fechar Encomenda' },
-        { key:'expedicao', label:'Enviar para Expedi\xe7\xe3o' }
-      ]},
-      { key:'saidas-camara', label:'Sa\xeddas de C\xe2mara', subs:[
-        { key:'saidas-fechar', label:'Fechar Encomenda' },
-        { key:'saidas-expedicao', label:'Enviar para Expedi\xe7\xe3o' }
-      ]},
-      { key:'ver-enc-expedidas', label:'Expedi\xe7\xe3o' },
-      { key:'ver-relatorios', label:'Relat\xf3rios' }
-    ]},
-    { key:'stock-tipo', label:'\uD83D\uDCCA Ver Stock por Tipo' },
-    { key:'exportar-enc', label:'\uD83D\uDCC8 Exportar Relat\xf3rios', subs:[
-      { key:'export-entradas-pdf', label:'Entradas C\xe2maras \u2014 PDF' },
-      { key:'export-entradas-excel', label:'Entradas C\xe2maras \u2014 Excel' },
-      { key:'export-entradas-word', label:'Entradas C\xe2maras \u2014 Word' },
-      { key:'export-entradas-ver', label:'Entradas C\xe2maras \u2014 Ver' },
-      { key:'export-saidas-pdf', label:'Sa\xeddas C\xe2maras \u2014 PDF' },
-      { key:'export-saidas-excel', label:'Sa\xeddas C\xe2maras \u2014 Excel' },
-      { key:'export-saidas-word', label:'Sa\xeddas C\xe2maras \u2014 Word' },
-      { key:'export-saidas-ver', label:'Sa\xeddas C\xe2maras \u2014 Ver' },
-      { key:'export-enc-pdf', label:'Encomendas \u2014 PDF' },
-      { key:'export-enc-excel', label:'Encomendas \u2014 Excel' },
-      { key:'export-enc-word', label:'Encomendas \u2014 Word' }
-    ]},
-    { key:'rendimentos', label:'\uD83D\uDCB0 Rendimentos' },
-    { key:'producao-manual', label:'\uD83D\uDD27 Produ\xe7\xe3o Manual' }
-  ];
-
-  function buildRows(items, depth) {
-    var html = '';
-    for (var i=0; i<items.length; i++) {
-      var item = items[i];
-      var chk = areas.indexOf(item.key) >= 0 ? ' checked' : '';
-      var pad = 12 + depth * 22;
-      var bg = depth === 0 ? '#dbeafe' : depth === 1 ? '#eff6ff' : '#f0fdf4';
-      var fw = depth === 0 ? '800' : '600';
-      var fs = depth === 0 ? '13px' : '12px';
-      var sz = depth === 0 ? '18' : '15';
-      html += '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px 10px '+pad+'px;background:'+bg+';border-bottom:1px solid #e5e7eb;cursor:pointer">'
-           +  '<input type="checkbox" data-perm="'+item.key+'"'+chk+' style="width:'+sz+'px;height:'+sz+'px;accent-color:#1e3a5f;flex-shrink:0;cursor:pointer">'
-           +  '<span style="font-size:'+fs+';font-weight:'+fw+';color:#1e293b">'+item.label+'</span>'
-           +  '</label>';
-      if (item.subs) html += buildRows(item.subs, depth + 1);
-    }
-    return html;
-  }
 
   var innerHtml = '<div style="padding:16px 20px 8px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center">'
     + '<span style="font-size:16px;font-weight:800;color:#1e3a5f">&#x270F;&#xFE0F; ' + u.nome + '</span>'
@@ -9797,14 +9918,16 @@ function editarUtilizador(id) {
     + '<label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">NOME</label>'
     + '<input id="eu-nome" value="' + u.nome + '" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:8px;margin-bottom:12px;box-sizing:border-box;font-size:14px">'
     + '<label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">PIN (4 d&#xED;gitos)</label>'
-    + '<input id="eu-pin" value="' + u.pin + '" maxlength="4" inputmode="numeric" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:8px;margin-bottom:12px;box-sizing:border-box;font-family:monospace;font-size:20px;letter-spacing:8px">'
+    + '<input id="eu-pin" value="' + u.pin + '" maxlength="4" inputmode="numeric" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:8px;margin-bottom:14px;box-sizing:border-box;font-family:monospace;font-size:20px;letter-spacing:8px">'
+    + _buildCorSelector(u.cor || '#6b7280', 'eu')
+    + _buildIconSelector(u.icon || '\uD83D\uDC64', 'eu')
     + '<label style="display:flex;align-items:center;gap:10px;padding:12px;background:#fef3c7;border-radius:10px;margin-bottom:4px;cursor:pointer">'
     + '<input type="checkbox" id="eu-readonly"' + (readonly ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:#d97706">'
     + '<span style="font-size:13px;font-weight:700;color:#92400e">Modo leitura apenas</span>'
     + '</label>'
     + '</div>'
     + '<div style="background:#1e3a5f;color:white;padding:8px 20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em">Permiss&#xF5;es</div>'
-    + buildRows(TREE, 0)
+    + _buildTreeRows(PERMISSOES_TREE, areas, 0)
     + '<div style="padding:16px 20px">'
     + '<button id="btn-guardar-eu" style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">&#x2713; Guardar</button>'
     + '</div>';
@@ -9825,6 +9948,8 @@ function _guardarEdicaoUtilizador(id) {
   var nome = (document.getElementById('eu-nome') || {}).value || '';
   var pin  = (document.getElementById('eu-pin')  || {}).value || '';
   var ro   = (document.getElementById('eu-readonly') || {}).checked || false;
+  var cor  = (document.getElementById('eu-cor')  || {}).value || '#6b7280';
+  var icon = (document.getElementById('eu-icon') || {}).value || '\uD83D\uDC64';
   nome = nome.trim(); pin = pin.trim();
   if (!nome) { alert('Nome obrigat\xf3rio.'); return; }
   if (!/^\d{4}$/.test(pin)) { alert('PIN tem de ter 4 d\xedgitos.'); return; }
@@ -9833,9 +9958,9 @@ function _guardarEdicaoUtilizador(id) {
     var k = cb.getAttribute('data-perm');
     if (k && areas.indexOf(k) < 0) areas.push(k);
   });
-  u.nome = nome; u.pin = pin; u.areas = areas; u.readonly = ro; u.perfil = 'custom';
+  u.nome = nome; u.pin = pin; u.areas = areas; u.readonly = ro; u.perfil = 'custom'; u.cor = cor; u.icon = icon;
   salvarUtilizadores(lista);
-  document.getElementById('modal-users').remove();
+  if (document.getElementById('modal-users')) document.getElementById('modal-users').remove();
   abrirGestaoUtilizadores();
 }
 
@@ -9856,70 +9981,59 @@ function eliminarUtilizador(id) {
 }
 
 function novoUtilizador() {
-  const ALL_AREAS = [
-    ['queijo','Produção Queijo'],['requeijao','Produção Requeijão'],
-    ['cura','Cura e Lavagem'],['encomendas','Encomendas'],
-    ['criar-enc','Criar/Editar Encomendas'],['exportar-enc','Exportar Encomendas'],
-    ['ver-enc-expedidas','Ver Expedições'],['ver-relatorios','Ver Relatórios'],
-    ['eliminar','Eliminar Registos'],['eliminar-prod','Eliminar Produções'],
-    ['admin','Painel Admin'],
-  ];
-  const html = `
-    <div id="modal-novo-user" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;display:flex;align-items:flex-end;justify-content:center">
-      <div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-          <div style="font-size:16px;font-weight:800;color:#1e3a5f">+ Novo Utilizador</div>
-          <button onclick="document.getElementById('modal-novo-user').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">✕</button>
-        </div>
-        <div class="form-group" style="margin-bottom:12px">
-          <label style="font-size:12px">Nome</label>
-          <input id="nu-nome" placeholder="Nome completo" style="padding:10px;border:2px solid #e5e7eb;border-radius:8px;width:100%;box-sizing:border-box">
-        </div>
-        <div class="form-group" style="margin-bottom:12px">
-          <label style="font-size:12px">PIN (4 dígitos)</label>
-          <input id="nu-pin" maxlength="4" inputmode="numeric" placeholder="1234" style="padding:10px;border:2px solid #e5e7eb;border-radius:8px;width:100%;box-sizing:border-box;font-family:monospace;font-size:16px">
-        </div>
-        <div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Permissões</div>
-        <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:16px">
-          ${ALL_AREAS.map(([key,label])=>`
-            <label style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;cursor:pointer">
-              <input type="checkbox" id="nu-perm-${key}" style="width:18px;height:18px;cursor:pointer;accent-color:#1e3a5f">
-              <span style="font-size:13px;font-weight:500">${label}</span>
-            </label>
-          `).join('')}
-        </div>
-        <button onclick="_criarNovoUtilizador()" style="width:100%;padding:14px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">✓ Criar Utilizador</button>
-      </div>
-    </div>
-  `;
-  document.getElementById('modal-users')?.remove();
-  document.body.insertAdjacentHTML('beforeend', html);
+  var corDefault = '#6b7280';
+  var iconDefault = '\uD83D\uDC64';
+  var innerHtml = '<div style="padding:16px 20px 8px;border-bottom:1px solid #e5e7eb;display:flex;justify-content:space-between;align-items:center">'
+    + '<span style="font-size:16px;font-weight:800;color:#1e3a5f">+ Novo Utilizador</span>'
+    + '<button id="btn-voltar-lista" style="background:#f3f4f6;border:none;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer">&#x2190; Voltar</button>'
+    + '</div>'
+    + '<div style="padding:16px 20px">'
+    + '<label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">NOME</label>'
+    + '<input id="nu-nome" placeholder="Nome completo" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:8px;margin-bottom:12px;box-sizing:border-box;font-size:14px">'
+    + '<label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">PIN (4 d\xedgitos)</label>'
+    + '<input id="nu-pin" maxlength="4" inputmode="numeric" placeholder="1234" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:8px;margin-bottom:14px;box-sizing:border-box;font-family:monospace;font-size:20px;letter-spacing:8px">'
+    + _buildCorSelector(corDefault, 'nu')
+    + _buildIconSelector(iconDefault, 'nu')
+    + '<label style="display:flex;align-items:center;gap:10px;padding:12px;background:#fef3c7;border-radius:10px;margin-bottom:4px;cursor:pointer">'
+    + '<input type="checkbox" id="nu-readonly" style="width:18px;height:18px;accent-color:#d97706">'
+    + '<span style="font-size:13px;font-weight:700;color:#92400e">Modo leitura apenas</span>'
+    + '</label>'
+    + '</div>'
+    + '<div style="background:#1e3a5f;color:white;padding:8px 20px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em">Permiss\xf5es</div>'
+    + _buildTreeRows(PERMISSOES_TREE, [], 0)
+    + '<div style="padding:16px 20px">'
+    + '<button id="btn-criar-nu" style="width:100%;padding:14px;background:#1e3a5f;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">&#x2713; Criar Utilizador</button>'
+    + '</div>';
+
+  var modal = document.getElementById('modal-users');
+  var inner = document.getElementById('modal-users-inner');
+  if (modal && inner) {
+    inner.innerHTML = innerHtml;
+    inner.querySelector('#btn-voltar-lista').addEventListener('click', function(){ abrirGestaoUtilizadores(); });
+    inner.querySelector('#btn-criar-nu').addEventListener('click', function(){ _criarNovoUtilizador(); });
+  }
 }
 
 function _criarNovoUtilizador() {
-  const ALL_AREAS_KEYS = ['queijo','requeijao','cura','encomendas','criar-enc','exportar-enc',
-    'ver-enc-expedidas','ver-relatorios','eliminar','eliminar-prod','admin'];
-  const nome = (document.getElementById('nu-nome')?.value||'').trim();
-  const pin  = (document.getElementById('nu-pin')?.value||'').trim();
+  var nome = (document.getElementById('nu-nome') || {}).value || '';
+  var pin  = (document.getElementById('nu-pin')  || {}).value || '';
+  var cor  = (document.getElementById('nu-cor')  || {}).value || '#6b7280';
+  var icon = (document.getElementById('nu-icon') || {}).value || '\uD83D\uDC64';
+  var ro   = (document.getElementById('nu-readonly') || {}).checked || false;
+  nome = nome.trim(); pin = pin.trim();
   if (!nome) { alert('Introduza um nome.'); return; }
-  if (!/^\d{4}$/.test(pin)) { alert('PIN tem de ter 4 dígitos.'); return; }
+  if (!/^\d{4}$/.test(pin)) { alert('PIN tem de ter 4 d\xedgitos.'); return; }
 
-  const areas = ALL_AREAS_KEYS.filter(a => {
-    const el = document.getElementById('nu-perm-'+a);
-    return el && el.checked;
+  var areas = [];
+  document.querySelectorAll('#modal-users [data-perm]:checked').forEach(function(cb) {
+    var k = cb.getAttribute('data-perm');
+    if (k && areas.indexOf(k) < 0) areas.push(k);
   });
 
-  const lista = getUtilizadores();
-  const id = 'u_' + Date.now();
-  lista.push({
-    id, nome, pin,
-    perfil: 'custom',
-    areas,
-    cor: '#6b7280',
-    icon: '👤'
-  });
+  var lista = getUtilizadores();
+  var id = 'u_' + Date.now();
+  lista.push({ id: id, nome: nome, pin: pin, perfil: 'custom', areas: areas, cor: cor, icon: icon, readonly: ro });
   salvarUtilizadores(lista);
-  document.getElementById('modal-novo-user')?.remove();
   abrirGestaoUtilizadores();
 }
 
@@ -10017,12 +10131,90 @@ function adminRenderUtilizadores() {
 }
 
 function adminNovoUtilizador() {
-  adminModalUtilizador(null);
+  _renderAdminForm(null);
 }
 
 function adminEditarUtilizador(id) {
-  const u = getUtilizadores().find(x => x.id === id);
-  if (u) adminModalUtilizador(u);
+  _renderAdminForm(id);
+}
+
+function _renderAdminForm(id) {
+  var isNovo = !id;
+  var lista = getUtilizadores();
+  var u = isNovo ? null : lista.find(function(x){ return x.id === id; });
+  if (!isNovo && !u) return;
+  var areas = u ? (u.areas || (PERFIS[u.perfil] ? PERFIS[u.perfil].areas : []) || []) : [];
+  var readonly = u ? (u.readonly || false) : false;
+  var prefix = isNovo ? 'af-nu' : 'af-eu';
+
+  var html = '<div id="admin-form-utilizador">'
+    + '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">'
+    + '<button onclick="_adminFormVoltar()" style="background:#f3f4f6;border:none;border-radius:20px;padding:7px 14px;font-size:12px;font-weight:700;cursor:pointer">&#x2190; Voltar</button>'
+    + '<span style="font-size:15px;font-weight:800;color:#1e3a5f">' + (isNovo ? '+ Novo Utilizador' : '&#x270F;&#xFE0F; ' + u.nome) + '</span>'
+    + '</div>'
+    + '<label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">NOME</label>'
+    + '<input id="' + prefix + '-nome" value="' + (u ? u.nome : '') + '" placeholder="Nome completo" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:8px;margin-bottom:12px;box-sizing:border-box;font-size:14px">'
+    + '<label style="font-size:11px;font-weight:700;color:#6b7280;display:block;margin-bottom:4px">PIN (4 d\xedgitos)</label>'
+    + '<input id="' + prefix + '-pin" value="' + (u ? u.pin : '') + '" maxlength="4" inputmode="numeric" placeholder="1234" style="width:100%;padding:10px;border:2px solid #e5e7eb;border-radius:8px;margin-bottom:14px;box-sizing:border-box;font-family:monospace;font-size:20px;letter-spacing:8px">'
+    + _buildCorSelector(u ? (u.cor || '#6b7280') : '#6b7280', prefix)
+    + _buildIconSelector(u ? (u.icon || '\uD83D\uDC64') : '\uD83D\uDC64', prefix)
+    + '<label style="display:flex;align-items:center;gap:10px;padding:12px;background:#fef3c7;border-radius:10px;margin-bottom:16px;cursor:pointer">'
+    + '<input type="checkbox" id="' + prefix + '-readonly"' + (readonly ? ' checked' : '') + ' style="width:18px;height:18px;accent-color:#d97706">'
+    + '<span style="font-size:13px;font-weight:700;color:#92400e">Modo leitura apenas</span>'
+    + '</label>'
+    + '<div style="background:#1e3a5f;color:white;padding:8px 14px;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.06em;border-radius:8px 8px 0 0">Permiss\xf5es</div>'
+    + '<div style="border:2px solid #1e3a5f;border-top:none;border-radius:0 0 8px 8px;overflow:hidden;margin-bottom:16px">'
+    + _buildTreeRows(PERMISSOES_TREE, areas, 0)
+    + '</div>'
+    + '<button onclick="_adminFormGuardar(\'' + (id || '') + '\')" style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">&#x2713; Guardar</button>'
+    + ((!isNovo && id !== 'jose') ? '<button onclick="_adminFormEliminar(\'' + id + '\')" style="width:100%;padding:12px;background:#fee2e2;color:#dc2626;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px">&#x1F5D1; Eliminar Utilizador</button>' : '')
+    + '</div>';
+
+  var painel = document.getElementById('admin-panel-utilizadores');
+  if (painel) painel.innerHTML = html;
+}
+
+function _adminFormVoltar() {
+  var painel = document.getElementById('admin-panel-utilizadores');
+  if (painel) {
+    painel.innerHTML = '<div id="admin-lista-utilizadores" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px"></div>'
+      + '<button onclick="adminNovoUtilizador()" style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:14px;font-weight:700;cursor:pointer">+ Novo Utilizador</button>';
+    adminRenderUtilizadores();
+  }
+}
+
+function _adminFormGuardar(id) {
+  var isNovo = !id;
+  var prefix = isNovo ? 'af-nu' : 'af-eu';
+  var nome = (document.getElementById(prefix + '-nome') || {}).value || '';
+  var pin  = (document.getElementById(prefix + '-pin')  || {}).value || '';
+  var cor  = (document.getElementById(prefix + '-cor')  || {}).value || '#6b7280';
+  var icon = (document.getElementById(prefix + '-icon') || {}).value || '\uD83D\uDC64';
+  var ro   = (document.getElementById(prefix + '-readonly') || {}).checked || false;
+  nome = nome.trim(); pin = pin.trim();
+  if (!nome) { alert('Nome obrigat\xf3rio.'); return; }
+  if (!/^\d{4}$/.test(pin)) { alert('PIN tem de ter 4 d\xedgitos.'); return; }
+  var areas = [];
+  document.querySelectorAll('#admin-form-utilizador [data-perm]:checked').forEach(function(cb) {
+    var k = cb.getAttribute('data-perm');
+    if (k && areas.indexOf(k) < 0) areas.push(k);
+  });
+  var lista = getUtilizadores();
+  if (isNovo) {
+    lista.push({ id: 'u_' + Date.now(), nome: nome, pin: pin, perfil: 'custom', areas: areas, cor: cor, icon: icon, readonly: ro });
+  } else {
+    var u = lista.find(function(x){ return x.id === id; });
+    if (u) { u.nome = nome; u.pin = pin; u.areas = areas; u.cor = cor; u.icon = icon; u.readonly = ro; u.perfil = 'custom'; }
+  }
+  salvarUtilizadores(lista);
+  _adminFormVoltar();
+}
+
+function _adminFormEliminar(id) {
+  if (!confirm('Tens a certeza que queres eliminar este utilizador?')) return;
+  var lista = getUtilizadores().filter(function(u){ return u.id !== id; });
+  salvarUtilizadores(lista);
+  _adminFormVoltar();
 }
 
 function adminModalUtilizador(u) {
