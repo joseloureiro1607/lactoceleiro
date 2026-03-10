@@ -3288,8 +3288,10 @@ function confirmarSaida() {
         + '<button onclick="_imprimirGuiaSaidaAvulsa()" style="display:block;width:100%;padding:12px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\udda8\ufe0f Imprimir / Guardar PDF</button>'
         + '<button onclick="_emailGuiaSaidaAvulsa()" style="display:block;width:100%;padding:12px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\udce7 Enviar por Email (qualidade@lactoceleiro.pt)</button>';
 
-      // Botão expedição disponível para todos com acesso a encomendas
-      btns += '<button onclick="_enviarSaidaAvulsaParaExpedicao()" style="display:block;width:100%;padding:12px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\ude9a Enviar para Expedi\xe7\xe3o</button>';
+      if (isEncUser && !isExpUser) {
+        // Utilizador encomendas: pode enviar para expedição
+        btns += '<button onclick="_enviarSaidaAvulsaParaExpedicao()" style="display:block;width:100%;padding:12px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\ude9a Enviar para Expedi\xe7\xe3o</button>';
+      }
 
       btns += '<button onclick="voltarSaidaLotes()" style="display:block;width:100%;padding:10px;background:#f3f4f6;border:none;border-radius:10px;font-size:13px;cursor:pointer;color:#374151">Nova Sa\xedda</button>'
         + '</div>';
@@ -9682,80 +9684,139 @@ function abrirGestaoUtilizadores() {
   document.body.insertAdjacentHTML('beforeend', html);
 }
 
-function _toggleMenuSubs(cb) {
-  var block = cb.closest('[data-menu-block]') || cb.parentElement.nextElementSibling;
-  if (block) block.querySelectorAll('.eu-sub-perm').forEach(function(s){ s.checked = cb.checked; });
-}
-function _toggleMenuSubs(cb) {
-  var block = cb.parentElement.parentElement.querySelector('[data-menu-block]');
-  if (block) block.querySelectorAll('.eu-sub-perm').forEach(function(s){ s.checked = cb.checked; });
-}
-
 function editarUtilizador(id) {
   const lista = getUtilizadores();
   const u = lista.find(x => x.id === id);
   if (!u) return;
   const areas = u.areas || PERFIS[u.perfil]?.areas || [];
-  const readonly = u.readonly || PERFIS[u.perfil]?.readonly || false;
+  const readonly = u.readonly || false;
 
-  function buildMenuHTML() {
-    return MENU_TREE.map(function(menu) {
-      var menuChecked = areas.includes(menu.key);
-      var subHtml = menu.subs.map(function(sub) {
-        var checked = areas.includes(sub.key);
-        return '<label style="display:flex;align-items:center;gap:8px;padding:6px 10px 6px 28px;background:#f8fafc;border-left:3px solid #bfdbfe;border-radius:0 6px 6px 0;margin:2px 0;cursor:pointer">'
-          + '<input type="checkbox" class="eu-sub-perm" data-key="' + sub.key + '" ' + (checked?'checked':'') + ' style="width:16px;height:16px;accent-color:#1e40af;cursor:pointer">'
-          + '<span style="font-size:12px;color:#374151">' + sub.label + '</span></label>';
+  const TREE = [
+    { key:'queijo', label:'🧀 Produção Queijo', subs:[
+      { key:'queijo-ver',    label:'Ver Lotes' },
+      { key:'queijo-criar',  label:'Criar / Editar Lote' },
+      { key:'eliminar-prod', label:'Eliminar Produções' }
+    ]},
+    { key:'requeijao', label:'🥛 Produção Requeijão', subs:[
+      { key:'requeijao-ver',   label:'Ver Lotes' },
+      { key:'requeijao-criar', label:'Criar / Editar Lote' }
+    ]},
+    { key:'cura', label:'🏠 Cura e Lavagem', subs:[
+      { key:'cura-ver',        label:'Ver Câmaras' },
+      { key:'cura-transferir', label:'Transferir' },
+      { key:'cura-lavar',      label:'Lavagem' }
+    ]},
+    { key:'encomendas', label:'📦 Encomendas', subs:[
+      { key:'criar-enc',         label:'Ver / Criar Encomendas' },
+      { key:'saidas-camara',     label:'Saídas de Câmara' },
+      { key:'expedicao',         label:'Expedição' },
+      { key:'ver-enc-expedidas', label:'Ver Expedições' },
+      { key:'ver-relatorios',    label:'Relatórios' },
+      { key:'exportar-enc',      label:'Exportar Excel' },
+      { key:'importar-foto',     label:'Importar Foto / PDF' }
+    ]},
+    { key:'admin', label:'⚙️ Administração', subs:[
+      { key:'eliminar', label:'Eliminar Registos' }
+    ]}
+  ];
+
+  function buildTree() {
+    return TREE.map(m => {
+      const mOn = areas.includes(m.key);
+      const subsHtml = m.subs.map(s => {
+        const sOn = areas.includes(s.key);
+        return `<label style="display:flex;align-items:center;gap:10px;padding:8px 12px 8px 36px;background:#f8fafc;border-top:1px solid #f0f4f8;cursor:pointer">
+          <input type="checkbox" data-perm="${s.key}" ${sOn?'checked':''} style="width:16px;height:16px;accent-color:#1e40af;flex-shrink:0;cursor:pointer">
+          <span style="font-size:12px;color:#374151">${s.label}</span>
+        </label>`;
       }).join('');
-      return '<div style="border:1.5px solid #e5e7eb;border-radius:10px;overflow:hidden;margin-bottom:6px">'
-        + '<label style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#eff6ff;cursor:pointer">'
-        + '<input type="checkbox" class="eu-menu-perm" data-key="' + menu.key + '" ' + (menuChecked?'checked':'') + ' onchange="_toggleMenuSubs(this)" style="width:18px;height:18px;accent-color:#1e3a5f;cursor:pointer">'
-        + '<span style="font-size:13px;font-weight:700;color:#1e3a5f">' + menu.label + '</span></label>'
-        + '<div data-menu-block="' + menu.key + '" style="padding:4px 8px 6px 8px">' + subHtml + '</div></div>';
+
+      return `<div style="border:2px solid ${mOn?'#93c5fd':'#e5e7eb'};border-radius:12px;margin-bottom:8px;overflow:hidden">
+        <div style="display:flex;align-items:center;background:${mOn?'#eff6ff':'#f8fafc'};padding:10px 14px;gap:10px">
+          <input type="checkbox" data-perm="${m.key}" ${mOn?'checked':''} onchange="euSyncSubs(this)" style="width:18px;height:18px;accent-color:#1e3a5f;flex-shrink:0;cursor:pointer">
+          <span style="font-size:13px;font-weight:800;color:#1e3a5f;flex:1">${m.label}</span>
+          <button type="button" onclick="euExpandir(this)" style="background:none;border:none;font-size:14px;cursor:pointer;color:#6b7280;padding:2px 6px">▶</button>
+        </div>
+        <div class="eu-sub-bloco" style="display:none">${subsHtml}</div>
+      </div>`;
     }).join('');
   }
 
-  const html = '<div id="modal-edit-user" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;display:flex;align-items:flex-end;justify-content:center">'
-    + '<div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto">'
-    + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">'
-    + '<div style="font-size:16px;font-weight:800;color:#1e3a5f">\u270f\ufe0f ' + u.nome + '</div>'
-    + '<button onclick="document.getElementById(\'modal-edit-user\').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">\u2715</button></div>'
-    + '<div style="margin-bottom:12px"><label style="font-size:12px;font-weight:600;color:#6b7280">Nome</label>'
-    + '<input id="eu-nome" value="' + u.nome + '" style="padding:10px;border:2px solid #e5e7eb;border-radius:8px;width:100%;box-sizing:border-box;margin-top:4px"></div>'
-    + '<div style="margin-bottom:16px"><label style="font-size:12px;font-weight:600;color:#6b7280">PIN (4 dígitos)</label>'
-    + '<input id="eu-pin" value="' + u.pin + '" maxlength="4" inputmode="numeric" style="padding:10px;border:2px solid #e5e7eb;border-radius:8px;width:100%;box-sizing:border-box;font-family:monospace;font-size:16px;margin-top:4px"></div>'
-    + '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#fef3c7;border-radius:10px;margin-bottom:14px">'
-    + '<span style="font-size:13px;font-weight:700;color:#92400e;flex:1">Modo leitura apenas (sem edição)</span>'
-    + '<input type="checkbox" id="eu-readonly" ' + (readonly?'checked':'') + ' style="width:20px;height:20px;accent-color:#92400e;cursor:pointer"></div>'
-    + '<div style="font-size:12px;font-weight:700;color:#374151;margin-bottom:8px;text-transform:uppercase;letter-spacing:.04em">Menus e Botões</div>'
-    + '<div style="margin-bottom:16px">' + buildMenuHTML() + '</div>'
-    + '<button onclick="_guardarEdicaoUtilizador(\'' + id + '\')" style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer">\u2713 Guardar</button>'
-    + '</div></div>';
+  const html = `<div id="modal-edit-user" style="position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;display:flex;align-items:flex-end;justify-content:center">
+    <div style="background:white;border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:480px;max-height:92vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div style="font-size:16px;font-weight:800;color:#1e3a5f">✏️ ${u.nome}</div>
+        <button onclick="document.getElementById('modal-edit-user').remove()" style="background:#f3f4f6;border:none;border-radius:50%;width:32px;height:32px;font-size:18px;cursor:pointer">✕</button>
+      </div>
+      <div style="margin-bottom:12px">
+        <label style="font-size:12px;font-weight:600;color:#6b7280">Nome</label>
+        <input id="eu-nome" value="${u.nome}" style="padding:10px;border:2px solid #e5e7eb;border-radius:8px;width:100%;box-sizing:border-box;margin-top:4px">
+      </div>
+      <div style="margin-bottom:14px">
+        <label style="font-size:12px;font-weight:600;color:#6b7280">PIN (4 dígitos)</label>
+        <input id="eu-pin" value="${u.pin}" maxlength="4" inputmode="numeric" style="padding:10px;border:2px solid #e5e7eb;border-radius:8px;width:100%;box-sizing:border-box;font-family:monospace;font-size:16px;margin-top:4px">
+      </div>
+      <label style="display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fef3c7;border-radius:10px;margin-bottom:16px;cursor:pointer">
+        <input type="checkbox" id="eu-readonly" ${readonly?'checked':''} style="width:20px;height:20px;accent-color:#d97706;flex-shrink:0">
+        <div>
+          <div style="font-size:13px;font-weight:700;color:#92400e">Modo leitura apenas</div>
+          <div style="font-size:11px;color:#b45309;margin-top:2px">Vê tudo mas não pode editar</div>
+        </div>
+      </label>
+      <div style="font-size:11px;font-weight:700;color:#6b7280;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em">Menus e botões — clica ▶ para expandir</div>
+      ${buildTree()}
+      <button onclick="_guardarEdicaoUtilizador('${id}')" style="width:100%;padding:14px;background:#15803d;color:white;border:none;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px">✓ Guardar</button>
+    </div>
+  </div>`;
 
   document.getElementById('modal-users')?.remove();
   document.body.insertAdjacentHTML('beforeend', html);
+}
+
+function euExpandir(btn) {
+  const bloco = btn.closest('div').nextElementSibling;
+  if (!bloco) return;
+  const aberto = bloco.style.display !== 'none';
+  bloco.style.display = aberto ? 'none' : 'block';
+  btn.textContent = aberto ? '▶' : '▼';
+}
+
+function euSyncSubs(cb) {
+  const bloco = cb.closest('div').parentElement.querySelector('.eu-sub-bloco');
+  if (bloco) bloco.querySelectorAll('[data-perm]').forEach(s => s.checked = cb.checked);
 }
 
 function _guardarEdicaoUtilizador(id) {
   const lista = getUtilizadores();
   const u = lista.find(x => x.id === id);
   if (!u) return;
+
   const nome = document.getElementById('eu-nome')?.value.trim();
-  const pin = document.getElementById('eu-pin')?.value.trim();
+  const pin  = document.getElementById('eu-pin')?.value.trim();
   const readonly = document.getElementById('eu-readonly')?.checked || false;
-  if (!nome) { alert('Nome é obrigatório.'); return; }
-  if (!pin || pin.length !== 4 || !/^\d+$/.test(pin)) { alert('PIN deve ter 4 dígitos.'); return; }
-  var areas = [];
-  document.querySelectorAll('.eu-menu-perm:checked, .eu-sub-perm:checked').forEach(function(cb) {
-    var k = cb.getAttribute('data-key');
+
+  if (!nome) { alert('Nome obrigatório.'); return; }
+  if (!/^\d{4}$/.test(pin)) { alert('PIN tem de ter 4 dígitos.'); return; }
+
+  const areas = [];
+  document.querySelectorAll('#modal-edit-user [data-perm]:checked').forEach(cb => {
+    const k = cb.getAttribute('data-perm');
     if (k && !areas.includes(k)) areas.push(k);
   });
-  u.nome = nome; u.pin = pin; u.areas = areas; u.readonly = readonly; u.perfil = 'custom';
+
+  u.nome = nome;
+  u.pin  = pin;
+  u.areas = areas;
+  u.readonly = readonly;
+  u.perfil = 'custom';
+
   salvarUtilizadores(lista);
   document.getElementById('modal-edit-user')?.remove();
-  if (typeof renderizarUtilizadores === 'function') renderizarUtilizadores();
-  alert('\u2713 Utilizador actualizado!');
+  abrirGestaoUtilizadores();
 }
+
+
+
 
 function eliminarUtilizador(id) {
   if (!confirm('Tens a certeza que queres eliminar este utilizador?')) return;
@@ -15075,36 +15136,7 @@ function voltarParaPrepararDoExp() {
 }
 
 // Chamar ao arrancar
-setTimeout(function(){ _atualizarBadgeExp(); }, 1200);var MENU_TREE = [
-  { key:'queijo', label:'🧀 Produção Queijo', subs:[
-    {key:'queijo-criar', label:'Criar Lote'},
-    {key:'queijo-ver', label:'Ver Lotes'},
-    {key:'eliminar-prod', label:'Eliminar Produções'}
-  ]},
-  { key:'requeijao', label:'🥛 Produção Requeijão', subs:[
-    {key:'requeijao-criar', label:'Criar Lote'},
-    {key:'requeijao-ver', label:'Ver Lotes'}
-  ]},
-  { key:'cura', label:'🏠 Cura e Lavagem', subs:[
-    {key:'cura-ver', label:'Ver Câmaras'},
-    {key:'cura-transferir', label:'Transferir'},
-    {key:'cura-lavar', label:'Lavagem'}
-  ]},
-  { key:'encomendas', label:'📦 Encomendas', subs:[
-    {key:'criar-enc', label:'Criar/Editar Encomendas'},
-    {key:'saidas-camara', label:'Saídas de Câmara'},
-    {key:'exportar-enc', label:'Exportar Excel'},
-    {key:'importar-foto', label:'Importar Foto/PDF'},
-    {key:'expedicao', label:'Expedição'},
-    {key:'ver-enc-expedidas', label:'Ver Expedições'},
-    {key:'ver-relatorios', label:'Relatórios'}
-  ]},
-  { key:'admin', label:'⚙️ Administração', subs:[
-    {key:'eliminar', label:'Eliminar Registos'}
-  ]}
-];
-
-
+setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
 </script>
 </body>
 </html>
