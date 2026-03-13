@@ -1640,12 +1640,12 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         </div>
       </div>
 
-      <button class="btn-primary laranja" id="btn-confirmar-saida" onclick="confirmarSaida()">✓ Confirmar Saída</button>
+      <button class="btn-primary laranja" id="btn-confirmar-saida" onclick="confirmarSaida()" style="display:none">✓ Confirmar Saída</button>
       <div id="saida-pos-opcoes" style="margin-top:8px;display:none"></div>
       <div id="saida-botoes-enc" style="display:none;margin-top:8px">
         <div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:12px;padding:12px">
-          <button onclick="_fecharEncOuAvulsa()" style="width:100%;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">✅ Fechar Encomenda</button>
-          <button onclick="_enviarEncOuAvulsaExpedicao()" style="width:100%;padding:13px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">🚚📦 Enviar para Expedição</button>
+          <button id="btn-saida-fechar" onclick="_fecharEncOuAvulsa()" style="width:100%;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">✅ Fechar Encomenda</button>
+          <button id="btn-saida-expedicao" onclick="_enviarEncOuAvulsaExpedicao()" style="width:100%;padding:13px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">🚚📦 Enviar para Expedição</button>
         </div>
       </div>
       <button class="btn-back" onclick="voltarSaidaLotes()">← Voltar</button>
@@ -2984,6 +2984,9 @@ function selecionarLoteSaida(idx) {
 }
 
 function _fecharEncOuAvulsa() {
+  // Esconder botão enviar expedição — já não faz sentido
+  var _bExp = document.getElementById('btn-saida-expedicao');
+  if (_bExp) _bExp.style.display = 'none';
   if (encAtualId) {
     _fecharEncSemExpedicao();
   } else {
@@ -3066,9 +3069,16 @@ function abrirFormSaida(idx, l) {
   var _posDiv = document.getElementById('saida-pos-opcoes');
   if (_posDiv) { _posDiv.innerHTML = ''; _posDiv.style.display = 'none'; }
   var _btnConf = document.getElementById('btn-confirmar-saida');
-  if (_btnConf) _btnConf.style.display = 'block';
+  if (_btnConf) _btnConf.style.display = 'none';
+  // Mostrar botões com base em permissões
   var _botoesEnc = document.getElementById('saida-botoes-enc');
-  if (_botoesEnc) _botoesEnc.style.display = 'block';
+  var _btnFech = document.getElementById('btn-saida-fechar');
+  var _btnExp  = document.getElementById('btn-saida-expedicao');
+  var _podeFech = temPermissao('saidas-fechar') || temPermissao('admin');
+  var _podeExp  = temPermissao('saidas-expedicao') || temPermissao('admin');
+  if (_btnFech) _btnFech.style.display = _podeFech ? 'block' : 'none';
+  if (_btnExp)  _btnExp.style.display  = _podeExp  ? 'block' : 'none';
+  if (_botoesEnc) _botoesEnc.style.display = (_podeFech || _podeExp) ? 'block' : 'none';
   irPara('screen-saida-form');
   setTimeout(() => document.getElementById('saida-qtd').focus(), 200);
 }
@@ -3780,9 +3790,15 @@ function irParaSaidaDeEncomenda() {
   var _posDiv2 = document.getElementById('saida-pos-opcoes');
   if (_posDiv2) { _posDiv2.innerHTML = ''; _posDiv2.style.display = 'none'; }
   var _btnConf2 = document.getElementById('btn-confirmar-saida');
-  if (_btnConf2) _btnConf2.style.display = 'block';
+  if (_btnConf2) _btnConf2.style.display = 'none';
   var _botoesEnc2 = document.getElementById('saida-botoes-enc');
-  if (_botoesEnc2) _botoesEnc2.style.display = 'block';
+  var _btnFech2 = document.getElementById('btn-saida-fechar');
+  var _btnExp2  = document.getElementById('btn-saida-expedicao');
+  var _podeFech2 = temPermissao('saidas-fechar') || temPermissao('admin');
+  var _podeExp2  = temPermissao('saidas-expedicao') || temPermissao('admin');
+  if (_btnFech2) _btnFech2.style.display = _podeFech2 ? 'block' : 'none';
+  if (_btnExp2)  _btnExp2.style.display  = _podeExp2  ? 'block' : 'none';
+  if (_botoesEnc2) _botoesEnc2.style.display = (_podeFech2 || _podeExp2) ? 'block' : 'none';
   renderizarLotesSaida();
   // Se câmara 4 vazia, ir para câmara 5
   const e = getEstado();
@@ -8839,12 +8855,12 @@ const UTILIZADORES_DEFAULT = [
 
 // Perfis e permissões
 const PERFIS = {
-  admin:      { label:"Administrador", areas:["queijo","requeijao","cura","encomendas","ver-relatorios","exportar-enc","admin","eliminar","eliminar-prod","criar-enc","ver-enc-expedidas"] },
-  direcao:    { label:"Direção",       areas:["queijo","requeijao","cura","encomendas","ver-relatorios","exportar-enc","ver-enc-expedidas"], readonly:true },
-  gestor:     { label:"Gestor",        areas:["queijo","requeijao","cura","encomendas","criar-enc","exportar-enc","ver-enc-expedidas"] },
+  admin:      { label:"Administrador", areas:["queijo","requeijao","cura","encomendas","ver-relatorios","exportar-enc","admin","eliminar","eliminar-prod","criar-enc","ver-enc-expedidas","saidas-camara","saidas-fechar","saidas-expedicao","resumo-rotulos","enc-fechar","expedicao"] },
+  direcao:    { label:"Direção",       areas:["queijo","requeijao","cura","encomendas","ver-relatorios","exportar-enc","ver-enc-expedidas","resumo-rotulos"], readonly:true },
+  gestor:     { label:"Gestor",        areas:["queijo","requeijao","cura","encomendas","criar-enc","exportar-enc","ver-enc-expedidas","saidas-camara","saidas-fechar","saidas-expedicao","resumo-rotulos","enc-fechar","expedicao"] },
   producao:   { label:"Produção",      areas:["cura"] },
-  encomendas: { label:"Encomendas",    areas:["encomendas","criar-enc","exportar-enc","ver-enc-expedidas","ver-relatorios"] },
-  expedicao:  { label:"Expedição",     areas:["encomendas","criar-enc","exportar-enc","ver-enc-expedidas","ver-relatorios"] },
+  encomendas: { label:"Encomendas",    areas:["encomendas","criar-enc","exportar-enc","ver-enc-expedidas","ver-relatorios","saidas-camara","saidas-fechar","saidas-expedicao","resumo-rotulos","enc-fechar","expedicao"] },
+  expedicao:  { label:"Expedição",     areas:["encomendas","criar-enc","exportar-enc","ver-enc-expedidas","ver-relatorios","saidas-camara","saidas-fechar","saidas-expedicao","resumo-rotulos"] },
 };
 
 // === GEMINI AI ===
