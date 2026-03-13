@@ -384,6 +384,13 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
   gap: 14px;
   margin-bottom: 8px;
 }
+@media (min-width:768px) {
+  .home-grid { grid-template-columns: repeat(4, 1fr); }
+  .home-grid .home-btn[style*="grid-column:1/-1"] { grid-column: span 2; }
+}
+@media (min-width:1024px) {
+  .home-grid { grid-template-columns: repeat(4, 1fr); gap:16px; }
+}
 .home-btn {
   border: none;
   border-radius: 20px;
@@ -1513,45 +1520,52 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
         <div style="font-size:11px;opacity:0.7;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:4px">Módulo</div>
         <div style="font-size:17px;font-weight:700">📦 Encomendas</div>
       </div>
-      <div class="main-btns">
-        <button class="main-btn main-btn-enc" id="btn-enc-nova" onclick="irPara('screen-enc-lista')">
+
+      <!-- Linha 1: Encomendas + Saídas -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <button class="main-btn main-btn-enc" id="btn-enc-nova" onclick="irPara('screen-enc-lista')" style="width:100%">
           <span class="icon">📋</span>ENCOMENDAS
         </button>
-        <button class="main-btn main-btn-saida" onclick="irPara('screen-saida-camara')">
+        <button class="main-btn main-btn-saida" onclick="irPara('screen-saida-camara')" style="width:100%">
           <span class="icon">📤</span>SAÍDAS DE CÂMARA
         </button>
       </div>
-      <div style="margin-top:8px">
+
+      <!-- Linha 2: Expedição (destaque) -->
+      <div style="margin-bottom:10px">
         <button class="main-btn" onclick="abrirExpedicao()"
           style="width:100%;padding:18px 12px;background:linear-gradient(135deg,#0369a1,#0284c7);color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
           <span style="font-size:22px">🚚</span>
-          <span>EXPEDI&#199;&#195;O</span>
+          <span>EXPEDIÇÃO</span>
           <span id="badge-expedicao" style="background:white;color:#0369a1;border-radius:20px;padding:2px 8px;font-size:12px;font-weight:900;display:none">0</span>
         </button>
       </div>
-      <div style="margin-top:2px">
-        <button class="main-btn main-btn-export" id="btn-enc-export" onclick="irPara('screen-export')" style="width:100%;padding:18px 12px">
+
+      <!-- Linha 3: 2 colunas — Exportar + Rótulos -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <button class="main-btn main-btn-export" id="btn-enc-export" onclick="irPara('screen-export')"
+          style="width:100%;padding:16px 12px">
           <span class="icon">📊</span>EXPORTAR RELATÓRIOS
         </button>
-      </div>
-      <div style="margin-top:2px">
-        <button class="main-btn" onclick="abrirImportarExcelEnc()"
-          style="width:100%;padding:16px 12px;background:linear-gradient(135deg,#065f46,#059669);color:white;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-          <span>📂</span> IMPORTAR EXCEL PRIMEBRANDS
+        <button id="btn-enc-rotulos" onclick="abrirResumoRotulosGeral()"
+          style="width:100%;padding:16px 12px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
+          <span style="font-size:20px">🏷️</span><span>RESUMO RÓTULOS</span>
         </button>
       </div>
-      <div style="margin-top:6px">
-        <button class="main-btn" onclick="abrirImportarFotoEnc()"
-          style="width:100%;padding:16px 12px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;border:none;border-radius:14px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
-          <span>📷</span> IMPORTAR FOTO / PDF ENCOMENDA
+
+      <!-- Linha 4: 2 colunas — Importar Excel + Importar Foto -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <button onclick="abrirImportarExcelEnc()"
+          style="width:100%;padding:16px 12px;background:linear-gradient(135deg,#065f46,#059669);color:white;border:none;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
+          <span style="font-size:20px">📂</span><span>IMPORTAR EXCEL</span>
+        </button>
+        <button onclick="abrirImportarFotoEnc()"
+          style="width:100%;padding:16px 12px;background:linear-gradient(135deg,#9333ea,#7c3aed);color:white;border:none;border-radius:14px;font-size:13px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px">
+          <span style="font-size:20px">📷</span><span>IMPORTAR FOTO/PDF</span>
         </button>
       </div>
-      <div style="margin-top:8px">
-        <button id="btn-enc-rotulos" onclick="abrirResumoRotulosGeral()" style="width:100%;padding:16px 12px;background:linear-gradient(135deg,#7c3aed,#6d28d9);color:white;border:none;border-radius:14px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
-          <span style="font-size:20px">🏷️</span><span>RESUMO DE RÓTULOS</span>
-        </button>
-      </div>
-      <div style="display:flex;gap:8px;margin-top:12px">
+
+      <div style="display:flex;gap:8px;margin-top:4px">
         <button class="btn-back" onclick="irPara('screen-home')" style="flex:1">← Voltar</button>
       </div>
     </div>
