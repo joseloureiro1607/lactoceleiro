@@ -1642,6 +1642,12 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
 
       <button class="btn-primary laranja" id="btn-confirmar-saida" onclick="confirmarSaida()">✓ Confirmar Saída</button>
       <div id="saida-pos-opcoes" style="margin-top:8px;display:none"></div>
+      <div id="saida-botoes-enc" style="display:none;margin-top:8px">
+        <div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:12px;padding:12px">
+          <button onclick="_fecharEncOuAvulsa()" style="width:100%;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">✅ Fechar Encomenda</button>
+          <button onclick="_enviarEncOuAvulsaExpedicao()" style="width:100%;padding:13px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">🚚📦 Enviar para Expedição</button>
+        </div>
+      </div>
       <button class="btn-back" onclick="voltarSaidaLotes()">← Voltar</button>
       <div class="status" id="status-saida"></div>
     </div>
@@ -2977,6 +2983,45 @@ function selecionarLoteSaida(idx) {
   abrirFormSaida(idx, l);
 }
 
+function _fecharEncOuAvulsa() {
+  if (encAtualId) {
+    _fecharEncSemExpedicao();
+  } else {
+    // Saída avulsa — validar campos obrigatórios primeiro
+    var e = getEstado();
+    var lote = e[camaraAtual] && e[camaraAtual][loteSaidaIdx];
+    var validade = lote && lote.validade ? lote.validade : '';
+    var _vinpEl = document.getElementById('saida-validade-inp');
+    if (!validade && _vinpEl) validade = _vinpEl.value.trim();
+    var kg = parseFloat((document.getElementById('saida-kg')||{value:''}).value) || null;
+    var qtd = parseInt(document.getElementById('saida-qtd').value) || 0;
+    if (!qtd || qtd <= 0) { mostrarStatus('status-saida', '⚠️ Introduza a quantidade', 'error'); return; }
+    if (!validade) { mostrarStatus('status-saida', '⚠️ Validade obrigatória', 'error'); return; }
+    if (!kg || kg <= 0) { mostrarStatus('status-saida', '⚠️ Peso (kg) obrigatório', 'error'); return; }
+    confirmarSaida();
+  }
+}
+
+function _enviarEncOuAvulsaExpedicao() {
+  if (encAtualId) {
+    _enviarEncParaExpedicaoFlow();
+  } else {
+    var e = getEstado();
+    var lote = e[camaraAtual] && e[camaraAtual][loteSaidaIdx];
+    var validade = lote && lote.validade ? lote.validade : '';
+    var _vinpEl = document.getElementById('saida-validade-inp');
+    if (!validade && _vinpEl) validade = _vinpEl.value.trim();
+    var kg = parseFloat((document.getElementById('saida-kg')||{value:''}).value) || null;
+    var qtd = parseInt(document.getElementById('saida-qtd').value) || 0;
+    if (!qtd || qtd <= 0) { mostrarStatus('status-saida', '⚠️ Introduza a quantidade', 'error'); return; }
+    if (!validade) { mostrarStatus('status-saida', '⚠️ Validade obrigatória', 'error'); return; }
+    if (!kg || kg <= 0) { mostrarStatus('status-saida', '⚠️ Peso (kg) obrigatório', 'error'); return; }
+    // Confirmar saída primeiro, depois enviar para expedição
+    window._pendingExpedicaoAposConfirm = true;
+    confirmarSaida();
+  }
+}
+
 function abrirFormSaida(idx, l) {
   loteSaidaIdx = idx;
   document.getElementById('saida-lote-nome').textContent = l.lote;
@@ -3017,6 +3062,13 @@ function abrirFormSaida(idx, l) {
   });
 
   encAtualId = null;
+  // Resetar estado pós-saída
+  var _posDiv = document.getElementById('saida-pos-opcoes');
+  if (_posDiv) { _posDiv.innerHTML = ''; _posDiv.style.display = 'none'; }
+  var _btnConf = document.getElementById('btn-confirmar-saida');
+  if (_btnConf) _btnConf.style.display = 'block';
+  var _botoesEnc = document.getElementById('saida-botoes-enc');
+  if (_botoesEnc) _botoesEnc.style.display = 'block';
   irPara('screen-saida-form');
   setTimeout(() => document.getElementById('saida-qtd').focus(), 200);
 }
@@ -3193,6 +3245,13 @@ function confirmarSaida() {
   var _vinpEl = document.getElementById('saida-validade-inp');
   if (_vinpEl && _vinpEl.value.trim()) validadeInput = _vinpEl.value.trim();
   var validade = validadeExistente || validadeInput || null;
+
+  // Validação obrigatória para saída avulsa
+  if (!encAtualId) {
+    if (!nomeLote) { mostrarStatus('status-saida', '⚠️ Lote não identificado', 'error'); return; }
+    if (!validade) { mostrarStatus('status-saida', '⚠️ Validade obrigatória — introduza a data de validade', 'error'); return; }
+    if (!kgSaida || kgSaida <= 0) { mostrarStatus('status-saida', '⚠️ Peso (kg) obrigatório', 'error'); return; }
+  }
   // Guardar validade introduzida de volta no lote (persistente para futuras saídas)
   if (!validadeExistente && validade) {
     lote.validade = validade;
@@ -3237,49 +3296,31 @@ function confirmarSaida() {
   mostrarStatus('status-saida', msg, 'success');
 
   if (encAtualId) {
-    // Verificar perfil para mostrar acções pós-saída
-    const isExpUser = temPermissao('expedicao') || temPermissao('admin');
-    const isEncUser = temPermissao('encomendas');
-
-    if (isExpUser) {
-      // Expedição: esconde botão confirmar, mostra só "Mais saídas" e "Fechar+Email"
-      const btnConf = document.getElementById('btn-confirmar-saida');
-      if (btnConf) btnConf.style.display = 'none';
-      const posDiv = document.getElementById('saida-pos-opcoes');
-      if (posDiv) {
-        posDiv.innerHTML = '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px;margin-bottom:6px">'
-          + '<div style="font-size:12px;font-weight:800;color:#15803d;margin-bottom:8px">✅ Saída registada!</div>'
-          + '<button onclick="voltarSaidaLotes()" style="width:100%;padding:11px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">📤 + Mais Saídas desta Encomenda</button>'
-          + '<button onclick="_fecharEncExpedicaoEmail()" style="width:100%;padding:12px;background:#15803d;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">🚚 Fechar Encomenda + Email</button>'
-          + '</div>';
-        posDiv.style.display = 'block';
-      }
-    } else if (isEncUser) {
-      // Encomendas: esconde botão confirmar, mostra opções
-      const btnConf = document.getElementById('btn-confirmar-saida');
-      if (btnConf) btnConf.style.display = 'none';
-      const posDiv = document.getElementById('saida-pos-opcoes');
-      if (posDiv) {
-        posDiv.innerHTML = '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px;margin-bottom:6px">'
-          + '<div style="font-size:12px;font-weight:800;color:#15803d;margin-bottom:8px">✅ Saída registada! O que fazer?</div>'
-          + '<button onclick="voltarSaidaLotes()" style="width:100%;padding:11px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">📤 + Mais Saídas desta Encomenda</button>'
-          + '<button onclick="_fecharEncSemExpedicao()" style="width:100%;padding:11px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">✅ Fechar Encomenda + Email</button>'
-          + '<button onclick="_enviarEncParaExpedicaoFlow()" style="width:100%;padding:11px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">🚚 Enviar para Expedição</button>'
-          + '</div>';
-        posDiv.style.display = 'block';
-      }
-    } else {
-      setTimeout(() => { abrirEncomenda(encAtualId); }, 2200);
+    // Saída de encomenda do sistema — mostrar sempre os dois botões
+    const btnConf = document.getElementById('btn-confirmar-saida');
+    if (btnConf) btnConf.style.display = 'none';
+    const posDiv = document.getElementById('saida-pos-opcoes');
+    if (posDiv) {
+      posDiv.innerHTML = '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:10px;margin-bottom:8px">'
+        + '<div style="font-size:12px;font-weight:800;color:#15803d;margin-bottom:8px">✅ Saída registada!</div>'
+        + '<button onclick="voltarSaidaLotes()" style="width:100%;padding:12px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer">📤 + Mais Saídas desta Encomenda</button>'
+        + '</div>'
+        + '<div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:8px">'
+        + '<button onclick="_fecharEncSemExpedicao()" style="width:100%;padding:13px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">✅ Fechar Encomenda</button>'
+        + '<button onclick="_enviarEncParaExpedicaoFlow()" style="width:100%;padding:13px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer">🚚📦 Enviar para Expedição</button>'
+        + '</div>';
+      posDiv.style.display = 'block';
+      // Esconder botões fixos
+      var _bEncFix = document.getElementById('saida-botoes-enc');
+      if (_bEncFix) _bEncFix.style.display = 'none';
+      posDiv.style.display = 'block';
     }
   } else {
-    // Saída avulsa (sem encomenda do sistema) — mostrar opções pós-saída por perfil
+    // Saída avulsa (sem encomenda do sistema) — mostrar opções pós-saída
     var _posDiv = document.getElementById('saida-pos-opcoes');
     var _btnConf = document.getElementById('btn-confirmar-saida');
     if (_btnConf) _btnConf.style.display = 'none';
     if (_posDiv) {
-      var isEncUser = temPermissao('encomendas') || temPermissao('admin');
-      var isExpUser = temPermissao('expedicao') || temPermissao('admin');
-
       // Construir dados desta saída para o guia
       var _saidaData = {
         lote: nomeLote,
@@ -3292,21 +3333,26 @@ function confirmarSaida() {
       };
       window._ultimaSaidaAvulsa = _saidaData;
 
-      var btns = '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:12px;margin-bottom:6px">'
-        + '<div style="font-size:12px;font-weight:800;color:#15803d;margin-bottom:10px">\u2705 Sa\xedda registada! O que fazer?</div>'
+      var btns = '<div style="background:#f0fdf4;border:2px solid #86efac;border-radius:12px;padding:10px;margin-bottom:8px">'
+        + '<div style="font-size:12px;font-weight:800;color:#15803d;margin-bottom:10px">\u2705 Sa\xedda registada!</div>'
         + '<button onclick="_imprimirGuiaSaidaAvulsa()" style="display:block;width:100%;padding:12px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\udda8\ufe0f Imprimir / Guardar PDF</button>'
-        + '<button onclick="_emailGuiaSaidaAvulsa()" style="display:block;width:100%;padding:12px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\udce7 Enviar por Email (qualidade@lactoceleiro.pt)</button>';
-
-      if (isEncUser && !isExpUser) {
-        // Utilizador encomendas: pode enviar para expedição
-        btns += '<button onclick="_enviarSaidaAvulsaParaExpedicao()" style="display:block;width:100%;padding:12px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\ude9a Enviar para Expedi\xe7\xe3o</button>';
-      }
-
-      btns += '<button onclick="voltarSaidaLotes()" style="display:block;width:100%;padding:10px;background:#f3f4f6;border:none;border-radius:10px;font-size:13px;cursor:pointer;color:#374151">Nova Sa\xedda</button>'
+        + '<button onclick="_emailGuiaSaidaAvulsa()" style="display:block;width:100%;padding:12px;background:#0369a1;color:white;border:none;border-radius:10px;font-size:13px;font-weight:800;cursor:pointer;margin-bottom:6px">\ud83d\udce7 Enviar por Email</button>'
+        + '</div>'
+        + '<div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:8px">'
+        + '<button onclick="_enviarSaidaAvulsaParaExpedicao()" style="display:block;width:100%;padding:13px;background:#7c3aed;color:white;border:none;border-radius:10px;font-size:14px;font-weight:800;cursor:pointer;margin-bottom:8px">\ud83d\ude9a\ud83d\udce6 Enviar para Expedi\xe7\xe3o</button>'
+        + '<button onclick="voltarSaidaLotes()" style="display:block;width:100%;padding:13px;background:#f3f4f6;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;color:#374151">Nova Sa\xedda</button>'
         + '</div>';
 
       _posDiv.innerHTML = btns;
       _posDiv.style.display = 'block';
+      // Esconder os botões fixos agora que a saída foi feita
+      var _bEnc = document.getElementById('saida-botoes-enc');
+      if (_bEnc) _bEnc.style.display = 'none';
+      // Se pedido de expedição pendente, executar agora
+      if (window._pendingExpedicaoAposConfirm) {
+        window._pendingExpedicaoAposConfirm = false;
+        setTimeout(function(){ _enviarSaidaAvulsaParaExpedicao(); }, 300);
+      }
     }
   }
 }
@@ -3730,6 +3776,13 @@ function irParaSaidaDeEncomenda() {
   // Esconder campos de destino manual quando vem de encomenda do sistema
   const destDiv = document.getElementById('saida-destino-campos');
   if (destDiv) destDiv.style.display = 'none';
+  // Resetar estado pós-saída
+  var _posDiv2 = document.getElementById('saida-pos-opcoes');
+  if (_posDiv2) { _posDiv2.innerHTML = ''; _posDiv2.style.display = 'none'; }
+  var _btnConf2 = document.getElementById('btn-confirmar-saida');
+  if (_btnConf2) _btnConf2.style.display = 'block';
+  var _botoesEnc2 = document.getElementById('saida-botoes-enc');
+  if (_botoesEnc2) _botoesEnc2.style.display = 'block';
   renderizarLotesSaida();
   // Se câmara 4 vazia, ir para câmara 5
   const e = getEstado();
@@ -9098,7 +9151,7 @@ function _confirmarImportEnc() {
   localStorage.setItem('lc_encomendas_v1', JSON.stringify(encs));
   _fecharModalImportFoto();
   renderizarEncomendas();
-  irPara('screen-enc');
+  irPara('screen-enc-lista');
   alert('Encomenda importada!\nVerifica artigos, quantidades e datas.\nQueijos do mesmo tamanho foram somados.');
 }
 
