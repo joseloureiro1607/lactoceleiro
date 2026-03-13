@@ -135,6 +135,17 @@ body { font-family:'DM Sans',sans-serif; background:linear-gradient(135deg,#0a16
   body { padding:20px; align-items:flex-start; }
   .container { border-radius:24px; box-shadow:0 20px 60px rgba(0,0,0,0.25); max-width:520px; min-height:unset; }
 }
+@media (min-width:1024px) {
+  body { padding:0; align-items:stretch; justify-content:stretch; }
+  .container { max-width:100%; width:100%; border-radius:0; box-shadow:none; min-height:100vh; display:grid; grid-template-rows:auto 1fr; }
+  .header { position:sticky; top:0; z-index:100; }
+  .body { max-width:780px; margin:0 auto; width:100%; padding:28px 32px; box-sizing:border-box; }
+  .main-btns { grid-template-columns:1fr 1fr 1fr 1fr; }
+  .main-btns-bottom { grid-template-columns:1fr 1fr 1fr 1fr; }
+  .main-btn { padding:28px 16px; font-size:14px; }
+  .camara-grid { grid-template-columns:repeat(3,1fr) !important; }
+  .modal { max-width:520px !important; }
+}
 
 /* COMPATIBILIDADE DESKTOP CHROME/EDGE */
 @media (min-width:600px) {
