@@ -4501,6 +4501,22 @@ async function sincronizarTudo() {
 }
 
 // --- PULL: busca dados do servidor ao abrir a app --
+function _mostrarDiagLeite(novos) {
+  // Mostrar apenas os últimos 5 registos para diagnóstico
+  var amostra = novos.slice(-5);
+  var html = '<div style="position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px">'
+    + '<div style="background:white;border-radius:16px;padding:20px;max-width:500px;width:100%;max-height:80vh;overflow-y:auto">'
+    + '<div style="font-weight:800;font-size:15px;color:#1e3a5f;margin-bottom:12px">🧪 Diagnóstico Leite — ' + novos.length + ' registos</div>'
+    + '<div style="font-size:11px;color:#6b7280;margin-bottom:8px">Últimos 5 registos recebidos:</div>'
+    + '<pre style="font-size:11px;background:#f8fafc;border-radius:8px;padding:10px;overflow-x:auto">' + JSON.stringify(amostra, null, 2) + '</pre>'
+    + '<div style="font-size:11px;color:#6b7280;margin-top:8px">Totais: ovelha=' + novos.filter(function(x){return x.tipo==="ovelha";}).length + ' dop=' + novos.filter(function(x){return x.tipo==="dop";}).length + ' cabra=' + novos.filter(function(x){return x.tipo==="cabra";}).length + '</div>'
+    + '<button onclick="this.closest(\'div[style*=fixed]\').remove()" style="width:100%;margin-top:12px;padding:12px;background:#1e3a5f;color:white;border:none;border-radius:10px;font-weight:700;cursor:pointer">Fechar</button>'
+    + '</div></div>';
+  var el = document.createElement('div');
+  el.innerHTML = html;
+  document.body.appendChild(el.firstChild);
+}
+
 async function puxarDadosServidor() {
   if (!SCRIPT_URL) return;
   mostrarEstadoSync('syncing');
@@ -4532,6 +4548,8 @@ async function puxarDadosServidor() {
       // Guardar no localStorage
       localStorage.setItem('lc_leite_importado_v1', JSON.stringify(novos));
       console.log('Leite da Sheet carregado:', novos.length, 'registos');
+      // Mostrar diagnóstico
+      _mostrarDiagLeite(novos);
     }
     mostrarEstadoSync('ok');
   } catch(e) {
