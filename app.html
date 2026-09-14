@@ -7313,8 +7313,20 @@ async function sincronizarTudo() {
       // que veio do servidor fazia recuar o servidor sempre que outro
       // aparelho já tinha gravado algo mais recente.
       if (meta[k] === undefined || meta[k] === null) return;
-      const v = localStorage.getItem(k);
-      if (k !== K_APAGADOS) _registarEliminacoes(k, v);
+      let v = localStorage.getItem(k);
+      // Nunca se envia um registo que está marcado como apagado. Sem isto,
+      // um aparelho que ainda não tinha aplicado as marcas mandava a lista
+      // comprida de volta e o servidor ficava agarrado a registos que já
+      // tinham sido eliminados — via-se como "aqui 12, no servidor 19".
+      if (k !== K_APAGADOS) {
+        try {
+          const limpo = _semApagados(k, v);
+          if (limpo !== v) {
+            v = limpo;
+            localStorage.setItem(k, v);
+          }
+        } catch (eL) {}
+      }
       payload.dados[k] = (v === null ? null : v);
       enviadas.push(k);
     });
@@ -7781,8 +7793,8 @@ var _pullEmCurso = false;
 //  Agora pergunta-se primeiro só as datas (poucos bytes). Se nada mudou
 //  no servidor desde a última vez, não se pede mais nada.
 // ═══════════════════════════════════════════════════════════════════════
-var APP_VERSAO = '2026-09-14 \u00b7 51';
-var APP_BUILD  = '2026-09-14T21:58:09Z';
+var APP_VERSAO = '2026-09-15 \u00b7 53';
+var APP_BUILD  = '2026-09-14T22:26:58Z';
 
 // ════════════════════════════════════════════════════════════════════════
 //  "NO TABLET AINDA APARECE A VERSAO 36"
@@ -8440,6 +8452,14 @@ function aplicarDadosRemoto(remoto, metaRemoto) {
         localStorage.setItem(k, limpo);
         if (typeof marcarModificado === 'function') marcarModificado(k);
         alterou = true;
+      } else if (remoto[k] !== undefined) {
+        // Aqui já está limpo, mas o servidor ainda tem registos apagados.
+        // Marca-se para enviar a lista limpa — senão o servidor ficava com
+        // eles para sempre, à espera que alguém se lembrasse de o corrigir.
+        var _remTxt = _comoTexto(remoto[k]);
+        if (_ehColecaoComIds(_remTxt) && _semApagados(k, _remTxt) !== _remTxt) {
+          if (typeof marcarModificado === 'function') marcarModificado(k);
+        }
       }
     } catch (e) {}
   });
@@ -19459,6 +19479,10 @@ function abrirAdmin() {
 }
 
 function adminTab(tab) {
+  // Os separadores "Dados" e "Editar" faziam quase o mesmo e obrigavam a
+  // adivinhar em qual estava cada coisa. Passou a haver um só. Quem ainda
+  // chamar 'editar' (um botão antigo, um link guardado) vai dar ao novo.
+  if (tab === 'editar') tab = 'dados';
   document.getElementById('admin-panel-utilizadores').style.display = tab === 'utilizadores' ? '' : 'none';
   document.getElementById('admin-panel-dados').style.display        = tab === 'dados'        ? '' : 'none';
   document.getElementById('tab-utilizadores').style.background = tab === 'utilizadores' ? '#1e3a5f' : '#f3f4f6';
@@ -19469,10 +19493,6 @@ function adminTab(tab) {
   if (cfgPanel) cfgPanel.style.display = tab === 'config' ? '' : 'none';
   var cfgBtn = document.getElementById('tab-config');
   if (cfgBtn) { cfgBtn.style.background = tab==='config'?'#1e3a5f':'#f3f4f6'; cfgBtn.style.color = tab==='config'?'white':'#6b7280'; }
-  var editarPanel = document.getElementById('admin-panel-editar');
-  if (editarPanel) editarPanel.style.display = tab === 'editar' ? '' : 'none';
-  var tabEditar = document.getElementById('tab-editar');
-  if (tabEditar) { tabEditar.style.background = tab==='editar'?'#1e3a5f':'#f3f4f6'; tabEditar.style.color = tab==='editar'?'white':'#6b7280'; }
   if (tab === 'utilizadores') adminRenderUtilizadores();
   if (tab === 'config') {
     _mostrarGeminiStatus();
@@ -28713,6 +28733,126 @@ function _admSalvarSoroManual(lista) {
 
 var ADMIN_COLECOES = {
 
+  // ─── TABELAS DE CONFIGURAÇÃO ───────────────────────────────────────
+  // Existiam nos ecrãs próprios mas não neste painel, e o painel é suposto
+  // ser o sítio onde se corrige qualquer registo sem ter de o apagar e
+  // voltar a fazer.
+
+  'artigos': {
+    label: '🏷️ Artigos', prefixo: 'art',
+    get: function () { return getArtigos(); },
+    save: function (l) { salvarArtigos(l); },
+    linha: function (r) {
+      return {
+        t: (r.nome || '—') + (r.referencia ? '  ·  ref. ' + r.referencia : ''),
+        s: (r.rotulo ? r.rotulo + ' · ' : '')
+           + (r.unidadesCaixa ? r.unidadesCaixa + ' un/caixa · ' : '')
+           + (r.validadeDias ? r.validadeDias + ' dias de validade' : '')
+      };
+    },
+    campos: [
+      { k: 'nome', label: 'Nome do artigo', tipo: 'text' },
+      { k: 'referencia', label: 'Referência', tipo: 'text' },
+      { k: 'rotulo', label: 'Nome no rótulo', tipo: 'text' },
+      { k: 'unidadesCaixa', label: 'Unidades por caixa', tipo: 'number' },
+      { k: 'validadeDias', label: 'Validade (dias)', tipo: 'number' },
+      { k: 'codigoBarras', label: 'Código de barras', tipo: 'text' },
+      { k: 'obs', label: 'Observações', tipo: 'textarea' }
+    ]
+  },
+
+  'clientes': {
+    label: '👥 Clientes', prefixo: 'cli',
+    get: function () { return getClientes(); },
+    save: function (l) { salvarClientes(l); },
+    linha: function (r) {
+      return {
+        t: r.nome || '—',
+        s: [r.nif ? 'NIF ' + r.nif : '', r.telefone || '', r.email || '']
+             .filter(function (x) { return x; }).join(' · ')
+      };
+    },
+    campos: [
+      { k: 'nome', label: 'Nome', tipo: 'text' },
+      { k: 'nif', label: 'NIF', tipo: 'text' },
+      { k: 'telefone', label: 'Telefone', tipo: 'text' },
+      { k: 'email', label: 'E-mail', tipo: 'text' },
+      { k: 'morada', label: 'Morada', tipo: 'textarea' },
+      { k: 'obs', label: 'Observações', tipo: 'textarea' }
+    ]
+  },
+
+  'receitas': {
+    label: '📖 Receitas de fabrico', prefixo: 'r',
+    get: function () { return getReceitas(); },
+    save: function (l) { salvarReceitas(l); },
+    linha: function (r) {
+      return {
+        t: (r.ingrediente || '—') + ' — ' + (r.percentual || 0) + '%',
+        s: 'em ' + (r.produto || '?') + ' · sobre o ' + (r.base === 'soro' ? 'soro' : 'leite')
+      };
+    },
+    campos: [
+      { k: 'produto', label: 'Produto', tipo: 'select',
+        opcoes: [{ v: 'ovelha', l: 'Queijo de ovelha' }, { v: 'cabra', l: 'Queijo de cabra' },
+                 { v: 'dop', l: 'Queijo DOP' }, { v: 'requeijao', l: 'Requeijão' }] },
+      { k: 'ingrediente', label: 'Ingrediente', tipo: 'text' },
+      { k: 'percentual', label: 'Percentagem (%)', tipo: 'number' },
+      { k: 'base', label: 'Calculada sobre', tipo: 'select',
+        opcoes: [{ v: 'leite', l: 'Leite' }, { v: 'soro', l: 'Soro' }] }
+    ]
+  },
+
+  'embalagem-entradas': {
+    label: '📦 Material de Embalagem — entradas', prefixo: 'emb',
+    get: function () { return getEntradasEmbalagem(); },
+    save: function (l) { salvarEntradasEmbalagem(l); },
+    linha: function (r) {
+      return {
+        t: (r.material || '—') + ' — ' + (r.quantidade || 0) + ' ' + (r.unidade || 'un'),
+        s: 'lote ' + (r.lote || '—')
+           + (r.fornecedor ? ' · ' + r.fornecedor : '')
+           + (r.dataFormatada ? ' · ' + r.dataFormatada : '')
+      };
+    },
+    campos: [
+      { k: 'material', label: 'Material', tipo: 'text' },
+      { k: 'lote', label: 'Lote', tipo: 'text' },
+      { k: 'quantidade', label: 'Quantidade', tipo: 'number' },
+      { k: 'unidade', label: 'Unidade', tipo: 'text' },
+      { k: 'fornecedor', label: 'Fornecedor', tipo: 'text' },
+      { k: 'data', label: 'Data de entrada', tipo: 'data-iso' },
+      { k: 'validade', label: 'Validade', tipo: 'data-ymd' },
+      { k: 'obs', label: 'Observações', tipo: 'textarea' }
+    ]
+  },
+
+  'embalagem-saidas': {
+    label: '📤 Material de Embalagem — saídas', prefixo: 'semb',
+    get: function () { return getSaidasEmbalagem(); },
+    save: function (l) { salvarSaidasEmbalagem(l); },
+    linha: function (r) {
+      return {
+        t: (r.material || '—') + ' — ' + (r.quantidade || 0) + ' ' + (r.unidade || 'un')
+           + (r.defice ? '  ⚠️ por regularizar' : ''),
+        s: 'lote ' + (r.lote || '—')
+           + (r.artigo ? ' · ' + r.artigo : '')
+           + (r.loteProducao ? ' · produção ' + r.loteProducao : '')
+      };
+    },
+    campos: [
+      { k: 'material', label: 'Material', tipo: 'text' },
+      { k: 'lote', label: 'Lote do material', tipo: 'text' },
+      { k: 'quantidade', label: 'Quantidade', tipo: 'number' },
+      { k: 'unidade', label: 'Unidade', tipo: 'text' },
+      { k: 'artigo', label: 'Artigo embalado', tipo: 'text' },
+      { k: 'unidades', label: 'Unidades embaladas', tipo: 'number' },
+      { k: 'loteProducao', label: 'Lote de produção', tipo: 'text' },
+      { k: 'data', label: 'Data', tipo: 'data-iso' },
+      { k: 'obs', label: 'Observações', tipo: 'textarea' }
+    ]
+  },
+
   'producoes-queijo': {
     label: '🧀 Produções de Queijo', prefixo: 'pq',
     get: function () { return getProdutosQueijo(); },
@@ -29973,15 +30113,11 @@ setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
         </button>
         <button id="tab-dados" onclick="adminTab('dados')"
           style="flex:1;padding:10px;border-radius:10px;border:none;background:#f3f4f6;color:#6b7280;font-weight:700;font-size:13px;cursor:pointer">
-          🗑️ Dados
+          ✏️ Dados e Edição
         </button>
         <button id="tab-config" onclick="adminTab('config')"
           style="flex:1;padding:10px;border-radius:10px;border:none;background:#f3f4f6;color:#6b7280;font-weight:700;font-size:13px;cursor:pointer">
           🤖 Config
-        </button>
-        <button id="tab-editar" onclick="adminTab('editar')"
-          style="flex:1;padding:10px;border-radius:10px;border:none;background:#f3f4f6;color:#6b7280;font-weight:700;font-size:13px;cursor:pointer">
-          ✏️ Editar
         </button>
       </div>
 
@@ -30024,168 +30160,99 @@ setTimeout(function(){ _atualizarBadgeExp(); }, 1200);
       <!-- PAINEL DADOS -->
       <div id="admin-panel-dados" style="display:none">
         <div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:14px;padding:14px;margin-bottom:14px">
-          <div style="font-weight:800;color:#1e40af;margin-bottom:4px;font-size:14px">🗂️ Gestão de Dados — Edição Completa</div>
-          <div style="font-size:11px;color:#64748b;line-height:1.5;margin-bottom:12px">Todos os menus e submenus, registo a registo. Cada lista permite <strong>editar</strong> ou <strong>eliminar</strong> cada registo individualmente.</div>
+          <div style="font-weight:800;color:#1e40af;margin-bottom:4px;font-size:14px">&#128451;&#65039; Gest&#227;o de Dados</div>
+          <div style="font-size:11px;color:#64748b;line-height:1.5;margin-bottom:12px">Todas as áreas da app, registo a registo. Cada lista permite <strong>editar campo a campo</strong> ou <strong>eliminar</strong> cada registo. Para corrigir tudo o que está ligado a um lote num só sítio, usa a Ficha Completa do Lote.</div>
+          <button onclick="abrirFichaLote('')" style="width:100%;padding:13px;background:linear-gradient(135deg,#1e3a5f,#0369a1);border:none;border-radius:10px;color:white;font-weight:800;font-size:13px;cursor:pointer;text-align:left">&#128270; Ficha Completa do Lote &mdash; editar tudo de um lote</button>
 
-          <!-- ─── PRODUÇÃO DE QUEIJO ─── -->
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:0 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">🧀 Produção de Queijo</div>
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:18px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">&#129472; Produ&#231;&#227;o de Queijo</div>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="adminAbrirColecao('producoes-queijo')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🧀 Editar / Eliminar Produções de Queijo</button>
-            <button onclick="adminListarLeite()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🥛 Editar / Eliminar Lotes de Leite</button>
+            <button onclick="adminAbrirColecao('producoes-queijo')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#129472; Produ&#231;&#245;es de Queijo</button>
+            <button onclick="adminListarLeite()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#129371; Lotes de Leite</button>
+            <button onclick="adminAbrirEditorLeite()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#129371; Entradas de Leite (stock)</button>
+            <div style="font-size:10px;color:#94a3b8;margin:4px 0 -2px">Abrir o ecrã completo:</div>
+            <button onclick="irPara('screen-pq-historico')" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#128203; Hist&#243;rico de Produ&#231;&#245;es</button>
+            <button onclick="irPara('screen-prod-queijo')" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#9203; Produ&#231;&#245;es em Curso (passos, tempos, quantidades)</button>
           </div>
 
-          <!-- ─── PRODUÇÃO DE REQUEIJÃO ─── -->
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:16px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">🥛 Produção de Requeijão</div>
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:18px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">&#129371; Produ&#231;&#227;o de Requeij&#227;o</div>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="adminAbrirColecao('producoes-requeijao')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🥛 Editar / Eliminar Produções de Requeijão</button>
-            <button onclick="adminAbrirColecao('saidas-requeijao')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🚚 Editar / Eliminar Saídas de Requeijão</button>
-            <button onclick="adminAbrirColecao('lotes-b-requeijao')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🔁 Editar / Eliminar Lotes B (sobras do dia)</button>
-            <button onclick="adminAbrirColecao('sorelho')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🧪 Editar / Eliminar Sorelho (subproduto)</button>
-            <button onclick="adminAbrirColecao('soro-auto')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🧈 Editar / Eliminar Soro (automático)</button>
-            <button onclick="adminAbrirColecao('soro-manual')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🧈 Editar / Eliminar Soro (manual)</button>
+            <button onclick="adminAbrirColecao('producoes-requeijao')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#129371; Produ&#231;&#245;es de Requeij&#227;o</button>
+            <button onclick="adminAbrirColecao('saidas-requeijao')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#128666; Sa&#237;das de Requeij&#227;o</button>
+            <button onclick="adminAbrirColecao('lotes-b-requeijao')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#128257; Lotes B (sobras do dia)</button>
+            <button onclick="adminAbrirColecao('sorelho')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#129514; Sorelho (subproduto)</button>
+            <button onclick="adminAbrirColecao('soro-auto')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#129352; Soro (autom&#225;tico)</button>
+            <button onclick="adminAbrirColecao('soro-manual')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#129352; Soro (manual)</button>
+            <div style="font-size:10px;color:#94a3b8;margin:4px 0 -2px">Abrir o ecrã completo:</div>
+            <button onclick="irPara('screen-prq-historico')" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#128203; Hist&#243;rico de Produ&#231;&#245;es</button>
+            <button onclick="irPara('screen-prod-requeijao')" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#9203; Produ&#231;&#245;es em Curso (caldeiras)</button>
+            <button onclick="irPara('screen-rq-saidas')" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#128666; Sa&#237;das e Lotes FIFO (A / B, validades)</button>
+            <button onclick="irPara('screen-entradas-soro')" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#129352; Entradas de Soro</button>
           </div>
 
-          <!-- ─── CURA E LAVAGEM ─── -->
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:16px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">🏭 Cura e Lavagem</div>
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:18px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">&#127981; Cura e Lavagem</div>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="adminListarLotes()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🧀 Editar / Eliminar Lotes nas Câmaras</button>
-            <button onclick="adminListarLavagens()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🧹 Editar / Eliminar Lavagens</button>
-            <button onclick="adminAbrirColecao('congelacoes')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🧊 Editar / Eliminar Congelações</button>
+            <button onclick="adminListarLotes()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#129472; Lotes nas C&#226;maras</button>
+            <button onclick="adminListarLavagens()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#129529; Lavagens</button>
+            <button onclick="adminAbrirColecao('congelacoes')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#129482; Congela&#231;&#245;es</button>
+            <div style="font-size:10px;color:#94a3b8;margin:4px 0 -2px">Abrir o ecrã completo:</div>
+            <button onclick="adminAbrirEditorCamaras()" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#127981; Editor de C&#226;maras (datas de entrada)</button>
+            <button onclick="irParaCongelacao()" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#129482; Congela&#231;&#227;o / Descongela&#231;&#227;o</button>
           </div>
 
-          <!-- ─── ENCOMENDAS E EXPEDIÇÃO ─── -->
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:16px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">📦 Encomendas e Expedição</div>
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:18px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">&#128230; Encomendas e Expedi&#231;&#227;o</div>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="adminListarEncomendas()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">📦 Editar / Eliminar Encomendas</button>
-            <button onclick="adminAbrirColecao('expedicoes')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🚚 Editar / Eliminar Expedições</button>
+            <button onclick="adminListarEncomendas()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#128230; Encomendas</button>
+            <button onclick="adminAbrirColecao('expedicoes')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#128666; Expedi&#231;&#245;es</button>
+            <div style="font-size:10px;color:#94a3b8;margin:4px 0 -2px">Abrir o ecrã completo:</div>
+            <button onclick="irPara('screen-enc-lista')" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#128230; Lista de Encomendas</button>
+            <button onclick="abrirExpedicao()" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#128666; Ecr&#227; de Expedi&#231;&#227;o</button>
           </div>
 
-          <!-- ─── ENTRADAS DE MATÉRIA-PRIMA ─── -->
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:16px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">🧂 Entradas de Matéria-Prima</div>
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:18px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">&#129474; Mat&#233;ria-Prima</div>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="adminListarEntradasMP()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🧂 Editar / Eliminar Entradas e Saídas de MP</button>
-            <button onclick="adminAbrirColecao('entradas-marcas')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">🏷️ Editar / Eliminar Entradas de Marcas</button>
+            <button onclick="adminListarEntradasMP()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#129474; Entradas e Sa&#237;das de MP</button>
+            <button onclick="adminAbrirColecao('entradas-marcas')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#127991;&#65039; Entradas de Marcas</button>
+            <div style="font-size:10px;color:#94a3b8;margin:4px 0 -2px">Abrir o ecrã completo:</div>
+            <button onclick="irPara('screen-mp-leite-soro')" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#129371; Entradas de Leite e Soro</button>
+            <button onclick="irPara('screen-pq-marcas')" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#127991;&#65039; Ecr&#227; de Marcas</button>
+          </div>
+
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:18px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">&#128230; Material de Embalagem</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button onclick="adminAbrirColecao('embalagem-entradas')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#128230; Entradas de Embalagem</button>
+            <button onclick="adminAbrirColecao('embalagem-saidas')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#128228; Sa&#237;das de Embalagem</button>
+            <div style="font-size:10px;color:#94a3b8;margin:4px 0 -2px">Abrir o ecrã completo:</div>
+            <button onclick="irPara('screen-embalagem')" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#128230; Ecr&#227; de Embalagem (receitas material &rarr; artigo)</button>
+          </div>
+
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:18px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">&#127991;&#65039; Artigos e Clientes</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button onclick="adminAbrirColecao('artigos')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#127991;&#65039; Artigos</button>
+            <button onclick="adminAbrirColecao('clientes')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#128101; Clientes</button>
+          </div>
+
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:18px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">&#128214; Receitas de Fabrico</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button onclick="adminAbrirColecao('receitas')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#128214; Receitas (% de ingredientes)</button>
+            <div style="font-size:10px;color:#94a3b8;margin:4px 0 -2px">Abrir o ecrã completo:</div>
+            <button onclick="adminAbrirReceitas()" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#128214; Editor de Receitas</button>
+            <button onclick="irPara('screen-receitas')" style="padding:9px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:9px;color:#475569;font-weight:600;font-size:12px;cursor:pointer;text-align:left">&#128214; Ecr&#227; de Receitas</button>
+          </div>
+
+          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:18px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">&#128736;&#65039; Corre&#231;&#245;es Gerais</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <button onclick="adminEditarDatas()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">&#128197; Corrigir Datas (c&#226;maras, encomendas)</button>
           </div>
         </div>
         <div style="background:#fef2f2;border:1.5px solid #fca5a5;border-radius:12px;padding:14px;margin-bottom:12px">
-          <div style="font-weight:700;color:#dc2626;margin-bottom:8px">⚠️ Zona de eliminação — ação irreversível</div>
+          <div style="font-weight:700;color:#dc2626;margin-bottom:8px">&#9888;&#65039; Zona de elimina&#231;&#227;o &mdash; a&#231;&#227;o irrevers&#237;vel</div>
+          <div style="font-size:11px;color:#b91c1c;margin-bottom:10px">Isto apaga em <strong>todos</strong> os aparelhos, n&#227;o s&#243; neste.</div>
           <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="adminEliminar('producoes-queijo')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">
-              🧀 Eliminar todas as produções de queijo
-            </button>
-            <button onclick="adminEliminar('producoes-requeijao')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">
-              🥛 Eliminar todas as produções de requeijão
-            </button>
-            <button onclick="adminEliminar('camaras')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">
-              🏭 Eliminar todos os lotes das câmaras
-            </button>
-            <button onclick="adminEliminar('encomendas')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">
-              📦 Eliminar todas as encomendas
-            </button>
-            <button onclick="adminEliminar('tudo')" style="padding:12px;background:#fef2f2;border:2px solid #dc2626;border-radius:10px;color:#dc2626;font-weight:800;font-size:13px;cursor:pointer;text-align:left">
-              ☠️ ELIMINAR TUDO (reset total)
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- PAINEL EDITAR ADMIN -->
-      <div id="admin-panel-editar" style="display:none">
-        <div style="background:#eff6ff;border:2px solid #bfdbfe;border-radius:14px;padding:14px;margin-bottom:12px">
-          <div style="font-weight:800;color:#1e40af;margin-bottom:4px;font-size:14px">✏️ Editar Dados</div>
-          <div style="font-size:11px;color:#64748b;line-height:1.5;margin-bottom:12px">Todos os menus e submenus da app. Para editar <strong>tudo o que está ligado a um lote</strong> (da produção à expedição) num só sítio, usa a Ficha Completa do Lote.</div>
-
-          <button onclick="abrirFichaLote('')" style="width:100%;padding:13px;background:linear-gradient(135deg,#1e3a5f,#0369a1);border:none;border-radius:10px;color:white;font-weight:800;font-size:13px;cursor:pointer;text-align:left">
-            🔎 Ficha Completa do Lote — editar tudo de um lote
-          </button>
-
-          <!-- ─── PRODUÇÃO DE QUEIJO ─── -->
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:16px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">🧀 Produção de Queijo</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="irPara('screen-pq-historico')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              📋 Histórico de Produções (editar/eliminar)
-            </button>
-            <button onclick="irPara('screen-prod-queijo')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              ⏳ Produções em Curso (passos, tempos, quantidades)
-            </button>
-            <button onclick="adminAbrirEditorLeite()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              🥛 Editar Entradas de Leite (stock)
-            </button>
-          </div>
-
-          <!-- ─── PRODUÇÃO DE REQUEIJÃO ─── -->
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:16px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">🥛 Produção de Requeijão</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="irPara('screen-prq-historico')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              📋 Histórico de Produções (editar/eliminar)
-            </button>
-            <button onclick="irPara('screen-prod-requeijao')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              ⏳ Produções em Curso (caldeiras)
-            </button>
-            <button onclick="irPara('screen-rq-saidas')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              🚚 Saídas e Lotes FIFO (A / B, validades)
-            </button>
-            <button onclick="irPara('screen-subprodutos-rq')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              🧪 Subprodutos — Sorelho (lotes SP)
-            </button>
-            <button onclick="irPara('screen-entradas-soro')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              🧈 Entradas de Soro
-            </button>
-          </div>
-
-          <!-- ─── CURA E LAVAGEM ─── -->
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:16px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">🏭 Cura e Lavagem</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="adminAbrirEditorCamaras()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              🏭 Editar Lotes nas Câmaras
-            </button>
-            <button onclick="adminAbrirEditorLavagens()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              🧼 Editar/Eliminar Lavagens
-            </button>
-            <button onclick="irParaCongelacao()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              🧊 Congelação / Descongelação
-            </button>
-          </div>
-
-          <!-- ─── ENCOMENDAS E EXPEDIÇÃO ─── -->
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:16px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">📦 Encomendas e Expedição</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="irPara('screen-enc-lista')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              📦 Editar/Eliminar Encomendas
-            </button>
-            <button onclick="abrirExpedicao()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              🚚 Editar/Eliminar Expedições
-            </button>
-          </div>
-
-          <!-- ─── ENTRADAS DE MATÉRIA-PRIMA ─── -->
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:16px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">🧂 Entradas de Matéria-Prima</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="irPara('screen-mp-leite-soro')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              🥛 Entradas de Leite e Soro
-            </button>
-            <button onclick="adminListarEntradasMP()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              🧂 Outras Entradas (editar/eliminar)
-            </button>
-            <button onclick="irPara('screen-pq-marcas')" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              🏷️ Entradas de Marcas
-            </button>
-          </div>
-
-          <!-- ─── RECEITAS ─── -->
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:16px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">📖 Receitas</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="adminAbrirReceitas()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              📖 Editar Receitas (% de ingredientes)
-            </button>
-          </div>
-
-          <!-- ─── CORREÇÕES GERAIS ─── -->
-          <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin:16px 0 7px;padding-bottom:5px;border-bottom:1.5px solid #cbd5e1">🛠️ Correções Gerais</div>
-          <div style="display:flex;flex-direction:column;gap:8px">
-            <button onclick="adminEditarDatas()" style="padding:12px;background:white;border:2px solid #bfdbfe;border-radius:10px;color:#1e40af;font-weight:700;font-size:13px;cursor:pointer;text-align:left">
-              📅 Corrigir Datas (câmaras, encomendas)
-            </button>
+            <button onclick="adminEliminar('producoes-queijo')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">&#129472; Eliminar todas as produ&#231;&#245;es de queijo</button>
+            <button onclick="adminEliminar('producoes-requeijao')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">&#129371; Eliminar todas as produ&#231;&#245;es de requeij&#227;o</button>
+            <button onclick="adminEliminar('camaras')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">&#127981; Eliminar todos os lotes das c&#226;maras</button>
+            <button onclick="adminEliminar('encomendas')" style="padding:12px;background:white;border:1.5px solid #fca5a5;border-radius:10px;color:#dc2626;font-weight:600;font-size:13px;cursor:pointer;text-align:left">&#128230; Eliminar todas as encomendas</button>
+            <button onclick="adminEliminar('tudo')" style="padding:12px;background:#fef2f2;border:2px solid #dc2626;border-radius:10px;color:#dc2626;font-weight:800;font-size:13px;cursor:pointer;text-align:left">&#9760;&#65039; ELIMINAR TUDO (reset total)</button>
           </div>
         </div>
       </div>
