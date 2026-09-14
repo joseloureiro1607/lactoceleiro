@@ -7384,7 +7384,54 @@ async function sincronizarTudo() {
       if (e && e.detalhe && e.detalhe.inicio) {
         _txtErro += ' — o servidor devolveu: ' + String(e.detalhe.inicio).slice(0, 80);
       }
-      falhas.push({ chave: '(todas)', bytes: 0, erro: _txtErro });
+
+      // ── SEGUNDA VIA ────────────────────────────────────────────────
+      // O envio normal não passou. Em vez de desistir, tenta-se pela via
+      // do formulário, que é travada muito mais dificilmente. Como não dá
+      // para ler a resposta, confirma-se a seguir pelos carimbos: só as
+      // áreas cujo carimbo no servidor avançou é que contam como
+      // guardadas.
+      var _viaDois = false;
+      try {
+        var _carimbosAntes = null;
+        try { _carimbosAntes = await _carimbosDoServidor(); } catch (eC) {}
+
+        await _enviarPorFormulario(payload, 120);
+        _viaDois = true;
+
+        // dar um instante ao servidor para acabar de gravar
+        await new Promise(function (r) { setTimeout(r, 1500); });
+
+        var _carimbosDepois = await _carimbosDoServidor();
+        var _passaram = [];
+        enviadas.forEach(function (k) {
+          var antes = (_carimbosAntes && _carimbosAntes[k]) || 0;
+          var depois = _carimbosDepois[k] || 0;
+          if (depois > antes) _passaram.push(k);
+        });
+
+        if (_passaram.length) {
+          okAlguma = true;
+          _passaram.forEach(function (k) {
+            if (metaDepois[k] === meta[k]) delete metaDepois[k];
+            try { _guardarBaseDaChave(k, payload.dados[k]); } catch (eB) {}
+          });
+          enviadas.forEach(function (k) {
+            if (_passaram.indexOf(k) < 0) {
+              falhas.push({ chave: k, bytes: (payload.dados[k] || '').length,
+                erro: 'nem pelo envio normal nem pela segunda via' });
+            }
+          });
+          console.log('Sincronização: o envio normal falhou (' + _txtErro
+            + ') mas a segunda via gravou ' + _passaram.length + ' área(s).');
+        } else {
+          falhas.push({ chave: '(todas)', bytes: 0,
+            erro: _txtErro + ' — a segunda via também não gravou' });
+        }
+      } catch (e2) {
+        falhas.push({ chave: '(todas)', bytes: 0,
+          erro: _txtErro + ' — segunda via: ' + ((e2 && e2.message) || 'falhou') });
+      }
     }
 
     setSyncMeta(metaDepois);
@@ -7513,6 +7560,84 @@ async function _jsonOuExplicar(resp, oQue) {
   throw e2;
 }
 
+// ════════════════════════════════════════════════════════════════════════
+//  SEGUNDA VIA DE ENVIO
+//  Ler funciona em todos os aparelhos; escrever so funcionava num. O
+//  envio usa fetch(), que e travado com facilidade por extensoes,
+//  proxies, firewalls e navegadores antigos - e quando e travado nao ha
+//  volta a dar do lado do codigo normal.
+//  Isto envia como qualquer pagina web faz desde sempre: um formulario
+//  submetido pelo proprio navegador para dentro de um iframe escondido.
+//  Nao usa fetch, nao precisa de CORS e passa onde o outro nao passa.
+//  Nao da para ler a resposta (o iframe e de outro dominio), por isso a
+//  confirmacao e feita a seguir, perguntando ao servidor os carimbos.
+// ════════════════════════════════════════════════════════════════════════
+function _enviarPorFormulario(payload, segundos) {
+  return new Promise(function (resolve, reject) {
+    var nome = 'lcenv_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+    var ifr, f, t, acabou = false;
+
+    function limpar() {
+      if (t) clearTimeout(t);
+      try { if (f && f.parentNode) f.parentNode.removeChild(f); } catch (e) {}
+      setTimeout(function () {
+        try { if (ifr && ifr.parentNode) ifr.parentNode.removeChild(ifr); } catch (e) {}
+      }, 1000);
+    }
+
+    try {
+      ifr = document.createElement('iframe');
+      ifr.name = nome;
+      ifr.id = nome;
+      ifr.setAttribute('aria-hidden', 'true');
+      ifr.style.cssText = 'position:absolute;width:0;height:0;border:0;left:-9999px';
+      document.body.appendChild(ifr);
+
+      f = document.createElement('form');
+      f.method = 'POST';
+      f.action = SCRIPT_URL;
+      f.target = nome;
+      f.acceptCharset = 'UTF-8';
+      f.style.display = 'none';
+
+      var campo = document.createElement('textarea');
+      campo.name = 'payload';
+      campo.value = JSON.stringify(payload);
+      f.appendChild(campo);
+      document.body.appendChild(f);
+
+      t = setTimeout(function () {
+        if (acabou) return;
+        acabou = true; limpar();
+        reject(new Error('a segunda via demorou demasiado'));
+      }, (segundos || 120) * 1000);
+
+      ifr.onload = function () {
+        if (acabou) return;
+        acabou = true; limpar();
+        resolve(true);
+      };
+
+      f.submit();
+    } catch (e) {
+      if (!acabou) { acabou = true; limpar(); reject(e); }
+    }
+  });
+}
+window._enviarPorFormulario = _enviarPorFormulario;
+
+// Pergunta ao servidor so os carimbos. Serve para confirmar que a segunda
+// via gravou mesmo - ela nao consegue ler a resposta.
+async function _carimbosDoServidor() {
+  var r = await _fetchSync(SCRIPT_URL + '?acao=estado&ts=' + Date.now(), 30);
+  var j = await _jsonOuExplicar(r, 'carimbos');
+  var mapa = {};
+  if (j && j.ok && Array.isArray(j.areas)) {
+    j.areas.forEach(function (a) { if (a && a.chave) mapa[a.chave] = _tsDe(a.ts); });
+  }
+  return mapa;
+}
+
 async function _fetchSync(url, segundos) {
   var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
   var t = ctrl ? setTimeout(function () { ctrl.abort(); }, (segundos || 90) * 1000) : null;
@@ -7536,8 +7661,8 @@ var _pullEmCurso = false;
 //  Agora pergunta-se primeiro só as datas (poucos bytes). Se nada mudou
 //  no servidor desde a última vez, não se pede mais nada.
 // ═══════════════════════════════════════════════════════════════════════
-var APP_VERSAO = '2026-09-14 \u00b7 44';
-var APP_BUILD  = '2026-09-14T19:09:32Z';
+var APP_VERSAO = '2026-09-14 \u00b7 45';
+var APP_BUILD  = '2026-09-14T19:55:47Z';
 
 // ════════════════════════════════════════════════════════════════════════
 //  "NO TABLET AINDA APARECE A VERSAO 36"
