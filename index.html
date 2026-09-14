@@ -7301,7 +7301,7 @@ async function sincronizarTudo() {
           signal: _c ? _c.signal : undefined
         });
       } finally { if (_t) clearTimeout(_t); }
-      var j = await r.json();
+      var j = await _jsonOuExplicar(r, 'envio');
 
       if (j && j.ok) {
         okAlguma = true;
@@ -7326,8 +7326,11 @@ async function sincronizarTudo() {
         falhas.push({ chave: '(todas)', bytes: 0, erro: (j && (j.erro || j.error)) || 'o servidor respondeu sem ok' });
       }
     } catch (e) {
-      falhas.push({ chave: '(todas)', bytes: 0,
-        erro: (e && e.name === 'AbortError') ? 'demorou demasiado' : ((e && e.message) || 'falhou') });
+      var _txtErro = (e && e.name === 'AbortError') ? 'demorou demasiado' : ((e && e.message) || 'falhou');
+      if (e && e.detalhe && e.detalhe.inicio) {
+        _txtErro += ' — o servidor devolveu: ' + String(e.detalhe.inicio).slice(0, 80);
+      }
+      falhas.push({ chave: '(todas)', bytes: 0, erro: _txtErro });
     }
 
     setSyncMeta(metaDepois);
@@ -7419,6 +7422,43 @@ async function sincronizarTudo() {
 // --- PULL: busca dados do servidor ao abrir a app --
 // fetch com tempo-limite. Sem isto, um pedido pendurado deixava a app a dizer
 // "a sincronizar" para sempre.
+// O Apps Script, quando nao consegue servir, responde com uma PAGINA HTML
+// (pedido de sessao Google, quota esgotada, erro interno). O JSON.parse
+// rebenta com "Unexpected token '<'" e ficamos sem saber qual das tres foi.
+// Isto le o corpo e diz o que veio mesmo.
+async function _jsonOuExplicar(resp, oQue) {
+  var txt = '';
+  try { txt = await resp.text(); } catch (e) { txt = ''; }
+  try { return JSON.parse(txt); } catch (e) {}
+
+  var t = String(txt || '').replace(/\s+/g, ' ').trim();
+  var baixo = t.toLowerCase();
+  var causa;
+  if (baixo.indexOf('accounts.google.com') >= 0 || baixo.indexOf('signin') >= 0
+      || baixo.indexOf('iniciar sess') >= 0 || baixo.indexOf('sign in') >= 0) {
+    causa = 'O Google esta a pedir para iniciar sessao. Neste navegador a conta '
+          + 'que esta ligada nao tem acesso ao script.';
+  } else if (baixo.indexOf('quota') >= 0 || baixo.indexOf('limite') >= 0) {
+    causa = 'O Google diz que a quota do script se esgotou. Costuma voltar ao fim de algumas horas.';
+  } else if (baixo.indexOf('unable to open') >= 0 || baixo.indexOf('nao foi possivel abrir') >= 0
+             || baixo.indexOf('n\u00e3o foi poss\u00edvel abrir') >= 0) {
+    causa = 'O Google nao consegue abrir o script neste momento.';
+  } else if (resp && resp.status && resp.status >= 400) {
+    causa = 'O servidor respondeu com erro ' + resp.status + '.';
+  } else {
+    causa = 'O servidor devolveu uma pagina em vez de dados.';
+  }
+
+  var e2 = new Error(causa);
+  e2.detalhe = {
+    estado: (resp && resp.status) || 0,
+    endereco: (resp && resp.url) || '',
+    inicio: t.slice(0, 160),
+    oQue: oQue || ''
+  };
+  throw e2;
+}
+
 async function _fetchSync(url, segundos) {
   var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
   var t = ctrl ? setTimeout(function () { ctrl.abort(); }, (segundos || 90) * 1000) : null;
@@ -7442,7 +7482,7 @@ var _pullEmCurso = false;
 //  Agora pergunta-se primeiro só as datas (poucos bytes). Se nada mudou
 //  no servidor desde a última vez, não se pede mais nada.
 // ═══════════════════════════════════════════════════════════════════════
-var APP_VERSAO = '2026-09-14 · 36';
+var APP_VERSAO = '2026-09-14 · 38';
 try { console.log('Lactoceleiro — versão ' + APP_VERSAO); } catch (e) {}
 
 var K_CARIMBOS_VISTOS = 'lc_sync_carimbos_v1';
@@ -7461,7 +7501,7 @@ window._esquecerCarimbosVistos = function () {
 async function _novidadesNoServidor() {
   try {
     var r = await _fetchSync(SCRIPT_URL + '?acao=estado&ts=' + Date.now(), 25);
-    var j = await r.json();
+    var j = await _jsonOuExplicar(r, 'carimbos');
     if (!j || !j.ok || !Array.isArray(j.areas)) return null;
     var vistos = _carimbosVistos(), mapa = {}, mudou = false;
     j.areas.forEach(function (a) {
@@ -7588,7 +7628,7 @@ async function puxarDadosServidor(forcar) {
       var nov = await _novidadesNoServidor();
       if (forcar === true || nov === null || nov.mudou) {
         const resp = await _fetchSync(SCRIPT_URL + '?acao=pull&ts=' + Date.now(), 90);
-        const json = await resp.json();
+        const json = await _jsonOuExplicar(resp, 'recepcao');
         if (json.ok && json.remoto) {
           // guardado para o diagnóstico e para a verificação pós-envio
           window._ultimoPull = { ts: Date.now(), remoto: json.remoto, metaRemoto: json.metaRemoto || {} };
@@ -16726,6 +16766,30 @@ function _idsDoHistorico(chave) {
   return m;
 }
 
+// Todas as marcas criadas de uma vez levam o MESMO carimbo. Isso distingue
+// as duas coisas que nao se distinguiam: um humano a apagar registo a
+// registo (carimbos diferentes, uma confirmacao em cada um) e o codigo a
+// apagar um monte de uma assentada (todos com o mesmo carimbo) - que e
+// sempre erro.
+function _momentosLapides(chave, soASerio) {
+  var ap = {};
+  try { ap = getApagadosSync() || {}; } catch (e) {}
+  var m = ap[chave];
+  if (!m || typeof m !== 'object') return [];
+  var hist = (soASerio && LAPIDES_NORMAIS[chave]) ? _idsDoHistorico(LAPIDES_NORMAIS[chave]) : null;
+  var grupos = {};
+  Object.keys(m).forEach(function (id) {
+    if (hist && hist[id]) return;
+    var ts = _tsDe(m[id]);
+    var chaveTs = Math.floor(ts / 1000);   // ao segundo
+    if (!grupos[chaveTs]) grupos[chaveTs] = { ts: ts, n: 0 };
+    grupos[chaveTs].n++;
+  });
+  return Object.keys(grupos).map(function (g) { return grupos[g]; })
+    .sort(function (x, y) { return y.n - x.n; });
+}
+window._momentosLapides = _momentosLapides;
+
 function _contarLapides() {
   var ap = {};
   try { ap = getApagadosSync() || {}; } catch (e) {}
@@ -16795,12 +16859,13 @@ async function abrirDiagnosticoSync() {
     + '</div><div id="diag-corpo" style="font-size:13px;color:#6b7280">A perguntar ao servidor…</div></div>';
   document.body.appendChild(m);
 
-  var resposta = null, erro = null;
+  var resposta = null, erro = null, detalhe = null;
   try {
     var r = await _fetchSync(SCRIPT_URL + '?acao=pull&ts=' + Date.now(), 90);
-    resposta = await r.json();
+    resposta = await _jsonOuExplicar(r, 'diagnostico');
   } catch (e) {
     erro = (e && e.name === 'AbortError') ? 'o servidor demorou demasiado a responder' : ((e && e.message) || 'não consegui falar com o servidor');
+    detalhe = e && e.detalhe ? e.detalhe : null;
   }
 
   var corpo = document.getElementById('diag-corpo');
@@ -16809,7 +16874,14 @@ async function abrirDiagnosticoSync() {
   if (erro || !resposta || !resposta.ok) {
     corpo.innerHTML = '<div style="background:#fff1f2;border:2px solid #fca5a5;border-radius:12px;padding:14px;color:#991b1b">'
       + '<strong>Não consegui ler o servidor.</strong><br>' + _stkEsc(erro || 'a resposta veio sem ok')
-      + '<div style="font-size:11px;margin-top:8px;color:#6b7280">Sem isto não dá para comparar. Confirma a ligação e tenta outra vez.</div></div>';
+      + (detalhe ? '<div style="font-size:11px;margin-top:8px;color:#6b7280;word-break:break-all">'
+          + 'Resposta ' + _stkEsc(String(detalhe.estado || '?')) + '<br>'
+          + (detalhe.endereco ? 'Veio de: ' + _stkEsc(String(detalhe.endereco).slice(0, 90)) + '<br>' : '')
+          + (detalhe.inicio ? 'Começa por: <code>' + _stkEsc(detalhe.inicio.slice(0, 120)) + '</code>' : '')
+          + '</div>' : '')
+      + '<div style="font-size:11px;margin-top:8px;color:#6b7280">Sem isto não dá para comparar. Confirma a ligação e tenta outra vez.</div>'
+      + '<button onclick="window.open(SCRIPT_URL + \'?acao=estado\', \'_blank\')" style="width:100%;margin-top:10px;padding:11px;background:#1e3a5f;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer">Abrir o servidor numa janela nova</button>'
+      + '<div style="font-size:11px;margin-top:6px;color:#6b7280">Se abrir uma página do Google a pedir conta, é esse o problema: este navegador está ligado a uma conta sem acesso ao script.</div></div>';
     return;
   }
 
@@ -16879,7 +16951,18 @@ async function abrirDiagnosticoSync() {
       + lap.porArea.filter(function (a) { return a.aSerio > 0; }).slice(0, 8).map(function (a) {
           return '<div style="font-size:12px;color:#6b7280">\u00b7 ' + _stkEsc(_syncNome(a.chave)) + ': <strong>' + a.aSerio + '</strong></div>';
         }).join('')
-      + '<div style="font-size:11px;color:#6b7280;margin-top:6px">Estes foram apagados de prop\u00f3sito por algu\u00e9m, e por isso s\u00e3o removidos de <strong>todos</strong> os aparelhos. Se n\u00e3o foste tu, foram criadas por engano.</div>'
+      + lap.porArea.filter(function (a) { return a.aSerio > 0; }).map(function (a) {
+          var mm = _momentosLapides(a.chave, true);
+          var suspeito = mm.some(function (g) { return g.n >= 3; });
+          return '<div style="font-size:11px;color:' + (suspeito ? '#991b1b' : '#6b7280') + ';margin-top:6px">'
+            + _stkEsc(_syncNome(a.chave)) + ' \u2014 apagados em ' + mm.length + ' momento(s): '
+            + mm.slice(0, 5).map(function (g) {
+                return g.n + ' ' + (g.n === 1 ? 'registo' : 'registos') + ' ' + _diagQuando(g.ts);
+              }).join(', ')
+            + (suspeito ? '<br><strong>V\u00e1rios de uma s\u00f3 vez \u2014 isto n\u00e3o \u00e9 algu\u00e9m a apagar um a um, \u00e9 erro do programa.</strong>' : '')
+            + '</div>';
+        }).join('')
+      + '<div style="font-size:11px;color:#6b7280;margin-top:6px">Enquanto estas marcas existirem, estes registos s\u00e3o removidos de <strong>todos</strong> os aparelhos.</div>'
       + '<button onclick="limparLapides()" style="width:100%;margin-top:8px;padding:10px;background:#991b1b;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer">\ud83e\uddf9 Apagar estas marcas</button>'
       + '</div>';
   }
