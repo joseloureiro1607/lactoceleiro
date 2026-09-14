@@ -7396,19 +7396,14 @@ async function sincronizarTudo() {
         var _carimbosAntes = null;
         try { _carimbosAntes = await _carimbosDoServidor(); } catch (eC) {}
 
-        await _enviarPorFormulario(payload, 120);
+        await _enviarPorFormulario(payload, 180);
         _viaDois = true;
 
-        // dar um instante ao servidor para acabar de gravar
-        await new Promise(function (r) { setTimeout(r, 1500); });
-
-        var _carimbosDepois = await _carimbosDoServidor();
-        var _passaram = [];
-        enviadas.forEach(function (k) {
-          var antes = (_carimbosAntes && _carimbosAntes[k]) || 0;
-          var depois = _carimbosDepois[k] || 0;
-          if (depois > antes) _passaram.push(k);
-        });
+        // Insiste-se até o servidor acusar a gravação, em vez de perguntar
+        // uma vez e desistir — ele está a atender o envio que acabámos de
+        // lhe mandar e a resposta demora.
+        var _res = await _esperarCarimbos(enviadas, _carimbosAntes);
+        var _passaram = _res.avancaram;
 
         if (_passaram.length) {
           okAlguma = true;
@@ -7628,14 +7623,34 @@ window._enviarPorFormulario = _enviarPorFormulario;
 
 // Pergunta ao servidor so os carimbos. Serve para confirmar que a segunda
 // via gravou mesmo - ela nao consegue ler a resposta.
-async function _carimbosDoServidor() {
-  var r = await _fetchSync(SCRIPT_URL + '?acao=estado&ts=' + Date.now(), 30);
+async function _carimbosDoServidor(segundos) {
+  var r = await _fetchSync(SCRIPT_URL + '?acao=estado&ts=' + Date.now(), segundos || 90);
   var j = await _jsonOuExplicar(r, 'carimbos');
   var mapa = {};
   if (j && j.ok && Array.isArray(j.areas)) {
     j.areas.forEach(function (a) { if (a && a.chave) mapa[a.chave] = _tsDe(a.ts); });
   }
   return mapa;
+}
+
+// O Apps Script atende um pedido de cada vez. Logo a seguir a um envio, a
+// pergunta "já gravaste?" fica na fila atrás dele — e a primeira resposta
+// pode demorar. Por isso insiste-se, em vez de desistir à primeira.
+async function _esperarCarimbos(chaves, antes, tentativas) {
+  var esperas = [3000, 8000, 15000, 25000];
+  var n = tentativas || esperas.length;
+  var ultimo = null;
+  for (var i = 0; i < n; i++) {
+    await new Promise(function (r) { setTimeout(r, esperas[Math.min(i, esperas.length - 1)]); });
+    try {
+      ultimo = await _carimbosDoServidor(90);
+    } catch (e) { continue; }
+    var avancaram = chaves.filter(function (k) {
+      return (ultimo[k] || 0) > ((antes && antes[k]) || 0);
+    });
+    if (avancaram.length) return { mapa: ultimo, avancaram: avancaram };
+  }
+  return { mapa: ultimo || {}, avancaram: [] };
 }
 
 async function _fetchSync(url, segundos) {
@@ -7661,8 +7676,8 @@ var _pullEmCurso = false;
 //  Agora pergunta-se primeiro só as datas (poucos bytes). Se nada mudou
 //  no servidor desde a última vez, não se pede mais nada.
 // ═══════════════════════════════════════════════════════════════════════
-var APP_VERSAO = '2026-09-14 \u00b7 45';
-var APP_BUILD  = '2026-09-14T19:55:47Z';
+var APP_VERSAO = '2026-09-14 \u00b7 46';
+var APP_BUILD  = '2026-09-14T20:05:47Z';
 
 // ════════════════════════════════════════════════════════════════════════
 //  "NO TABLET AINDA APARECE A VERSAO 36"
