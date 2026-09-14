@@ -7482,7 +7482,64 @@ var _pullEmCurso = false;
 //  Agora pergunta-se primeiro só as datas (poucos bytes). Se nada mudou
 //  no servidor desde a última vez, não se pede mais nada.
 // ═══════════════════════════════════════════════════════════════════════
-var APP_VERSAO = '2026-09-14 · 39';
+var APP_VERSAO = '2026-09-14 \u00b7 40';
+var APP_BUILD  = '2026-09-14T08:42:22Z';
+
+// ════════════════════════════════════════════════════════════════════════
+//  "NO TABLET AINDA APARECE A VERSAO 36"
+//  O browser guarda o ficheiro e continua a servir o antigo, mesmo depois
+//  de substituido no GitHub. Ate agora so se resolvia inventando um
+//  endereco novo a cada vez (?v=39, ?v=39b...), e era preciso lembrar-se
+//  em cada aparelho.
+//  Agora e a propria app que pergunta ao GitHub quando e que o ficheiro
+//  foi publicado. Se for mais recente do que a copia que esta a correr,
+//  aparece uma faixa em cima com um botao que recarrega por um endereco
+//  que este browser nunca viu - e ai ele vai mesmo buscar o novo.
+// ════════════════════════════════════════════════════════════════════════
+var REPO_COMMITS = 'https://api.github.com/repos/joseloureiro1607/lactoceleiro/commits?path=index.html&per_page=1';
+
+function _mostrarBannerVersao(marca) {
+  if (document.getElementById('banner-versao')) return;
+  var d = document.createElement('div');
+  d.id = 'banner-versao';
+  d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10001;background:#b45309;'
+    + 'color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;'
+    + 'font-size:13px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.3)';
+  d.innerHTML = '<span style="flex:1">H\u00e1 uma vers\u00e3o mais recente da app neste servidor.</span>'
+    + '<button id="bv-ok" style="background:#fff;color:#b45309;border:none;border-radius:8px;'
+    + 'padding:8px 14px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap">Actualizar</button>'
+    + '<button id="bv-nao" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);'
+    + 'border-radius:8px;padding:8px 10px;font-size:13px;font-weight:800;cursor:pointer">Agora n\u00e3o</button>';
+  document.body.appendChild(d);
+  var ok = document.getElementById('bv-ok');
+  if (ok) ok.onclick = function () {
+    // Endereco novo = o browser nao tem nada guardado para ele.
+    location.replace(location.pathname + '?v=' + encodeURIComponent(marca || Date.now()));
+  };
+  var nao = document.getElementById('bv-nao');
+  if (nao) nao.onclick = function () { d.remove(); };
+}
+
+async function _verificarVersaoPublicada() {
+  try {
+    if (location.protocol === 'file:') return;
+    if (String(location.hostname).indexOf('github.io') < 0) return;
+    var r = await fetch(REPO_COMMITS + '&ts=' + Date.now(), { cache: 'no-store' });
+    if (!r || !r.ok) return;
+    var j = await r.json();
+    if (!Array.isArray(j) || !j.length) return;
+    var c = j[0] || {};
+    var quando = c.commit && c.commit.committer && c.commit.committer.date;
+    if (!quando) return;
+    var tPublicado = Date.parse(quando), tAqui = Date.parse(APP_BUILD);
+    if (!tPublicado || !tAqui) return;
+    // um minuto de folga para relogios diferentes
+    if (tPublicado <= tAqui + 60000) return;
+    _mostrarBannerVersao(String(c.sha || '').slice(0, 7));
+  } catch (e) { /* sem internet ou o GitHub nao respondeu: nao faz mal */ }
+}
+window._verificarVersaoPublicada = _verificarVersaoPublicada;
+
 try { console.log('Lactoceleiro — versão ' + APP_VERSAO); } catch (e) {}
 
 var K_CARIMBOS_VISTOS = 'lc_sync_carimbos_v1';
@@ -16580,6 +16637,8 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('focus', function () { _syncSeVelho(60 * 1000); });
 
 // ao abrir a app, ir buscar o que há no servidor mesmo antes do PIN
+setTimeout(function () { try { _verificarVersaoPublicada(); } catch (e) {} }, 4000);
+
 setTimeout(function () {
   try { _limparLapidesEstragadas(); } catch (e) {}
   if (!_podeSincronizar()) return;
