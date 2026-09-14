@@ -7358,10 +7358,15 @@ async function sincronizarTudo() {
       var _t = _c ? setTimeout(function () { _c.abort(); }, 120000) : null;
       var r;
       try {
+        // O envio ia com feitio 'text/plain'. Passa a ir com o feitio de
+        // um formulário comum, que é o que a web usa há sempre e o que
+        // menos gente pelo caminho estranha — proxies, extensões, filtros.
+        // É o mesmo feitio da segunda via, mas rápido: se passar assim,
+        // deixa de ser preciso o formulário escondido e a espera dele.
         r = await fetch(SCRIPT_URL, {
           method: 'POST', redirect: 'follow',
-          headers: { 'Content-Type': 'text/plain' },
-          body: JSON.stringify(payload),
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+          body: 'payload=' + encodeURIComponent(JSON.stringify(payload)),
           signal: _c ? _c.signal : undefined
         });
       } finally { if (_t) clearTimeout(_t); }
@@ -7403,17 +7408,13 @@ async function sincronizarTudo() {
       // guardadas.
       var _viaDois = false;
       try {
-        var _carimbosAntes = null;
-        try { _carimbosAntes = await _carimbosDoServidor(); } catch (eC) {}
-
         await _enviarPorFormulario(payload, 180);
         _viaDois = true;
 
         // Insiste-se até o servidor acusar a gravação, em vez de perguntar
         // uma vez e desistir — ele está a atender o envio que acabámos de
         // lhe mandar e a resposta demora.
-        var _res = await _esperarCarimbos(enviadas, _carimbosAntes);
-        var _passaram = _res.avancaram;
+        var _passaram = await _esperarConfirmacao(enviadas, payload);
 
         if (_passaram.length) {
           okAlguma = true;
@@ -7465,39 +7466,25 @@ async function sincronizarTudo() {
     try { await puxarDadosServidor(true); } catch(e) { if (!falhas.length) mostrarEstadoSync('ok'); }
 
     // ── Confirmar que o servidor GUARDOU mesmo ──────────────────────
-    // Um "ok" do servidor não prova nada: se o Apps Script não conseguiu
-    // gravar (valor grande de mais, por exemplo) e mesmo assim respondeu
-    // ok, este aparelho apagava a marca e os dados nunca chegavam aos
-    // outros — sem erro nenhum à vista. Agora compara-se com o que o
-    // servidor devolve no pull logo a seguir: se o carimbo de lá não
-    // avançou, o envio não pegou, a marca volta a ser posta, e fica
-    // registado.
+    // Um "ok" do servidor não prova que gravou. Mas a data também não
+    // prova nada: se outro aparelho gravou a mesma área no mesmo minuto,
+    // a data avança e este dava o seu envio por bom sem ter passado.
+    // O que prova é o TAMANHO: se o que está no servidor tem o mesmo
+    // número de caracteres do que mandámos, o que lá está é o nosso.
     try {
-      // Confia-se primeiro nos carimbos que o próprio envio devolveu; só
-      // se ele não os der é que se olha para o pull. E se nenhum dos dois
-      // trouxer nada, não se conclui coisa nenhuma — antes isto re-marcava
-      // tudo como "por enviar" só porque a resposta veio vazia.
-      // Se o envio nem chegou ao servidor ("Failed to fetch"), ja sabemos que
-      // nao passou nada: dizer ainda "o servidor respondeu ok mas nao guardou"
-      // e um segundo aviso, falso, sobre a mesma coisa.
-      var _envioFalhouTodo = falhas.some(function (f) { return f.chave === '(todas)'; });
-      // E os carimbos so servem se forem FRESCOS. Com a recepcao leve, o
-      // ultimo pull pode ser de ha muito tempo.
-      var _pullFresco = window._ultimoPull && (Date.now() - window._ultimoPull.ts) < 120000;
-      var mr = metaRemotoJunto || (_pullFresco ? window._ultimoPull.metaRemoto : null) || null;
-      var _temCarimbos = mr && _enviadasOk.some(function (k) { return _tsDe(mr[k]) > 0; });
-      if (!_envioFalhouTodo && mr && _temCarimbos && _enviadasOk.length) {
+      if (_enviadasOk.length) {
+        var estF = await _estadoDoServidor(60);
         var naoGuardou = [];
         var metaAgora = getSyncMeta();
         _enviadasOk.forEach(function (k) {
-          var tsServidor = _tsDe(mr[k]);
-          var tsEnviado = _tsDe(meta[k]);
-          // tolerância de 1 minuto para relógios diferentes
-          if (!(tsServidor >= tsEnviado - 60000)) {
-            naoGuardou.push({ chave: k, bytes: (payload.dados[k] || '').length,
-              erro: 'o servidor respondeu ok mas não guardou' });
-            metaAgora[k] = tsEnviado;   // volta a ficar por enviar
-          }
+          var enviado = payload.dados[k];
+          var tamanho = (typeof enviado === 'string') ? enviado.length : 0;
+          var la = estF.bytes[k];
+          if (la === undefined) return;              // o servidor não diz: não se conclui nada
+          if (k === K_APAGADOS ? (la >= tamanho) : (la === tamanho)) return;
+          naoGuardou.push({ chave: k, bytes: tamanho,
+            erro: 'o servidor respondeu ok mas o que lá está não é o que enviámos' });
+          metaAgora[k] = _tsDe(meta[k]);             // volta a ficar por enviar
         });
         if (naoGuardou.length) {
           setSyncMeta(metaAgora);
@@ -7635,20 +7622,68 @@ window._enviarPorFormulario = _enviarPorFormulario;
 // Pergunta ao servidor so os carimbos. Serve para confirmar que a segunda
 // via gravou mesmo - ela nao consegue ler a resposta.
 async function _carimbosDoServidor(segundos) {
+  var e = await _estadoDoServidor(segundos);
+  return e.ts;
+}
+
+// Devolve, por área, a data E o tamanho do que está no servidor. O tamanho
+// é o que permite saber se o que lá está é MESMO o que este aparelho
+// mandou.
+async function _estadoDoServidor(segundos) {
   var r = await _fetchSync(SCRIPT_URL + '?acao=estado&ts=' + Date.now(), segundos || 90);
   var j = await _jsonOuExplicar(r, 'carimbos');
-  var mapa = {};
+  var ts = {}, bytes = {};
   if (j && j.ok && Array.isArray(j.areas)) {
-    j.areas.forEach(function (a) { if (a && a.chave) mapa[a.chave] = _tsDe(a.ts); });
+    j.areas.forEach(function (a) {
+      if (!a || !a.chave) return;
+      ts[a.chave] = _tsDe(a.ts);
+      bytes[a.chave] = Number(a.bytes) || 0;
+    });
   }
-  return mapa;
+  return { ts: ts, bytes: bytes };
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+//  CONFIRMAR PELO CONTEÚDO, NÃO PELA HORA
+//  Isto perguntava "a data desta área avançou no servidor?". Não prova
+//  nada: se outro aparelho gravou a mesma área nesse intervalo, a data
+//  avança na mesma e este dava o seu envio por bom. Foi assim que uma
+//  produção criada no tablet desapareceu sem erro nenhum — enquanto o PC
+//  e o telemóvel gravavam, o tablet limpou a marca a pensar que tinha
+//  conseguido.
+//  Agora compara-se o TAMANHO do que lá está com o tamanho do que se
+//  mandou. Se for igual, o que está no servidor é o nosso.
+// ═══════════════════════════════════════════════════════════════════════
+async function _esperarConfirmacao(enviadas, payload) {
+  var esperas = [1000, 2500, 6000, 12000, 20000];
+  var confirmadas = [];
+  for (var i = 0; i < esperas.length; i++) {
+    await new Promise(function (r) { setTimeout(r, esperas[i]); });
+    var est;
+    try { est = await _estadoDoServidor(90); } catch (e) { continue; }
+
+    confirmadas = enviadas.filter(function (k) {
+      var enviado = payload.dados[k];
+      var tamanho = (typeof enviado === 'string') ? enviado.length : 0;
+      var la = est.bytes[k] || 0;
+      // As marcas de eliminação são juntadas pelo servidor, por isso o que
+      // lá fica é igual ou maior do que o que se mandou — nunca menor.
+      if (k === K_APAGADOS) return la >= tamanho;
+      return la === tamanho;
+    });
+
+    if (confirmadas.length === enviadas.length) break;
+  }
+  return confirmadas;
 }
 
 // O Apps Script atende um pedido de cada vez. Logo a seguir a um envio, a
 // pergunta "já gravaste?" fica na fila atrás dele — e a primeira resposta
 // pode demorar. Por isso insiste-se, em vez de desistir à primeira.
 async function _esperarCarimbos(chaves, antes, tentativas) {
-  var esperas = [3000, 8000, 15000, 25000];
+  // Começa depressa: quase sempre o servidor já gravou ao fim de um
+  // segundo. Só insiste com paciência se não tiver respondido logo.
+  var esperas = [1000, 2500, 6000, 12000, 20000];
   var n = tentativas || esperas.length;
   var ultimo = null;
   for (var i = 0; i < n; i++) {
@@ -7673,7 +7708,7 @@ async function _esperarCarimbos(chaves, antes, tentativas) {
 //  Tenta-se primeiro o moderno; se falhar, repete-se pelo antigo. Num
 //  aparelho onde o moderno falhe sempre, passa a usar-se logo o antigo.
 // ════════════════════════════════════════════════════════════════════════
-var K_VIA_ANTIGA = 'lc_via_antiga_v1';
+var K_VIA_ANTIGA = 'lc_via_antiga_v2';
 
 function _preferirViaAntiga() {
   try { return localStorage.getItem(K_VIA_ANTIGA) === '1'; } catch (e) { return false; }
@@ -7746,8 +7781,8 @@ var _pullEmCurso = false;
 //  Agora pergunta-se primeiro só as datas (poucos bytes). Se nada mudou
 //  no servidor desde a última vez, não se pede mais nada.
 // ═══════════════════════════════════════════════════════════════════════
-var APP_VERSAO = '2026-09-14 \u00b7 49';
-var APP_BUILD  = '2026-09-14T20:40:54Z';
+var APP_VERSAO = '2026-09-14 \u00b7 50';
+var APP_BUILD  = '2026-09-14T21:34:46Z';
 
 // ════════════════════════════════════════════════════════════════════════
 //  "NO TABLET AINDA APARECE A VERSAO 36"
