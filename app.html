@@ -7344,6 +7344,10 @@ async function sincronizarTudo() {
     var remotoJunto = null, metaRemotoJunto = null;
 
     try {
+      // Num aparelho onde a via moderna ja falhou, nao se perde tempo com
+      // ela outra vez: vai-se logo pelo formulario, que ali funciona.
+      if (_preferirViaAntiga()) throw new Error('via moderna desligada neste aparelho');
+
       var _c = (typeof AbortController !== 'undefined') ? new AbortController() : null;
       var _t = _c ? setTimeout(function () { _c.abort(); }, 120000) : null;
       var r;
@@ -7417,6 +7421,7 @@ async function sincronizarTudo() {
                 erro: 'nem pelo envio normal nem pela segunda via' });
             }
           });
+          _marcarViaAntiga();   // neste aparelho é esta a via boa
           console.log('Sincronização: o envio normal falhou (' + _txtErro
             + ') mas a segunda via gravou ' + _passaram.length + ' área(s).');
         } else {
@@ -7653,11 +7658,70 @@ async function _esperarCarimbos(chaves, antes, tentativas) {
   return { mapa: ultimo || {}, avancaram: [] };
 }
 
+// ════════════════════════════════════════════════════════════════════════
+//  LEITURA QUE FUNCIONA EM NAVEGADORES ANTIGOS
+//  O tablet e um Android com anos e o Chrome dele trata mal o fetch()
+//  moderno - sobretudo o reencaminhamento que o Google usa para
+//  responder. O XMLHttpRequest e a forma antiga de fazer o mesmo, existe
+//  desde sempre e nao tem esses problemas.
+//  Tenta-se primeiro o moderno; se falhar, repete-se pelo antigo. Num
+//  aparelho onde o moderno falhe sempre, passa a usar-se logo o antigo.
+// ════════════════════════════════════════════════════════════════════════
+var K_VIA_ANTIGA = 'lc_via_antiga_v1';
+
+function _preferirViaAntiga() {
+  try { return localStorage.getItem(K_VIA_ANTIGA) === '1'; } catch (e) { return false; }
+}
+function _marcarViaAntiga() {
+  try { localStorage.setItem(K_VIA_ANTIGA, '1'); } catch (e) {}
+}
+
+// Faz o mesmo que o fetch, mas a moda antiga. Devolve um objecto com a
+// mesma forma do outro, para o resto do codigo nao dar por nada.
+function _pedirAntiga(url, segundos) {
+  return new Promise(function (resolve, reject) {
+    try {
+      var x = new XMLHttpRequest();
+      x.open('GET', url, true);
+      x.timeout = (segundos || 90) * 1000;
+      x.onload = function () {
+        var txt = x.responseText;
+        resolve({
+          ok: x.status >= 200 && x.status < 300,
+          status: x.status,
+          url: (x.responseURL || url),
+          text: function () { return Promise.resolve(txt); },
+          json: function () { return Promise.resolve(JSON.parse(txt)); }
+        });
+      };
+      x.onerror = function () { reject(new Error('o pedido nao chegou ao servidor')); };
+      x.ontimeout = function () { reject(new Error('o servidor demorou demasiado a responder')); };
+      x.send();
+    } catch (e) { reject(e); }
+  });
+}
+
 async function _fetchSync(url, segundos) {
+  if (_preferirViaAntiga()) return await _pedirAntiga(url, segundos);
+
   var ctrl = (typeof AbortController !== 'undefined') ? new AbortController() : null;
   var t = ctrl ? setTimeout(function () { ctrl.abort(); }, (segundos || 90) * 1000) : null;
   try {
-    return await fetch(url, ctrl ? { redirect: 'follow', signal: ctrl.signal } : { redirect: 'follow' });
+    var r = await fetch(url, ctrl ? { redirect: 'follow', signal: ctrl.signal } : { redirect: 'follow' });
+    // Um 404 vindo do reencaminhamento do Google e o sintoma classico do
+    // navegador antigo: nao vale a pena insistir pela via moderna.
+    if (r && r.status === 404) {
+      if (t) { clearTimeout(t); t = null; }
+      var r2 = await _pedirAntiga(url, segundos);
+      if (r2 && r2.ok) { _marcarViaAntiga(); console.warn('Sincronização: passo a usar a via antiga de leitura neste aparelho.'); }
+      return r2;
+    }
+    return r;
+  } catch (e) {
+    if (t) { clearTimeout(t); t = null; }
+    var r3 = await _pedirAntiga(url, segundos);
+    if (r3 && r3.ok) { _marcarViaAntiga(); console.warn('Sincronização: passo a usar a via antiga de leitura neste aparelho.'); }
+    return r3;
   } finally { if (t) clearTimeout(t); }
 }
 
@@ -7676,8 +7740,8 @@ var _pullEmCurso = false;
 //  Agora pergunta-se primeiro só as datas (poucos bytes). Se nada mudou
 //  no servidor desde a última vez, não se pede mais nada.
 // ═══════════════════════════════════════════════════════════════════════
-var APP_VERSAO = '2026-09-14 \u00b7 47';
-var APP_BUILD  = '2026-09-14T20:31:16Z';
+var APP_VERSAO = '2026-09-14 \u00b7 48';
+var APP_BUILD  = '2026-09-14T20:35:41Z';
 
 // ════════════════════════════════════════════════════════════════════════
 //  "NO TABLET AINDA APARECE A VERSAO 36"
