@@ -7482,8 +7482,8 @@ var _pullEmCurso = false;
 //  Agora pergunta-se primeiro só as datas (poucos bytes). Se nada mudou
 //  no servidor desde a última vez, não se pede mais nada.
 // ═══════════════════════════════════════════════════════════════════════
-var APP_VERSAO = '2026-09-14 \u00b7 40';
-var APP_BUILD  = '2026-09-14T08:42:22Z';
+var APP_VERSAO = '2026-09-14 \u00b7 41';
+var APP_BUILD  = '2026-09-14T08:57:38Z';
 
 // ════════════════════════════════════════════════════════════════════════
 //  "NO TABLET AINDA APARECE A VERSAO 36"
@@ -7498,28 +7498,50 @@ var APP_BUILD  = '2026-09-14T08:42:22Z';
 // ════════════════════════════════════════════════════════════════════════
 var REPO_COMMITS = 'https://api.github.com/repos/joseloureiro1607/lactoceleiro/commits?path=index.html&per_page=1';
 
-function _mostrarBannerVersao(marca) {
+var K_SHA_VISTO = 'lc_app_publicado_v1';
+
+function _shaVisto() {
+  try { return JSON.parse(localStorage.getItem(K_SHA_VISTO) || 'null'); } catch (e) { return null; }
+}
+function _guardarShaVisto(sha) {
+  try { localStorage.setItem(K_SHA_VISTO, JSON.stringify({ sha: sha, build: APP_BUILD })); } catch (e) {}
+}
+
+function _mostrarBannerVersao(sha) {
   if (document.getElementById('banner-versao')) return;
   var d = document.createElement('div');
   d.id = 'banner-versao';
   d.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:10001;background:#b45309;'
     + 'color:#fff;padding:10px 14px;display:flex;align-items:center;gap:10px;'
     + 'font-size:13px;font-weight:700;box-shadow:0 2px 10px rgba(0,0,0,.3)';
-  d.innerHTML = '<span style="flex:1">H\u00e1 uma vers\u00e3o mais recente da app neste servidor.</span>'
+  d.innerHTML = '<span style="flex:1">Há uma versão mais recente da app neste servidor.</span>'
     + '<button id="bv-ok" style="background:#fff;color:#b45309;border:none;border-radius:8px;'
     + 'padding:8px 14px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap">Actualizar</button>'
     + '<button id="bv-nao" style="background:transparent;color:#fff;border:1px solid rgba(255,255,255,.6);'
-    + 'border-radius:8px;padding:8px 10px;font-size:13px;font-weight:800;cursor:pointer">Agora n\u00e3o</button>';
+    + 'border-radius:8px;padding:8px 10px;font-size:13px;font-weight:800;cursor:pointer">Agora não</button>';
   document.body.appendChild(d);
   var ok = document.getElementById('bv-ok');
   if (ok) ok.onclick = function () {
+    // Fica registado que esta publicacao ja foi buscada: se por acaso o
+    // ficheiro for o mesmo, a faixa nao volta a aparecer em ciclo.
+    _guardarShaVisto(sha);
     // Endereco novo = o browser nao tem nada guardado para ele.
-    location.replace(location.pathname + '?v=' + encodeURIComponent(marca || Date.now()));
+    location.replace(location.pathname + '?v=' + encodeURIComponent(sha || Date.now()));
   };
   var nao = document.getElementById('bv-nao');
   if (nao) nao.onclick = function () { d.remove(); };
 }
 
+// COMO SE SABE QUE HA VERSAO NOVA
+// A primeira tentativa comparava a data de publicacao no GitHub com a data
+// em que o ficheiro foi feito. Nao podia funcionar: o ficheiro e sempre
+// feito ANTES de ser publicado, por isso a publicacao e sempre mais
+// recente - e a faixa aparecia mesmo a quem ja tinha a ultima versao.
+//
+// O que se compara agora e a IDENTIDADE da publicacao (o sha do commit)
+// com a que este aparelho registou da ultima vez. So ha aviso quando o
+// GitHub tem uma publicacao diferente daquela que este browser foi
+// buscar - que e exactamente a pergunta certa.
 async function _verificarVersaoPublicada() {
   try {
     if (location.protocol === 'file:') return;
@@ -7528,14 +7550,23 @@ async function _verificarVersaoPublicada() {
     if (!r || !r.ok) return;
     var j = await r.json();
     if (!Array.isArray(j) || !j.length) return;
-    var c = j[0] || {};
-    var quando = c.commit && c.commit.committer && c.commit.committer.date;
-    if (!quando) return;
-    var tPublicado = Date.parse(quando), tAqui = Date.parse(APP_BUILD);
-    if (!tPublicado || !tAqui) return;
-    // um minuto de folga para relogios diferentes
-    if (tPublicado <= tAqui + 60000) return;
-    _mostrarBannerVersao(String(c.sha || '').slice(0, 7));
+    var sha = String((j[0] || {}).sha || '');
+    if (!sha) return;
+
+    var visto = _shaVisto();
+
+    // Primeira vez neste aparelho: assume-se que o que esta a correr e o
+    // que la esta. Quando muito perde-se um aviso, nunca se inventa um.
+    if (!visto || !visto.sha) { _guardarShaVisto(sha); return; }
+
+    // Este ficheiro e mais recente do que o que estava registado: acabou
+    // de ser actualizado. Regista-se e fica calado.
+    var tAqui = Date.parse(APP_BUILD), tVisto = Date.parse(visto.build || '');
+    if (tAqui && (!tVisto || tAqui > tVisto)) { _guardarShaVisto(sha); return; }
+
+    if (sha === visto.sha) return;   // e a mesma publicacao: nada a dizer
+
+    _mostrarBannerVersao(sha.slice(0, 7));
   } catch (e) { /* sem internet ou o GitHub nao respondeu: nao faz mal */ }
 }
 window._verificarVersaoPublicada = _verificarVersaoPublicada;
