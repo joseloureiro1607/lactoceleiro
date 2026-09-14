@@ -3308,6 +3308,57 @@ function _carimbarRegistos(chave, texto) {
   try { return JSON.stringify(lista); } catch (e) { return texto; }
 }
 
+// ════════════════════════════════════════════════════════════════════════
+//  APAGAR NUM APARELHO TEM DE APAGAR EM TODOS
+//  A marca de eliminacao era adivinhada la a frente, na altura de enviar,
+//  comparando com a ultima lista sincronizada. Como uma lista tambem
+//  encolhe por outros motivos (uma juncao mal feita, um corte por data),
+//  foi preciso por um travao: mais de 10 de uma vez, nao marca nada.
+//  Resultado: apagar as produções em curso todas de uma vez nao marcava
+//  NENHUMA, e no minuto seguinte elas voltavam do servidor.
+//  A marca passa a ser escrita no proprio instante em que se apaga, com o
+//  registo ainda a vista. Deixa de haver adivinhacao e deixa de ser
+//  preciso travao nenhum.
+// ════════════════════════════════════════════════════════════════════════
+function _marcarApagados(chave, ids) {
+  if (!ids || !ids.length) return;
+  if (typeof CHAVES_DA_FOLHA !== 'undefined' && CHAVES_DA_FOLHA.indexOf(chave) >= 0) return;
+  try {
+    var ap = getApagadosSync();
+    if (!ap[chave]) ap[chave] = {};
+    var agora = Date.now();
+    ids.forEach(function (id) {
+      if (id !== undefined && id !== null && id !== '') ap[chave][String(id)] = agora;
+    });
+    _salvarApagadosSync(ap);
+    if (typeof marcarModificado === 'function') marcarModificado(K_APAGADOS);
+  } catch (e) {}
+}
+window._marcarApagados = _marcarApagados;
+
+// Quais os ids que existiam antes desta gravacao e ja nao existem depois.
+// Como se compara com o que estava aqui ha um instante, e nao com o que
+// se sincronizou ha horas, isto so pode ser obra de quem esta a usar a app.
+function _marcarSumidos(chave, antes, depois) {
+  function ids(txt) {
+    var arr;
+    try { arr = JSON.parse(txt || 'null'); } catch (e) { return null; }
+    if (!Array.isArray(arr)) return null;
+    var m = {};
+    for (var i = 0; i < arr.length; i++) {
+      var o = arr[i];
+      if (!o || typeof o !== 'object' || o.id === undefined || o.id === null || o.id === '') return null;
+      m[String(o.id)] = true;
+    }
+    return m;
+  }
+  var a = ids(antes), d = ids(depois);
+  if (!a || !d) return;
+  var fora = [];
+  Object.keys(a).forEach(function (id) { if (!d[id]) fora.push(id); });
+  if (fora.length) _marcarApagados(chave, fora);
+}
+
 // Um único sítio a marcar, para não ficar dependente de alguém se lembrar
 // de o chamar em cada um dos cinquenta sítios que gravam listas.
 (function () {
@@ -3318,6 +3369,9 @@ function _carimbarRegistos(chave, texto) {
         if (!_semCarimbar && typeof v === 'string' && v.charAt(0) === '['
             && SYNC_KEYS.indexOf(k) >= 0 && k !== 'lc_apagados_v1'
             && k !== 'lc_leite_importado_v1' && v.length < 2000000) {
+          // O historico e um diario cortado aos 500: quando transborda, os
+          // mais antigos caem fora. Isso nao e ninguem a apagar nada.
+          if (k !== 'lc_historico_v1') _marcarSumidos(k, localStorage.getItem(k), v);
           v = _carimbarRegistos(k, v);
         }
       } catch (e) {}
@@ -7482,8 +7536,8 @@ var _pullEmCurso = false;
 //  Agora pergunta-se primeiro só as datas (poucos bytes). Se nada mudou
 //  no servidor desde a última vez, não se pede mais nada.
 // ═══════════════════════════════════════════════════════════════════════
-var APP_VERSAO = '2026-09-14 \u00b7 41';
-var APP_BUILD  = '2026-09-14T08:57:38Z';
+var APP_VERSAO = '2026-09-14 \u00b7 43';
+var APP_BUILD  = '2026-09-14T15:51:06Z';
 
 // ════════════════════════════════════════════════════════════════════════
 //  "NO TABLET AINDA APARECE A VERSAO 36"
@@ -7846,41 +7900,20 @@ function _idsDe(txt) {
   return ids;
 }
 
-// Compara o que se sincronizou da última vez com o que está agora: o que
-// desapareceu foi apagado neste dispositivo.
+// ADIVINHACAO DESLIGADA
+// Esta funcao comparava o que se tinha sincronizado da ultima vez com o
+// que estava agora e marcava como apagado tudo o que faltasse. Mas uma
+// lista tambem encolhe sem ninguem apagar nada - uma juncao mal feita, um
+// corte por data, um aparelho que recebeu menos do que tinha. Foi assim
+// que apareceram 409 marcas de uma vez e desapareceram registos bons.
+// Pos-se um travao de 10, e o travao passou a impedir as eliminacoes a
+// serio (apagar as produções em curso todas de uma vez nao marcava nada).
+//
+// Os dois problemas tinham a mesma raiz: adivinhar tarde. Agora a marca e
+// escrita no instante em que se apaga (_marcarSumidos, na gravacao), por
+// isso nao ha nada a adivinhar aqui. Fica a nao fazer nada, de proposito.
 function _registarEliminacoes(k, txtAtual) {
-  if (CHAVES_DA_FOLHA.indexOf(k) >= 0) return;
-  var base = _syncBase()[k];
-  if (base === undefined) return;
-  var antes = _idsDe(base), agora = _idsDe(txtAtual);
-  if (!antes || !agora) return;
-  var vivos = {};
-  agora.forEach(function (i) { vivos[i] = true; });
-  var sumiram = antes.filter(function (i) { return !vivos[i]; });
-  if (!sumiram.length) return;
-
-  // ── O travão que faltava ───────────────────────────────────────────
-  // Esta função adivinha o que foi apagado comparando o que se
-  // sincronizou da última vez com o que está agora. Serve para quando se
-  // apaga UM registo. Mas quando uma lista encolhe por outro motivo —
-  // uma data de arranque a cortar o leite, uma junção que correu mal, um
-  // aparelho que recebeu menos do que tinha — isto marcava TUDO como
-  // apagado e esses registos desapareciam em todos os aparelhos.
-  // Foi assim que apareceram 400 marcas sem ninguém ter apagado 400
-  // registos. Ninguém apaga 10 coisas de uma vez sem ser a mando de um
-  // bug: acima disso não se marca nada.
-  if (sumiram.length > 10) {
-    console.warn('Sincronização: ' + sumiram.length + ' registos desapareceram de ' + k
-      + ' de uma só vez. Não vou marcá-los como apagados — isto não é uma eliminação, é um erro.');
-    return;
-  }
-
-  var ap = getApagadosSync();
-  if (!ap[k]) ap[k] = {};
-  var agoraTs = Date.now();
-  sumiram.forEach(function (i) { ap[k][i] = agoraTs; });
-  _salvarApagadosSync(ap);
-  if (typeof marcarModificado === 'function') marcarModificado(K_APAGADOS);
+  return;
 }
 
 // Junta as lápides que vêm de outro dispositivo às daqui.
@@ -7925,35 +7958,15 @@ function _semApagados(k, txt) {
 // Limpeza única das marcas de eliminação criadas por engano pelas versões
 // anteriores. Corre uma só vez por aparelho. Sem isto, cada aparelho
 // continuaria a espalhar as marcas velhas e a apagar registos bons.
+// LIMPEZA UNICA - JA NAO SE APLICA
+// Servia para varrer as centenas de marcas falsas que a adivinhacao
+// antiga criava, apagando os grupos com mais de 10. Agora que as marcas
+// sao escritas no momento em que se apaga, um grupo grande e legitimo -
+// e quem apaga doze produções de uma vez quer mesmo apagar as doze.
+// Se isto continuasse a correr, apagava essas marcas e as produções
+// voltavam do servidor. Fica desligado.
 function _limparLapidesEstragadas() {
-  var K = 'lc_lapides_limpas_v1';
-  try {
-    if (localStorage.getItem(K) === '1') return;
-    var ap = getApagadosSync();
-    var total = 0, suspeitas = 0;
-    var limpo = {};
-    Object.keys(ap).forEach(function (k) {
-      var grupo = ap[k];
-      if (!grupo || typeof grupo !== 'object') return;
-      var ids = Object.keys(grupo);
-      total += ids.length;
-      // Um grupo grande, ou criado todo no mesmo instante, é obra de um
-      // bug e não de alguém a apagar registos um a um.
-      var carimbos = {};
-      ids.forEach(function (i) { carimbos[String(grupo[i])] = (carimbos[String(grupo[i])] || 0) + 1; });
-      var maiorLote = 0;
-      Object.keys(carimbos).forEach(function (c) { if (carimbos[c] > maiorLote) maiorLote = carimbos[c]; });
-      if (ids.length > 10 || maiorLote > 10) { suspeitas += ids.length; return; }
-      limpo[k] = grupo;
-    });
-    if (suspeitas) {
-      localStorage.setItem(K_APAGADOS, JSON.stringify(limpo));
-      if (typeof marcarModificado === 'function') marcarModificado(K_APAGADOS);
-      console.warn('Sincronização: apaguei ' + suspeitas + ' marcas de eliminação criadas por engano (de '
-        + total + '). Os registos correspondentes voltam a aparecer.');
-    }
-    localStorage.setItem(K, '1');
-  } catch (e) {}
+  try { localStorage.setItem('lc_lapides_limpas_v1', '1'); } catch (e) {}
 }
 window._limparLapidesEstragadas = _limparLapidesEstragadas;
 
@@ -8113,7 +8126,11 @@ function aplicarDadosRemoto(remoto, metaRemoto) {
     // E mesmo o que não é lista: uma marca com mais de 24 horas é uma marca
     // encravada, não uma alteração recente. Deixa de mandar.
     var _marcaVelha = (tsLocal > 0) && ((Date.now() - tsLocal) > 24 * 3600 * 1000);
-    if (!_ehLista && !_marcaVelha && !(tsRemoto > tsLocal)) return;
+    // As lapides juntam-se SEMPRE, venham com que carimbo vierem: sao uma
+    // uniao, a juncao nunca perde nada de nenhum dos lados. Sem esta
+    // excepcao, bastava este aparelho ter tambem lapides por enviar para
+    // recusar as do outro - e apagar num aparelho nao apagava nos outros.
+    if (k !== K_APAGADOS && !_ehLista && !_marcaVelha && !(tsRemoto > tsLocal)) return;
     // Vazio no servidor significa "ainda não recebi nada", não "foi apagado".
     // Apagar aqui destruía os dados deste dispositivo na primeira ligação.
     if (remoto[k] === null) return;
@@ -8159,6 +8176,27 @@ function aplicarDadosRemoto(remoto, metaRemoto) {
       if (typeof marcarModificado === 'function' && _ehColecaoComIds(novo)) marcarModificado(k);
     }
     alterou = true;
+  });
+
+  // ── As marcas de eliminacao mandam sempre ────────────────────────────
+  // Nao chega filtrar o que vem do servidor. Se o servidor mandar uma
+  // lista vazia (porque outro aparelho apagou tudo), o merge acima nem
+  // lhe toca - ha uma regra que diz "vazio la fora nao apaga nada aqui".
+  // Entao a lista deste aparelho ficava intacta e as eliminacoes nunca
+  // chegavam. As marcas passam a ser aplicadas no fim, a tudo.
+  SYNC_KEYS.forEach(function (k) {
+    if (k === K_APAGADOS) return;
+    if (CHAVES_DA_FOLHA.indexOf(k) >= 0) return;
+    try {
+      var actual = localStorage.getItem(k);
+      if (!_ehColecaoComIds(actual)) return;
+      var limpo = _semApagados(k, actual);
+      if (limpo !== actual) {
+        localStorage.setItem(k, limpo);
+        if (typeof marcarModificado === 'function') marcarModificado(k);
+        alterou = true;
+      }
+    } catch (e) {}
   });
   } finally { _semCarimbar = _carimbarAntes; }
   // Com uma produção aberta não se mexe no ecrã. Refazer o resumo ou as
@@ -17063,12 +17101,27 @@ async function abrirDiagnosticoSync() {
       + '<div style="font-size:11px;color:#4b5563;margin-top:4px">Sa\u00edram da lista de \u201cem curso\u201d e est\u00e3o no hist\u00f3rico. '
       + '\u00c9 assim que tem de ser \u2014 <strong>n\u00e3o \u00e9 preciso mexer</strong>.</div></div>';
   }
-  if (lap.aSerio) {
+  if (lap.aSerio && _lapEscondem === 0) {
+    // Marcas inertes: os registos que elas tapam ja nao existem em lado
+    // nenhum. Nao ha nada a fazer, por isso nao se poe um aviso amarelo
+    // com um botao vermelho a assustar quem abre o diagnostico.
+    h += '<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:10px 14px;margin-bottom:12px">'
+      + '<div style="font-size:12px;font-weight:700;color:#64748b">' + lap.aSerio
+      + ' registos apagados, sem efeito</div>'
+      + '<div style="font-size:11px;color:#94a3b8;margin-top:4px">'
+      + 'J\u00e1 n\u00e3o existem aqui nem no servidor, por isso estas marcas n\u00e3o est\u00e3o a esconder nada. '
+      + 'N\u00e3o h\u00e1 nada a fazer.</div>'
+      + '<div style="font-size:11px;color:#cbd5e1;margin-top:4px">'
+      + lap.porArea.filter(function (a) { return a.aSerio > 0; }).map(function (a) {
+          return _stkEsc(_syncNome(a.chave)) + ': ' + a.aSerio;
+        }).join(' \u00b7 ')
+      + '</div></div>';
+  } else if (lap.aSerio) {
     h += '<div style="background:' + (lap.aSerio > 50 ? '#fff1f2' : '#fffbeb') + ';border:2px solid '
       + (lap.aSerio > 50 ? '#fca5a5' : '#fcd34d') + ';border-radius:12px;padding:12px 14px;margin-bottom:12px">'
       + '<div style="font-size:12px;font-weight:800;color:' + (lap.aSerio > 50 ? '#991b1b' : '#92400e') + ';margin-bottom:6px">'
-      + (lap.aSerio > 50 ? '\ud83d\uded1 ' : '\u26a0\ufe0f ') + lap.aSerio + ' registos apagados \u00e0 m\u00e3o</div>'
-      + lap.porArea.filter(function (a) { return a.aSerio > 0; }).slice(0, 8).map(function (a) {
+      + (lap.aSerio > 50 ? '\ud83d\uded1 ' : '\u26a0\ufe0f ') + _lapEscondem + ' registos est\u00e3o a ser escondidos</div>'
+      + lap.porArea.filter(function (a) { return a.aSerio > 0; }).map(function (a) {
           return '<div style="font-size:12px;color:#6b7280">\u00b7 ' + _stkEsc(_syncNome(a.chave)) + ': <strong>' + a.aSerio + '</strong></div>';
         }).join('')
       + lap.porArea.filter(function (a) { return a.aSerio > 0; }).map(function (a) {
@@ -17080,13 +17133,9 @@ async function abrirDiagnosticoSync() {
               }).join(', ')
             + '</div>';
         }).join('')
-      + '<div style="font-size:11px;color:#6b7280;margin-top:6px">A hora \u00e9 a da <strong>sincroniza\u00e7\u00e3o</strong>, n\u00e3o a do momento em que se apagou. '
-      + 'V\u00e1rios \u00e0 mesma hora s\u00f3 quer dizer que foram apagados entre duas sincroniza\u00e7\u00f5es.</div>'
-      + (_lapEscondem === 0
-          ? '<div style="font-size:11px;color:#15803d;margin-top:8px;font-weight:700">Neste momento estas marcas n\u00e3o escondem nada: os registos j\u00e1 n\u00e3o existem nem aqui nem no servidor. Apagar as marcas n\u00e3o traz nada de volta \u2014 podes deixar como est\u00e1.</div>'
-          : '<div style="font-size:11px;color:#991b1b;margin-top:8px;font-weight:700">' + _lapEscondem
-            + ' destes registos ainda existem em algum lado e est\u00e3o a ser escondidos. Se n\u00e3o foste tu que os apagaste, usa o bot\u00e3o.</div>')
-      + '<button onclick="limparLapides()" style="width:100%;margin-top:8px;padding:10px;background:#991b1b;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer">\ud83e\uddf9 Apagar estas marcas</button>'
+      + '<div style="font-size:11px;color:#6b7280;margin-top:6px">A hora \u00e9 a da <strong>sincroniza\u00e7\u00e3o</strong>, n\u00e3o a do momento em que se apagou.</div>'
+      + '<div style="font-size:11px;color:#991b1b;margin-top:8px;font-weight:700">Estes registos ainda existem em algum lado e est\u00e3o a ser escondidos. Se n\u00e3o foste tu que os apagaste, usa o bot\u00e3o.</div>'
+      + '<button onclick="limparLapides()" style="width:100%;margin-top:8px;padding:10px;background:#991b1b;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer">\ud83e\uddf9 Recuperar estes registos</button>'
       + '</div>';
   }
 
@@ -19564,6 +19613,34 @@ function adminEditarDatas() {
     +'</div>';
   document.body.appendChild(modal);
 }
+// Limpa uma lista inteira DEIXANDO RASTO. Antes fazia-se removeItem: a
+// chave desaparecia daqui e, na sincronizacao seguinte, voltava tudo do
+// servidor como se nada fosse.
+function _limparChaveColecao(k) {
+  try {
+    var txt = localStorage.getItem(k);
+    var arr = null;
+    try { arr = JSON.parse(txt || 'null'); } catch (e) {}
+    if (Array.isArray(arr)) {
+      var ids = [];
+      arr.forEach(function (o) {
+        if (o && typeof o === 'object' && o.id !== undefined && o.id !== null && o.id !== '') ids.push(o.id);
+      });
+      if (ids.length === arr.length) {
+        _marcarApagados(k, ids);
+        localStorage.setItem(k, '[]');
+        if (typeof marcarModificado === 'function') marcarModificado(k);
+        return;
+      }
+    }
+    // Nao e uma lista de registos com id (as camaras, por exemplo): nao ha
+    // marcas a por, limpa-se e o carimbo mais recente decide.
+    localStorage.removeItem(k);
+    if (typeof marcarModificado === 'function') marcarModificado(k);
+  } catch (e) {}
+}
+window._limparChaveColecao = _limparChaveColecao;
+
 function adminEliminar(tipo) {
   const msgs = {
     'producoes-queijo':    'Tens a certeza? Todas as produções de queijo serão eliminadas.',
@@ -19573,33 +19650,35 @@ function adminEliminar(tipo) {
     'tudo':                '⚠️ ATENÇÃO! Vais eliminar TODOS os dados. Esta ação é irreversível. Tens a certeza absoluta?'
   };
   if (!confirm(msgs[tipo])) return;
+  // Isto apaga em TODOS os aparelhos, nao so neste. Vale a pena dize-lo.
+  if (!confirm('Isto apaga também nos outros aparelhos, assim que sincronizarem.\n\nContinuar?')) return;
 
   if (tipo === 'producoes-queijo' || tipo === 'tudo') {
-    localStorage.removeItem('lc_prod_queijo_v1');
-    localStorage.removeItem('lc_lotes_producao_v1');
-    localStorage.removeItem('lc_pq_em_curso_v1');
+    _limparChaveColecao('lc_prod_queijo_v1');
+    _limparChaveColecao('lc_lotes_producao_v1');
+    _limparChaveColecao('lc_pq_em_curso_v1');
   }
   if (tipo === 'producoes-requeijao' || tipo === 'tudo') {
-    localStorage.removeItem('lc_prod_requeijao_v1');
-    localStorage.removeItem('lc_prq_em_curso_v1');
+    _limparChaveColecao('lc_prod_requeijao_v1');
+    _limparChaveColecao('lc_prq_em_curso_v1');
   }
   if (tipo === 'camaras' || tipo === 'tudo') {
-    localStorage.removeItem('lc_camaras_v2');
-    localStorage.removeItem('lc_congelacoes_v1');
+    _limparChaveColecao('lc_camaras_v2');
+    _limparChaveColecao('lc_congelacoes_v1');
   }
   if (tipo === 'encomendas' || tipo === 'tudo') {
-    localStorage.removeItem('lc_encomendas_v1');
-    localStorage.removeItem('lc_saidas_leite_v1');
+    _limparChaveColecao('lc_encomendas_v1');
+    _limparChaveColecao('lc_saidas_leite_v1');
   }
   if (tipo === 'tudo') {
-    localStorage.removeItem('lc_entradas_leite_v1');
-    localStorage.removeItem('lc_historico_v1');
-    localStorage.removeItem('lc_soro_vba_importado_v1');
+    _limparChaveColecao('lc_entradas_leite_v1');
+    _limparChaveColecao('lc_historico_v1');
+    _limparChaveColecao('lc_soro_vba_importado_v1');
     localStorage.removeItem('lc_leite_importado_v1');
   }
 
-  alert('✅ Dados eliminados com sucesso.');
-  marcarModificado && SYNC_KEYS.forEach(k => marcarModificado(k));
+  alert('✅ Dados eliminados. Sincroniza para apagar também nos outros aparelhos.');
+  try { sincronizarTudo(); } catch (e) {}
 }
 
 
