@@ -7676,8 +7676,8 @@ var _pullEmCurso = false;
 //  Agora pergunta-se primeiro só as datas (poucos bytes). Se nada mudou
 //  no servidor desde a última vez, não se pede mais nada.
 // ═══════════════════════════════════════════════════════════════════════
-var APP_VERSAO = '2026-09-14 \u00b7 46';
-var APP_BUILD  = '2026-09-14T20:05:47Z';
+var APP_VERSAO = '2026-09-14 \u00b7 47';
+var APP_BUILD  = '2026-09-14T20:31:16Z';
 
 // ════════════════════════════════════════════════════════════════════════
 //  "NO TABLET AINDA APARECE A VERSAO 36"
@@ -17184,6 +17184,15 @@ async function abrirDiagnosticoSync() {
 
   var remoto = resposta.remoto || {};
   var metaRemoto = resposta.metaRemoto || {};
+
+  // O diagnostico ia buscar os dados ao servidor so para os comparar, e
+  // deitava-os fora. Um aparelho podia ficar dias a MOSTRAR aqui que o
+  // servidor tinha outra coisa, sem nunca a receber. Agora aplica-se: ja
+  // que os dados vieram, aproveitam-se.
+  try {
+    aplicarDadosRemoto(remoto, metaRemoto);
+    window._ultimoPull = { ts: Date.now(), remoto: remoto, metaRemoto: metaRemoto };
+  } catch (e) { console.warn('Diagnóstico: não consegui aplicar os dados', e); }
   var metaLocal = getSyncMeta();
   var falhas = _lerFalhasSync();
 
@@ -17382,9 +17391,17 @@ function _diagProducoesEmCurso(remoto) {
       + '⬇ ' + faltamAqui + ' produção(ões) estão no servidor e ainda não chegaram aqui. '
       + 'Carrega em "Sincronizar agora".</div>';
   } else if (faltamLa) {
+    // ATENÇÃO: "está aqui e não está no servidor" tem DUAS leituras
+    // opostas — ou foi criada aqui e ainda não subiu, ou foi apagada
+    // noutro aparelho e é este que está atrasado. Mandar reenviar era o
+    // conselho certo para a primeira e desfazia a segunda. Enquanto não
+    // soubermos qual é, não se manda ninguém carregar em nada.
     alerta = '<div style="font-size:11px;color:#92400e;margin-top:6px;font-weight:700">'
-      + '⬆ ' + faltamLa + ' produção(ões) estão só neste aparelho. '
-      + 'Carrega em "Reenviar tudo daqui" para as pôr no servidor.</div>';
+      + '⬆ ' + faltamLa + ' produção(ões) estão aqui e não estão no servidor.'
+      + '<div style="font-weight:400;color:#6b7280;margin-top:4px">'
+      + 'Pode ser porque foram criadas neste aparelho e ainda não subiram, ou porque '
+      + 'foram apagadas noutro. Carrega em <strong>Sincronizar agora</strong>: se forem novas, sobem; '
+      + 'se foram apagadas lá, desaparecem daqui.</div></div>';
   } else {
     alerta = '<div style="font-size:11px;color:#15803d;margin-top:6px;font-weight:700">'
       + '✓ As produções em curso são exactamente as mesmas aqui e no servidor.</div>';
