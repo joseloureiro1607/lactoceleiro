@@ -7318,8 +7318,14 @@ async function sincronizarTudo() {
       payload.dados[k] = (v === null ? null : v);
       enviadas.push(k);
     });
-    // As lápides podem ter acabado de ser criadas por _registarEliminacoes
-    if (payload.dados[K_APAGADOS] === undefined) {
+    // As marcas de eliminação só sobem quando ESTE aparelho criou alguma.
+    // Antes iam em todos os envios, mesmo sem nada de novo — e um aparelho
+    // atrasado mandava a sua lista curta por cima da lista longa do
+    // servidor, apagando as marcas dos outros de três em três minutos.
+    // Era isto que fazia com que apagar num aparelho nunca chegasse aos
+    // outros. (No servidor as marcas passaram também a juntar-se em vez de
+    // substituir, para o caso de dois aparelhos as mandarem ao mesmo tempo.)
+    if (payload.dados[K_APAGADOS] === undefined && meta[K_APAGADOS] !== undefined) {
       const ap = localStorage.getItem(K_APAGADOS);
       if (!_sincVazio(ap)) { payload.dados[K_APAGADOS] = ap; enviadas.push(K_APAGADOS); }
     }
@@ -7740,8 +7746,8 @@ var _pullEmCurso = false;
 //  Agora pergunta-se primeiro só as datas (poucos bytes). Se nada mudou
 //  no servidor desde a última vez, não se pede mais nada.
 // ═══════════════════════════════════════════════════════════════════════
-var APP_VERSAO = '2026-09-14 \u00b7 48';
-var APP_BUILD  = '2026-09-14T20:35:41Z';
+var APP_VERSAO = '2026-09-14 \u00b7 49';
+var APP_BUILD  = '2026-09-14T20:40:54Z';
 
 // ════════════════════════════════════════════════════════════════════════
 //  "NO TABLET AINDA APARECE A VERSAO 36"
