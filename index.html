@@ -7482,7 +7482,7 @@ var _pullEmCurso = false;
 //  Agora pergunta-se primeiro só as datas (poucos bytes). Se nada mudou
 //  no servidor desde a última vez, não se pede mais nada.
 // ═══════════════════════════════════════════════════════════════════════
-var APP_VERSAO = '2026-09-14 · 38';
+var APP_VERSAO = '2026-09-14 · 39';
 try { console.log('Lactoceleiro — versão ' + APP_VERSAO); } catch (e) {}
 
 var K_CARIMBOS_VISTOS = 'lc_sync_carimbos_v1';
@@ -16790,6 +16790,35 @@ function _momentosLapides(chave, soASerio) {
 }
 window._momentosLapides = _momentosLapides;
 
+// Uma marca so faz mal enquanto houver, em algum lado, o registo que ela
+// esconde. Se o registo ja nao existe nem aqui nem no servidor, apagar a
+// marca nao traz nada de volta - e so barulho no ecra.
+function _lapidesQueEscondemAlgo(remoto) {
+  var ap = {};
+  try { ap = getApagadosSync() || {}; } catch (e) {}
+  var n = 0;
+  Object.keys(ap).forEach(function (k) {
+    if (!ap[k] || typeof ap[k] !== 'object') return;
+    var ids = Object.keys(ap[k]);
+    if (!ids.length) return;
+    function temIds(txt) {
+      var m = {};
+      try {
+        var arr = JSON.parse(txt || 'null');
+        if (Array.isArray(arr)) arr.forEach(function (o) {
+          if (o && o.id !== undefined && o.id !== null) m[String(o.id)] = true;
+        });
+      } catch (e) {}
+      return m;
+    }
+    var aqui = temIds(localStorage.getItem(k));
+    var la = temIds(remoto ? _comoTexto(remoto[k]) : null);
+    ids.forEach(function (id) { if (aqui[id] || la[id]) n++; });
+  });
+  return n;
+}
+window._lapidesQueEscondemAlgo = _lapidesQueEscondemAlgo;
+
 function _contarLapides() {
   var ap = {};
   try { ap = getApagadosSync() || {}; } catch (e) {}
@@ -16936,6 +16965,7 @@ async function abrirDiagnosticoSync() {
   // Lápides — registos marcados como apagados. Se forem muitas sem ninguém
   // ter apagado nada, são elas que estão a fazer desaparecer os registos.
   var lap = _contarLapides();
+  var _lapEscondem = _lapidesQueEscondemAlgo(remoto);
   if (lap.normais) {
     h += '<div style="background:#f0fdf4;border:2px solid #bbf7d0;border-radius:12px;padding:10px 14px;margin-bottom:12px">'
       + '<div style="font-size:12px;font-weight:800;color:#15803d">\u2713 ' + lap.normais
@@ -16953,16 +16983,19 @@ async function abrirDiagnosticoSync() {
         }).join('')
       + lap.porArea.filter(function (a) { return a.aSerio > 0; }).map(function (a) {
           var mm = _momentosLapides(a.chave, true);
-          var suspeito = mm.some(function (g) { return g.n >= 3; });
-          return '<div style="font-size:11px;color:' + (suspeito ? '#991b1b' : '#6b7280') + ';margin-top:6px">'
-            + _stkEsc(_syncNome(a.chave)) + ' \u2014 apagados em ' + mm.length + ' momento(s): '
+          return '<div style="font-size:11px;color:#6b7280;margin-top:6px">'
+            + _stkEsc(_syncNome(a.chave)) + ' \u2014 marcados em ' + mm.length + ' momento(s): '
             + mm.slice(0, 5).map(function (g) {
                 return g.n + ' ' + (g.n === 1 ? 'registo' : 'registos') + ' ' + _diagQuando(g.ts);
               }).join(', ')
-            + (suspeito ? '<br><strong>V\u00e1rios de uma s\u00f3 vez \u2014 isto n\u00e3o \u00e9 algu\u00e9m a apagar um a um, \u00e9 erro do programa.</strong>' : '')
             + '</div>';
         }).join('')
-      + '<div style="font-size:11px;color:#6b7280;margin-top:6px">Enquanto estas marcas existirem, estes registos s\u00e3o removidos de <strong>todos</strong> os aparelhos.</div>'
+      + '<div style="font-size:11px;color:#6b7280;margin-top:6px">A hora \u00e9 a da <strong>sincroniza\u00e7\u00e3o</strong>, n\u00e3o a do momento em que se apagou. '
+      + 'V\u00e1rios \u00e0 mesma hora s\u00f3 quer dizer que foram apagados entre duas sincroniza\u00e7\u00f5es.</div>'
+      + (_lapEscondem === 0
+          ? '<div style="font-size:11px;color:#15803d;margin-top:8px;font-weight:700">Neste momento estas marcas n\u00e3o escondem nada: os registos j\u00e1 n\u00e3o existem nem aqui nem no servidor. Apagar as marcas n\u00e3o traz nada de volta \u2014 podes deixar como est\u00e1.</div>'
+          : '<div style="font-size:11px;color:#991b1b;margin-top:8px;font-weight:700">' + _lapEscondem
+            + ' destes registos ainda existem em algum lado e est\u00e3o a ser escondidos. Se n\u00e3o foste tu que os apagaste, usa o bot\u00e3o.</div>')
       + '<button onclick="limparLapides()" style="width:100%;margin-top:8px;padding:10px;background:#991b1b;color:#fff;border:none;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer">\ud83e\uddf9 Apagar estas marcas</button>'
       + '</div>';
   }
